@@ -1,44 +1,60 @@
 const { createClient } = require('@supabase/supabase-js');
-const Resend = require('@resend/resend');
+const resend = require('resend');
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const resend = new Resend(process.env.RESEND_API_KEY);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const resendApiKey = process.env.RESEND_API_KEY;
 
-async function cleanupPortfolios() {
+if (!supabaseUrl || !supabaseServiceRoleKey || !resendApiKey) {
+  throw new Error('Missing environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+const resendClient = new resend.Resend(resendApiKey);
+
+async function cleanupExpiredPortfolios() {
   const now = new Date().toISOString();
-  const threeDaysFromNow = new Date();
-  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
-  // Fetch portfolios nearing expiry (within 3 days) or expired
-  const { data, error } = await supabase
+  const { data: expiredPortfolios, error } = await supabase
     .from('portfolios')
-    .select('fingerprint, username, expiry')
-    .lte('expiry', threeDaysFromNow.toISOString());
+    .select('fingerprint, github_repo, donation_status')
+    .lt('expiry', now);
 
   if (error) {
-    console.error('Error fetching portfolios:', error);
+    console.error('Supabase error:', error.message);
     return;
   }
 
-  for (const portfolio of data) {
-    if (new Date(portfolio.expiry) <= new Date()) {
-      // Delete expired portfolio
-      await supabase
-        .from('portfolios')
-        .delete()
-        .eq('fingerprint', portfolio.fingerprint);
-      console.log(`Deleted expired portfolio for ${portfolio.username || portfolio.fingerprint}`);
-    } else if (new Date(portfolio.expiry) <= threeDaysFromNow) {
-      // Send warning email
-      await resend.emails.send({
-        from: 'no-reply@theidealprogen.com',
-        to: 'user@example.com', // Replace with dynamic email if available (future enhancement)
-        subject: 'Portfolio Expiry Warning',
-        text: `Hi ${portfolio.username || 'User'},\nYour portfolio will expire on ${portfolio.expiry}. Donate $5 at https://www.buymeacoffee.com/theidealprogen to extend it by 30 days.`
-      });
-      console.log(`Sent warning email to ${portfolio.username || portfolio.fingerprint}`);
-    }
+  if (!expiredPortfolios || expiredPortfolios.length === 0) {
+    console.log('No expired portfolios found.');
+    return;
   }
+
+  for (const portfolio of expiredPortfolios) {
+    // Option 1: Delete the portfolio
+    const { error: deleteError } = await supabase
+      .from('portfolios')
+      .delete()
+      .eq('fingerprint', portfolio.fingerprint);
+    if (deleteError) {
+      console.error(`Failed to delete portfolio ${portfolio.fingerprint}:`, deleteError.message);
+      continue;
+    }
+
+    // Option 2: Archive instead of delete (uncomment and adjust table if needed)
+    // await supabase
+    //   .from('archived_portfolios')
+    //   .insert({ ...portfolio, archived_at: now });
+
+    // Notify user via email (optional)
+    await resendClient.emails.send({
+      from: 'noreply@yourdomain.com',
+      to: 'user-email@example.com', // Replace with dynamic email if available
+      subject: 'Your Portfolio Has Expired',
+      html: `<p>Your portfolio (${portfolio.github_repo}) has expired. Total donations: $${portfolio.donation_status.amount}</p>`,
+    }).catch(err => console.error('Email error:', err));
+  }
+
+  console.log(`Cleaned up ${expiredPortfolios.length} expired portfolios.`);
 }
 
-cleanupPortfolios().catch(console.error);
+cleanupExpiredPortfolios().catch(console.error);
