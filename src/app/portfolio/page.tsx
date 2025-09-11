@@ -59,7 +59,6 @@ export default function PortfolioBuilder() {
       const visitorId = result.visitorId;
       setFingerprint(visitorId);
 
-      // READ: allow 0 rows without 406
       const { data, error } = await supabase
         .from('portfolios')
         .select('expiry, donation_status, github_repo')
@@ -72,21 +71,16 @@ export default function PortfolioBuilder() {
       }
 
       if (data) {
-        // Expiry prompt
         const expiryDate = new Date(data.expiry);
         if (new Date() > expiryDate) setShowDonationPrompt(true);
 
-        // Live URL from owner/repo
         if (data.github_repo) {
           const [owner, repo] = String(data.github_repo).split('/');
           if (owner && repo) setLiveUrl(`https://${owner}.github.io/${repo}/`);
         }
       }
 
-      // IMPORTANT:
-      // We DO NOT insert a placeholder row here anymore.
-      // Your schema requires github_repo (NOT NULL), so inserting here caused 400.
-      // The row is created during /api/publish instead.
+      // No placeholder insert here (schema requires github_repo). Row is created during /api/publish.
     } catch (err) {
       console.error('Error loading fingerprint:', err);
     } finally {
@@ -111,13 +105,12 @@ export default function PortfolioBuilder() {
       const response = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolioData, fingerprint }), // ✅ send fingerprint
+        body: JSON.stringify({ portfolioData, fingerprint }),
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || 'Publish failed');
 
-      // Server returns the final GitHub Pages URL
       setLiveUrl(data.url);
       alert('Portfolio published successfully! Check the live URL below.');
     } catch (err) {
@@ -144,55 +137,151 @@ export default function PortfolioBuilder() {
     }
   };
 
+  // Export as a nice-looking Tailwind page (includes CDN + runtime config, so it matches your theme)
   const exportToHTML = () => {
-    if (!Object.values(errors).some((e) => e)) {
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${portfolioData.fullName || 'Portfolio'} Portfolio</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            .portfolio-content { max-width: 800px; margin: 0 auto; }
-            h1 { font-size: 2em; }
-            h2 { font-size: 1.5em; margin-top: 20px; }
-            p, ul { line-height: 1.6; }
-            img { max-width: 100%; height: auto; }
-            a { color: #007bff; text-decoration: none; }
-            a:hover { text-decoration: underline; }
-          </style>
-        </head>
-        <body>
-          <div class="portfolio-content">
-            <h1>${portfolioData.fullName || 'Your Name'}</h1>
-            ${portfolioData.photoDataUrl ? `<img src="${portfolioData.photoDataUrl}" alt="Headshot" style="width: 150px; border-radius: 50%;">` : ''}
-            ${portfolioData.about ? `<h2>About</h2><p>${portfolioData.about}</p>` : ''}
-            ${portfolioData.skills?.filter((s: string) => s).length > 0 ? `<h2>Skills</h2><ul>${portfolioData.skills.map((s: string) => s ? `<li>${s}</li>` : '').join('')}</ul>` : ''}
-            ${portfolioData.projects?.filter((p: { name?: string; description?: string }) => p.name || p.description).length > 0 ? `<h2>Projects</h2>${portfolioData.projects.map((p: { name?: string; description?: string; link?: string }) => `<div><h3>${p.name || 'Project'}</h3><p>${p.description}</p>${p.link ? `<a href="${p.link}" target="_blank">Visit</a>` : ''}</div>`).join('')}` : ''}
-            ${portfolioData.certifications?.filter((c: string) => c).length > 0 ? `<h2>Certifications</h2><ul>${portfolioData.certifications.map((c: string) => c ? `<li>${c}</li>` : '').join('')}</ul>` : ''}
-            ${portfolioData.media?.filter((m: { title?: string; link?: string }) => m.title || m.link).length > 0 ? `<h2>Media</h2>${portfolioData.media.map((m: { title?: string; type?: string; link?: string }) => `<div><h3>${m.title || 'Media'}</h3><p>${m.type}</p>${m.link ? `<a href="${m.link}" target="_blank">View</a>` : ''}</div>`).join('')}` : ''}
-            <h2>Contact</h2>
-            <p>${portfolioData.email ? `Email: <a href="mailto:${portfolioData.email}">${portfolioData.email}</a>` : ''}</p>
-            <p>${portfolioData.phone ? `Phone: ${portfolioData.phone}` : ''}</p>
-            <p>${portfolioData.linkedin ? `LinkedIn: <a href="${portfolioData.linkedin}" target="_blank">LinkedIn</a>` : ''}</p>
-            ${portfolioData.socials?.filter((s: { label?: string; url?: string }) => s.label && s.url).length > 0 ? `<h3>Social Links</h3>${portfolioData.socials.map((s: { label?: string; url?: string }) => s.label && s.url ? `<a href="${s.url}" target="_blank">${s.label}</a><br>` : '').join('')}` : ''}
-            ${portfolioData.cvFileDataUrl ? `<a href="${portfolioData.cvFileDataUrl}" download="${portfolioData.cvFileName || 'cv.pdf'}">Download CV</a>` : ''}
-          </div>
-        </body>
-        </html>
-      `;
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${portfolioData.fullName || 'portfolio'}_portfolio.html`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } else {
+    if (Object.values(errors).some((e) => e)) {
       alert('Please fix all errors before exporting.');
+      return;
     }
+
+    const esc = (s: string) =>
+      (s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    const skills = (portfolioData.skills || []).filter(Boolean);
+    const projects = (portfolioData.projects || []).filter(p => (p?.name && p.name.trim()) || (p?.description && p.description.trim()));
+    const certs = (portfolioData.certifications || []).filter(Boolean);
+    const media = (portfolioData.media || []).filter(m => (m?.title && m.title.trim()) || (m?.link && m.link.trim()));
+    const socials = (portfolioData.socials || []).filter(s => s?.label && s?.url);
+
+    const head = `
+<!-- Tailwind runtime config so exported HTML matches your Tailwind theme -->
+<script>
+  window.tailwind = window.tailwind || {};
+  window.tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      screens: { sm:'640px', md:'768px', lg:'1024px', xl:'1280px' },
+      extend: {
+        colors: {
+          navy:{ 700:'#1E3A8A' },
+          slate:{ 200:'#E2E8F0' },
+          teal:{ 500:'#14B8A6', 600:'#0F766E', 700:'#0F766E' },
+          gray:{ 50:'#F9FAFB', 600:'#4B5563', 800:'#1F2937' },
+        }
+      }
+    }
+  }
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+    `.trim();
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en" class="${theme === 'dark' ? 'dark' : ''}">
+<head>
+  <meta charset="UTF-8" />
+  <title>${esc(portfolioData.fullName || 'Portfolio')} | Portfolio</title>
+  ${head}
+</head>
+<body class="min-h-screen bg-gradient-to-b from-[#0A1C3A]/10 to-white text-gray-900 dark:bg-zinc-900 dark:text-white">
+  <header class="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur border-b border-slate-200/60 dark:border-zinc-800">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-xl md:text-2xl font-bold text-navy-700 dark:text-white">${esc(portfolioData.fullName || 'Your Name')}</h1>
+      <div class="flex gap-2">
+        ${portfolioData.cvFileDataUrl ? `<a class="px-3 py-1.5 rounded-full bg-teal-600 text-white text-sm" href="${portfolioData.cvFileDataUrl}" download="${esc(portfolioData.cvFileName || 'cv.pdf')}">Download CV</a>` : ''}
+        ${portfolioData.linkedin ? `<a class="px-3 py-1.5 rounded-full border border-teal-600 text-teal-700 dark:text-teal-400 text-sm" href="${portfolioData.linkedin}" target="_blank" rel="noopener">LinkedIn</a>` : ''}
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <section class="text-center">
+      ${portfolioData.photoDataUrl ? `<img src="${portfolioData.photoDataUrl}" alt="${esc(portfolioData.fullName || 'Headshot')}" class="mx-auto h-32 w-32 rounded-xl object-cover ring-2 ring-teal-500/40" />` : ''}
+      <h2 class="text-2xl md:text-3xl font-bold mt-4">${esc(portfolioData.fullName || 'Your Name')}${portfolioData.role ? ` · <span class="font-medium">${esc(portfolioData.role)}</span>` : ''}</h2>
+      ${portfolioData.tagline ? `<p class="text-gray-600 dark:text-gray-300 mt-2">${esc(portfolioData.tagline)}</p>` : ''}
+      ${portfolioData.location ? `<p class="text-gray-500 dark:text-gray-400 text-sm mt-1">${esc(portfolioData.location)}</p>` : ''}
+    </section>
+
+    ${portfolioData.about ? `
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-2">About</h3>
+      <p class="text-gray-700 dark:text-gray-300 leading-relaxed">${esc(portfolioData.about)}</p>
+    </section>` : ''}
+
+    ${skills.length ? `
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Skills</h3>
+      <div class="flex flex-wrap gap-2">
+        ${skills.map(s => `<span class="px-3 py-1 rounded-full bg-slate-200 dark:bg-zinc-800 text-sm">${esc(s)}</span>`).join('')}
+      </div>
+    </section>` : ''}
+
+    ${projects.length ? `
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Projects</h3>
+      <div class="space-y-4">
+        ${projects.map(p => `
+          <article class="rounded-lg border border-slate-200 dark:border-zinc-800 p-4">
+            <h4 class="text-lg font-semibold">${esc(p.name || 'Project')}</h4>
+            ${p.description ? `<p class="text-gray-700 dark:text-gray-300 mt-1">${esc(p.description)}</p>` : ''}
+            ${p.link ? `<a href="${p.link}" target="_blank" rel="noopener" class="inline-block mt-2 text-teal-700 dark:text-teal-400 underline">Visit</a>` : ''}
+          </article>
+        `).join('')}
+      </div>
+    </section>` : ''}
+
+    ${certs.length ? `
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Certifications</h3>
+      <ul class="list-disc pl-6 space-y-1">
+        ${certs.map(c => `<li>${esc(c)}</li>`).join('')}
+      </ul>
+    </section>` : ''}
+
+    ${media.length ? `
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Media</h3>
+      <div class="space-y-3">
+        ${media.map(m => `
+          <div>
+            <div class="font-medium">${esc(m.title || 'Media')}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">${esc(m.type || 'video')}</div>
+            ${m.link ? `<a href="${m.link}" target="_blank" rel="noopener" class="inline-block mt-1 text-teal-700 dark:text-teal-400 underline">View</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </section>` : ''}
+
+    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
+      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Contact</h3>
+      <div class="space-y-1">
+        ${portfolioData.email ? `<div>Email: <a href="mailto:${portfolioData.email}" class="underline">${esc(portfolioData.email)}</a></div>` : ''}
+        ${portfolioData.phone ? `<div>Phone: ${esc(portfolioData.phone)}</div>` : ''}
+        ${portfolioData.linkedin ? `<div>LinkedIn: <a href="${portfolioData.linkedin}" target="_blank" rel="noopener" class="underline">Profile</a></div>` : ''}
+        ${socials.length ? `<div class="mt-2"><div class="font-medium mb-1">Socials</div>${socials.map(s => `<a class="inline-block mr-3 underline" href="${s.url}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join('')}</div>` : ''}
+        ${portfolioData.cvFileDataUrl ? `<div class="mt-2"><a class="px-3 py-1.5 rounded-full bg-teal-600 text-white text-sm" href="${portfolioData.cvFileDataUrl}" download="${esc(portfolioData.cvFileName || 'cv.pdf')}">Download CV</a></div>` : ''}
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-6 text-center text-gray-600 dark:text-gray-400">
+    © ${new Date().getFullYear()} ${esc(portfolioData.fullName || 'Your Name')} — Portfolio
+  </footer>
+</body>
+</html>
+    `.trim();
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${portfolioData.fullName || 'portfolio'}_portfolio.html`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const resetForm = () => {
@@ -226,9 +315,9 @@ export default function PortfolioBuilder() {
   const previewMaxWidth = viewSize === 'mobile' ? 375 : viewSize === 'tablet' ? 768 : 1280;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white p-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#0A1C3A]/10 to-white text-black dark:bg-zinc-900 dark:text-white p-4">
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-teal-700">Portfolio Builder</h1>
+        <h1 className="text-2xl font-bold text-teal-700 dark:text-teal-400">Portfolio Builder</h1>
         <Button variant="outline" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
           Toggle Theme
         </Button>
@@ -249,10 +338,17 @@ export default function PortfolioBuilder() {
             setErrors={setErrors}
           />
           <div className="mt-4 flex gap-2">
-            <Button className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2" onClick={resetForm}>
+            <Button
+              className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
+              onClick={resetForm}
+            >
               Reset
             </Button>
-            <Button className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2" onClick={handlePublish} disabled={publishLoading}>
+            <Button
+              className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
+              onClick={handlePublish}
+              disabled={publishLoading}
+            >
               {publishLoading ? 'Publishing...' : 'Publish'}
             </Button>
           </div>
@@ -295,7 +391,7 @@ export default function PortfolioBuilder() {
           className={`bg-gray-900 rounded-2xl shadow-xl order-2 min-h-[400px] ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-50 overflow-y-auto' : ''}`}
           style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
-          <div className="flex justify-between items-center px-4 py-1 bg-gray-8 00 rounded-t-xl">
+          <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
               <span className="w-3 h-3 bg-red-500 rounded-full" />
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
