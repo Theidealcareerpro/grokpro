@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CLData, EMPTY_CL } from '@/lib/types';
 import Section from './Section';
 import Input from './Input';
@@ -10,6 +10,17 @@ import { CheckIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 interface CLFormProps {
   clData: CLData;
   setCLData: (data: CLData) => void;
+}
+
+function shallowEqualErrors(
+  a: Record<string, string>,
+  b: Record<string, string>
+) {
+  const ak = Object.keys(a);
+  const bk = Object.keys(b);
+  if (ak.length !== bk.length) return false;
+  for (const k of ak) if (a[k] !== b[k]) return false;
+  return true;
 }
 
 export default function CLForm({ clData, setCLData }: CLFormProps) {
@@ -24,6 +35,7 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
     thankYou: false,
     closing: false,
   });
+
   const [errors, setErrors] = useState({
     name: '',
     email: '',
@@ -35,75 +47,92 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
     body: '',
   });
 
-  const validateForm = () => {
-    let isValid = true;
-    const newErrors = { name: '', email: '', jobTitle: '', companyName: '', hiringManagerName: '', companyAddress: '', cityStateZip: '', body: '' };
+  // If parent ever replaces clData (e.g., reset), keep localData in sync.
+  useEffect(() => {
+    setLocalData(clData);
+  }, [clData]);
+
+  // Compute validation errors from localData (pure + memoized).
+  const computedErrors = useMemo(() => {
+    const next = {
+      name: '',
+      email: '',
+      jobTitle: '',
+      companyName: '',
+      hiringManagerName: '',
+      companyAddress: '',
+      cityStateZip: '',
+      body: '',
+    };
 
     if (!localData.name || !localData.name.trim()) {
-      newErrors.name = 'Name is required';
-      isValid = false;
+      next.name = 'Name is required';
     }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!localData.email || !emailRegex.test(localData.email)) {
-      newErrors.email = 'Valid email is required';
-      isValid = false;
+      next.email = 'Valid email is required';
     }
+
     if (!localData.jobTitle || !localData.jobTitle.trim()) {
-      newErrors.jobTitle = 'Job title is required';
-      isValid = false;
+      next.jobTitle = 'Job title is required';
     }
+
     if (!localData.companyName || !localData.companyName.trim()) {
-      newErrors.companyName = 'Company name is required';
-      isValid = false;
+      next.companyName = 'Company name is required';
     }
+
     if (!localData.hiringManagerName || !localData.hiringManagerName.trim()) {
-      newErrors.hiringManagerName = 'Hiring manager name is required';
-      isValid = false;
+      next.hiringManagerName = 'Hiring manager name is required';
     }
+
     if (!localData.companyAddress || !localData.companyAddress.trim()) {
-      newErrors.companyAddress = 'Company address is required';
-      isValid = false;
+      next.companyAddress = 'Company address is required';
     }
+
     if (!localData.cityStateZip || !localData.cityStateZip.trim()) {
-      newErrors.cityStateZip = 'City, State, ZIP is required';
-      isValid = false;
+      next.cityStateZip = 'City, State, ZIP is required';
     }
+
     if (localData.bodyParagraphs.length === 0) {
-      newErrors.body = 'At least one body paragraph is required';
-      isValid = false;
+      next.body = 'At least one body paragraph is required';
     }
 
-    setErrors(newErrors);
-    return isValid;
-  };
+    return next;
+  }, [localData]);
 
+  // Apply errors only when they actually change (prevents setState loops).
+  useEffect(() => {
+    setErrors((prev) => (shallowEqualErrors(prev, computedErrors) ? prev : computedErrors));
+  }, [computedErrors]);
+
+  // Push localData up to parent when it changes.
   useEffect(() => {
     setCLData(localData);
-    validateForm();
-  }, [localData, setCLData, validateForm]);
+  }, [localData, setCLData]);
 
   const handleChange = (field: keyof CLData, value: string) => {
-    setLocalData(prev => ({ ...prev, [field]: value }));
+    setLocalData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleBodyChange = (index: number, value: string) => {
     const updated = [...localData.bodyParagraphs];
     updated[index] = value;
-    setLocalData(prev => ({ ...prev, bodyParagraphs: updated }));
+    setLocalData((prev) => ({ ...prev, bodyParagraphs: updated }));
   };
 
   const addBodyParagraph = () => {
-    setLocalData(prev => ({ ...prev, bodyParagraphs: [...prev.bodyParagraphs, ''] }));
+    setLocalData((prev) => ({ ...prev, bodyParagraphs: [...prev.bodyParagraphs, ''] }));
   };
 
   const removeBodyParagraph = (index: number) => {
     const updated = [...localData.bodyParagraphs];
     updated.splice(index, 1);
-    setLocalData(prev => ({ ...prev, bodyParagraphs: updated }));
+    setLocalData((prev) => ({ ...prev, bodyParagraphs: updated }));
   };
 
   const toggleSection = (section: keyof typeof collapsedSections) => {
-    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   return (
@@ -183,7 +212,11 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
         />
       </Section>
 
-      <Section title="Hiring Manager Info" isCollapsed={collapsedSections.hiringManager} onToggle={() => toggleSection('hiringManager')}>
+      <Section
+        title="Hiring Manager Info"
+        isCollapsed={collapsedSections.hiringManager}
+        onToggle={() => toggleSection('hiringManager')}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="relative mb-6">
             <Input
@@ -191,7 +224,9 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               value={localData.hiringManagerName}
               placeholder="e.g., Ms. Emily Carter"
               onChange={(e) => handleChange('hiringManagerName', e.target.value)}
-              className={errors.hiringManagerName ? 'border-red-500' : localData.hiringManagerName.trim() ? 'border-green-500' : ''}
+              className={
+                errors.hiringManagerName ? 'border-red-500' : localData.hiringManagerName.trim() ? 'border-green-500' : ''
+              }
             />
             {errors.hiringManagerName && (
               <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
@@ -227,7 +262,9 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               value={localData.companyAddress}
               placeholder="e.g., 123 Tech St"
               onChange={(e) => handleChange('companyAddress', e.target.value)}
-              className={errors.companyAddress ? 'border-red-500' : localData.companyAddress.trim() ? 'border-green-500' : ''}
+              className={
+                errors.companyAddress ? 'border-red-500' : localData.companyAddress.trim() ? 'border-green-500' : ''
+              }
             />
             {errors.companyAddress && (
               <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
@@ -310,10 +347,16 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
             {errors.body}
           </div>
         )}
-        <Button type="button" onClick={addBodyParagraph}>+ Add Body Paragraph</Button>
+        <Button type="button" onClick={addBodyParagraph}>
+          + Add Body Paragraph
+        </Button>
       </Section>
 
-      <Section title="Excitement Paragraph" isCollapsed={collapsedSections.excitement} onToggle={() => toggleSection('excitement')}>
+      <Section
+        title="Excitement Paragraph"
+        isCollapsed={collapsedSections.excitement}
+        onToggle={() => toggleSection('excitement')}
+      >
         <Textarea
           label="Excitement Paragraph"
           value={localData.excitement}
@@ -322,7 +365,11 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
         />
       </Section>
 
-      <Section title="Thank You Paragraph" isCollapsed={collapsedSections.thankYou} onToggle={() => toggleSection('thankYou')}>
+      <Section
+        title="Thank You Paragraph"
+        isCollapsed={collapsedSections.thankYou}
+        onToggle={() => toggleSection('thankYou')}
+      >
         <Textarea
           label="Thank You Paragraph"
           value={localData.thankYou}
@@ -335,7 +382,7 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
         <Textarea
           label="Closing"
           value={localData.closing || `Sincerely,\n\n${localData.name}\n${localData.email}`}
-          placeholder="e.g., Sincerely, followed by your name and email on new lines (e.g., Sincerely,\n\nJohn Doe\njohn.doe@example.com)."
+          placeholder={`e.g., Sincerely,\n\nJohn Doe\njohn.doe@example.com`}
           onChange={(e) => handleChange('closing', e.target.value)}
         />
       </Section>

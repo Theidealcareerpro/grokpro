@@ -1,43 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronDown, ChevronUp, Trash2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import type { PortfolioData, PortfolioProject, PortfolioSocial, Media } from '@/lib/portfolio-types';
 
-/* ------------------------------------------------------------------ */
-/* helpers (module scope = stable)                                     */
-/* ------------------------------------------------------------------ */
+/* ----------------- helpers (module scope = stable) ----------------- */
 
-const TEMPLATE_OPTIONS = [
-  { id: 'modern', label: 'Modern' },
-  { id: 'classic', label: 'Classic' },       // ClassicProLeft in publish, Classic in preview
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'tech', label: 'Tech' },
-  { id: 'creative', label: 'Creative' },
-  { id: 'corporate', label: 'Corporate' },
-] as const;
-
-type TemplateIdOption = typeof TEMPLATE_OPTIONS[number]['id'];
-
-// Accept http/https + data + blob for in-app uploads and external links
-function isValidUrlFlexible(value: string) {
-  if (!value) return false;
-  if (value.startsWith('data:')) return true;
-  if (value.startsWith('blob:')) return true;
+const isValidUrl = (value: string) => {
   try {
+    // Accept data URLs and http(s)
+    if (value.startsWith('data:')) return true;
     const u = new URL(value);
     return u.protocol === 'http:' || u.protocol === 'https:';
   } catch {
     return false;
   }
-}
+};
 
 function shallowEqualErrors(a: Record<string, string>, b: Record<string, string>) {
   const aKeys = Object.keys(a);
@@ -47,27 +32,16 @@ function shallowEqualErrors(a: Record<string, string>, b: Record<string, string>
   return true;
 }
 
-function debounce<T extends (...args: any[]) => void>(fn: T, ms = 300) {
-  let t: ReturnType<typeof setTimeout> | null = null;
-  const debounced = (...args: Parameters<T>) => {
-    if (t) clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-  return debounced as T;
-}
-
-/* ------------------------------------------------------------------ */
-/* component                                                           */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- component ---------------------------- */
 
 interface PortfolioFormProps {
   portfolioData: PortfolioData;
   setPortfolioData: (data: PortfolioData) => void;
-  errors: { [key: string]: string };
+  errors: Record<string, string>;
   setErrors: (
     errors:
-      | { [key: string]: string }
-      | ((prev: { [key: string]: string }) => { [key: string]: string })
+      | Record<string, string>
+      | ((prev: Record<string, string>) => Record<string, string>)
   ) => void;
   onUsernameUpdate?: (newUsername: string) => Promise<void>;
 }
@@ -89,49 +63,27 @@ export default function PortfolioForm({
     media: false,
   });
 
-  // stable arrays (defensive fallback so UI never crashes)
-  const skills = portfolioData.skills ?? [];
-  const projects = portfolioData.projects ?? [];
-  const certifications = portfolioData.certifications ?? [];
-  const socials = portfolioData.socials ?? [];
-  const media = portfolioData.media ?? [];
+  // memoize frequently read arrays to calm hook-deps warnings (optional but tidy)
+  const skills = useMemo(() => portfolioData.skills ?? [], [portfolioData.skills]);
+  const projects = useMemo(() => portfolioData.projects ?? [], [portfolioData.projects]);
+  const certifications = useMemo(() => portfolioData.certifications ?? [], [portfolioData.certifications]);
+  const socials = useMemo(() => portfolioData.socials ?? [], [portfolioData.socials]);
+  const media = useMemo(() => portfolioData.media ?? [], [portfolioData.media]);
 
   /* ----------------------- validation (fixed) ----------------------- */
 
   const computedErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (!portfolioData.fullName?.trim()) e.name = 'Name is required';
-
-    if (portfolioData.photoDataUrl && !isValidUrlFlexible(portfolioData.photoDataUrl)) {
-      e.photo = 'Invalid image URL or data URI';
-    }
-
-    if (portfolioData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(portfolioData.email)) {
-      e.email = 'Invalid email format';
-    }
-
-    if (portfolioData.phone && !/^\+?[\d\s\-()]{7,}$/.test(portfolioData.phone)) {
-      e.phone = 'Invalid phone number';
-    }
-
-    if (portfolioData.linkedin && !isValidUrlFlexible(portfolioData.linkedin)) {
-      e.linkedin = 'Invalid LinkedIn URL';
-    }
-
-    if (socials.some((s) => s?.url && !isValidUrlFlexible(s.url))) {
-      e.socials = 'One or more social URLs are invalid';
-    }
-
-    if (projects.some((p) => p?.link && !isValidUrlFlexible(p.link!))) {
-      e.projects = 'One or more project links are invalid';
-    }
-
-    if (media.some((m) => m?.link && !isValidUrlFlexible(m.link!))) {
-      e.media = 'One or more media links are invalid';
-    }
-
+    if (!portfolioData.fullName.trim()) e.name = 'Name is required';
+    if (portfolioData.photoDataUrl && !isValidUrl(portfolioData.photoDataUrl)) e.photo = 'Invalid image URL / data URL';
+    if (portfolioData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(portfolioData.email)) e.email = 'Invalid email format';
+    if (portfolioData.phone && !/^\+?[\d\s\-()]{7,}$/.test(portfolioData.phone)) e.phone = 'Invalid phone number';
+    if (portfolioData.linkedin && !isValidUrl(portfolioData.linkedin)) e.linkedin = 'Invalid LinkedIn URL';
+    if (socials.some((s) => s.url && !isValidUrl(s.url))) e.socials = 'One or more social URLs are invalid';
+    if (projects.some((p) => p.link && !isValidUrl(p.link!))) e.projects = 'One or more project links are invalid';
+    if (media.some((m) => m.link && !isValidUrl(m.link!))) e.media = 'One or more media links are invalid';
     return e;
-  }, [portfolioData, socials, projects, media]);
+  }, [portfolioData.fullName, portfolioData.photoDataUrl, portfolioData.email, portfolioData.phone, portfolioData.linkedin, socials, projects, media]);
 
   useEffect(() => {
     setErrors((prev) => (shallowEqualErrors(prev, computedErrors) ? prev : computedErrors));
@@ -170,7 +122,8 @@ export default function PortfolioForm({
   };
 
   const updateSocial = (index: number, field: keyof PortfolioSocial, value: string) => {
-    const next = socials.map((s, i) => (i === index ? { ...s, [field]: value } : s));
+    const next: PortfolioSocial[] = [...socials];
+    next[index] = { ...next[index], [field]: value };
     setPortfolioData({ ...portfolioData, socials: next });
   };
 
@@ -180,16 +133,12 @@ export default function PortfolioForm({
       socials: [...socials, { label: '', url: '' }],
     });
 
-  const removeSocial = (index: number) =>
-    setPortfolioData({
-      ...portfolioData,
-      socials: socials.filter((_, i) => i !== index),
-    });
-
   const updateMedia = (index: number, field: keyof Media, value: string) => {
-    const next = media.map((m, i) =>
-      i === index ? { ...m, [field]: field === 'type' && !['video', 'podcast', 'article'].includes(value) ? 'video' : value } : m
-    );
+    const next: Media[] = [...media];
+    next[index] = { ...next[index], [field]: value } as Media;
+    if (field === 'type' && !['video', 'podcast', 'article'].includes(value)) {
+      next[index].type = 'video';
+    }
     setPortfolioData({ ...portfolioData, media: next });
   };
 
@@ -199,14 +148,9 @@ export default function PortfolioForm({
       media: [...media, { title: '', type: 'video', link: '' }],
     });
 
-  const removeMedia = (index: number) =>
-    setPortfolioData({
-      ...portfolioData,
-      media: media.filter((_, i) => i !== index),
-    });
-
   const updateProject = (index: number, field: keyof PortfolioProject, value: string) => {
-    const next = projects.map((p, i) => (i === index ? { ...p, [field]: value } : p));
+    const next: PortfolioProject[] = [...projects];
+    next[index] = { ...next[index], [field]: value };
     setPortfolioData({ ...portfolioData, projects: next });
   };
 
@@ -216,14 +160,9 @@ export default function PortfolioForm({
       projects: [...projects, { name: '', description: '', link: '' }],
     });
 
-  const removeProject = (index: number) =>
-    setPortfolioData({
-      ...portfolioData,
-      projects: projects.filter((_, i) => i !== index),
-    });
-
   const updateSkill = (index: number, value: string) => {
-    const next = skills.map((s, i) => (i === index ? value : s));
+    const next = [...skills];
+    next[index] = value;
     setPortfolioData({ ...portfolioData, skills: next });
   };
 
@@ -233,14 +172,9 @@ export default function PortfolioForm({
       skills: [...skills, ''],
     });
 
-  const removeSkill = (index: number) =>
-    setPortfolioData({
-      ...portfolioData,
-      skills: skills.filter((_, i) => i !== index),
-    });
-
   const updateCertification = (index: number, value: string) => {
-    const next = certifications.map((c, i) => (i === index ? value : c));
+    const next = [...certifications];
+    next[index] = value;
     setPortfolioData({ ...portfolioData, certifications: next });
   };
 
@@ -248,12 +182,6 @@ export default function PortfolioForm({
     setPortfolioData({
       ...portfolioData,
       certifications: [...certifications, ''],
-    });
-
-  const removeCertification = (index: number) =>
-    setPortfolioData({
-      ...portfolioData,
-      certifications: certifications.filter((_, i) => i !== index),
     });
 
   const onDragEnd = useCallback(
@@ -295,24 +223,13 @@ export default function PortfolioForm({
     [portfolioData, setPortfolioData, skills, projects, certifications, media]
   );
 
-  // Debounced username update to avoid spamming API
-  const debouncedUsernameRef = useRef(
-    onUsernameUpdate
-      ? debounce((u: string) => {
-          onUsernameUpdate(u).catch(() => void 0);
-        }, 600)
-      : null
-  );
-
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUsername = e.target.value;
     setPortfolioData({ ...portfolioData, username: newUsername });
-    debouncedUsernameRef.current?.(newUsername);
+    if (onUsernameUpdate) void onUsernameUpdate(newUsername);
   };
 
   /* ------------------------------- UI ------------------------------- */
-
-  const hasAnyErrors = Object.keys(errors || {}).length > 0;
 
   return (
     <Card className="w-full">
@@ -321,42 +238,21 @@ export default function PortfolioForm({
       </CardHeader>
 
       <CardContent className="space-y-6">
-
-        {/* Error summary (compact) */}
-        {hasAnyErrors && (
-          <div
-            className="rounded-md border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm"
-            role="alert"
-            aria-live="polite"
-          >
-            Please fix the issues:{' '}
-            {Object.entries(errors).map(([k, v], i) => (
-              <span key={k}>
-                {v}
-                {i < Object.keys(errors).length - 1 ? '; ' : ''}
-              </span>
-            ))}
-          </div>
-        )}
-
         {Object.entries(isOpen).map(([section, open]) => (
           <div key={section} className={`border rounded-lg ${section}-section`}>
             <Button
               variant="ghost"
               className="w-full text-left font-semibold p-3 flex justify-between items-center"
               onClick={() => setIsOpen((prev) => ({ ...prev, [section]: !prev[section] }))}
-              aria-expanded={open}
-              aria-controls={`${section}-content`}
               aria-label={`Toggle ${section} section`}
             >
-              <span className="capitalize">{section}</span>
+              {section.charAt(0).toUpperCase() + section.slice(1)}
               {open ? <ChevronUp /> : <ChevronDown />}
             </Button>
 
             <AnimatePresence>
               {open && (
                 <motion.div
-                  id={`${section}-content`}
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
@@ -365,7 +261,7 @@ export default function PortfolioForm({
                   {section === 'header' && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">
                           Full Name <span className="text-xs text-gray-500">(e.g., John Doe)</span>
                         </label>
                         <Input
@@ -375,11 +271,11 @@ export default function PortfolioForm({
                           className={errors.name ? 'border-red-500' : ''}
                           aria-label="Full Name"
                         />
-                        {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">
                           Role <span className="text-xs text-gray-500">(e.g., Software Engineer)</span>
                         </label>
                         <Input
@@ -391,7 +287,7 @@ export default function PortfolioForm({
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">
                           Tagline <span className="text-xs text-gray-500">(e.g., Building Innovative Solutions)</span>
                         </label>
                         <Input
@@ -403,7 +299,7 @@ export default function PortfolioForm({
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">
                           Location <span className="text-xs text-gray-500">(e.g., London, UK)</span>
                         </label>
                         <Input
@@ -415,7 +311,7 @@ export default function PortfolioForm({
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label className="block text-sm font-medium text-gray-700">
                           Username <span className="text-xs text-gray-500">(e.g., johndoe, optional)</span>
                         </label>
                         <Input
@@ -426,51 +322,53 @@ export default function PortfolioForm({
                         />
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Upload Image</label>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload('photo', e)}
-                            className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                            aria-label="Upload Headshot"
-                          />
-                          {errors.photo && <p className="text-red-500 text-sm mt-1">{errors.photo}</p>}
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Upload CV (PDF)</label>
-                          <Input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => handleFileUpload('cv', e)}
-                            className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                            aria-label="Upload CV"
-                          />
-                          {errors.cv && <p className="text-red-500 text-sm mt-1">{errors.cv}</p>}
-                        </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Upload Image</label>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUpload('photo', e)}
+                          className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          aria-label="Upload Headshot"
+                        />
+                        {errors.photo && <p className="text-red-500 text-sm">{errors.photo}</p>}
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Template</label>
+                        <label className="block text-sm font-medium text-gray-700">Upload CV</label>
+                        <Input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => handleFileUpload('cv', e)}
+                          className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          aria-label="Upload CV"
+                        />
+                        {errors.cv && <p className="text-red-500 text-sm">{errors.cv}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Template</label>
                         <Select
                           value={portfolioData.templateId}
-                          onValueChange={(value: TemplateIdOption) => {
-                            if (value !== portfolioData.templateId) {
-                              setPortfolioData({ ...portfolioData, templateId: value });
+                          onValueChange={(value: string) => {
+                            if (
+                              ['modern', 'classic', 'minimal', 'tech', 'creative', 'corporate'].includes(value) &&
+                              value !== portfolioData.templateId
+                            ) {
+                              setPortfolioData({ ...portfolioData, templateId: value as PortfolioData['templateId'] });
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full py-2 px-4 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-zinc-900 dark:border-zinc-700">
+                          <SelectTrigger className="w-full py-2 px-4 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <SelectValue placeholder="Select Template" />
                           </SelectTrigger>
-                          <SelectContent className="w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 dark:bg-zinc-900 dark:border-zinc-700">
-                            {TEMPLATE_OPTIONS.map((opt) => (
-                              <SelectItem key={opt.id} value={opt.id} className="py-2 px-4 hover:bg-gray-100 dark:hover:bg-zinc-800">
-                                {opt.label}
-                              </SelectItem>
-                            ))}
+                          <SelectContent className="w-full bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                            <SelectItem value="modern" className="py-2 px-4 hover:bg-gray-100">Modern</SelectItem>
+                            <SelectItem value="classic" className="py-2 px-4 hover:bg-gray-100">Classic</SelectItem>
+                            <SelectItem value="minimal" className="py-2 px-4 hover:bg-gray-100">Minimal</SelectItem>
+                            <SelectItem value="tech" className="py-2 px-4 hover:bg-gray-100">Tech</SelectItem>
+                            <SelectItem value="creative" className="py-2 px-4 hover:bg-gray-100">Creative</SelectItem>
+                            <SelectItem value="corporate" className="py-2 px-4 hover:bg-gray-100">Corporate</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -495,7 +393,7 @@ export default function PortfolioForm({
                         className={errors.email ? 'border-red-500' : ''}
                         aria-label="Email"
                       />
-                      {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                      {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
 
                       <Input
                         placeholder="Phone (e.g., +44 123 456 7890)"
@@ -504,7 +402,7 @@ export default function PortfolioForm({
                         className={errors.phone ? 'border-red-500' : ''}
                         aria-label="Phone"
                       />
-                      {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+                      {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
 
                       <Input
                         placeholder="LinkedIn URL (e.g., https://linkedin.com/in/johndoe)"
@@ -513,42 +411,29 @@ export default function PortfolioForm({
                         className={errors.linkedin ? 'border-red-500' : ''}
                         aria-label="LinkedIn URL"
                       />
-                      {errors.linkedin && <p className="text-red-500 text-sm mt-1">{errors.linkedin}</p>}
+                      {errors.linkedin && <p className="text-red-500 text-sm">{errors.linkedin}</p>}
 
-                      <div className="flex items-center justify-between mt-4">
-                        <h4 className="text-sm font-medium">Social Links</h4>
-                        <Button onClick={addSocial} variant="secondary" size="sm" aria-label="Add Social Link">
-                          <Plus className="h-4 w-4 mr-1" /> Add Social
-                        </Button>
-                      </div>
-
-                      {socials.map((social, index: number) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 mt-2 items-center">
-                          <div className="col-span-5">
-                            <Input
-                              placeholder="Label (e.g., Twitter)"
-                              value={social.label}
-                              onChange={(e) => updateSocial(index, 'label', e.target.value)}
-                              aria-label={`Social Label ${index + 1}`}
-                            />
-                          </div>
-                          <div className="col-span-6">
-                            <Input
-                              placeholder="URL (e.g., https://twitter.com/johndoe)"
-                              value={social.url}
-                              onChange={(e) => updateSocial(index, 'url', e.target.value)}
-                              className={errors.socials ? 'border-red-500' : ''}
-                              aria-label={`Social URL ${index + 1}`}
-                            />
-                          </div>
-                          <div className="col-span-1 flex justify-end">
-                            <Button variant="ghost" size="icon" onClick={() => removeSocial(index)} aria-label={`Remove Social ${index + 1}`}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                      {socials.map((social, index) => (
+                        <div key={index} className="grid grid-cols-2 gap-2 mt-2">
+                          <Input
+                            placeholder="Label (e.g., Twitter)"
+                            value={social.label}
+                            onChange={(e) => updateSocial(index, 'label', e.target.value)}
+                            aria-label={`Social Label ${index + 1}`}
+                          />
+                          <Input
+                            placeholder="URL (e.g., https://twitter.com/johndoe)"
+                            value={social.url}
+                            onChange={(e) => updateSocial(index, 'url', e.target.value)}
+                            className={errors.socials ? 'border-red-500' : ''}
+                            aria-label={`Social URL ${index + 1}`}
+                          />
                         </div>
                       ))}
-                      {errors.socials && <p className="text-red-500 text-sm mt-1">{errors.socials}</p>}
+                      {errors.socials && <p className="text-red-500 text-sm">{errors.socials}</p>}
+                      <Button onClick={addSocial} className="mt-2" aria-label="Add Social Link">
+                        Add Social
+                      </Button>
                     </>
                   )}
 
@@ -557,13 +442,13 @@ export default function PortfolioForm({
                       <Droppable droppableId="skills" type="skills">
                         {(provided) => (
                           <div ref={provided.innerRef} {...provided.droppableProps} className="skills-section">
-                            {skills.map((skill, index: number) => (
-                              <Draggable key={`skill-${index}`} draggableId={`skill-${index}`} index={index}>
-                                {(provided) => (
+                            {skills.map((skill, index) => (
+                              <Draggable key={index} draggableId={`skill-${index}`} index={index}>
+                                {(drag) => (
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
+                                    ref={drag.innerRef}
+                                    {...drag.draggableProps}
+                                    {...drag.dragHandleProps}
                                     className="flex items-center gap-2 mt-2"
                                   >
                                     <Input
@@ -573,9 +458,6 @@ export default function PortfolioForm({
                                       className="flex-1"
                                       aria-label={`Skill ${index + 1}`}
                                     />
-                                    <Button variant="ghost" size="icon" onClick={() => removeSkill(index)} aria-label={`Remove Skill ${index + 1}`}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
                                   </div>
                                 )}
                               </Draggable>
@@ -584,8 +466,8 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addSkill} className="mt-3" aria-label="Add Skill">
-                        <Plus className="h-4 w-4 mr-1" /> Add Skill
+                      <Button onClick={addSkill} className="mt-2" aria-label="Add Skill">
+                        Add Skill
                       </Button>
                     </DragDropContext>
                   )}
@@ -595,21 +477,15 @@ export default function PortfolioForm({
                       <Droppable droppableId="projects" type="projects">
                         {(provided) => (
                           <div ref={provided.innerRef} {...provided.droppableProps} className="projects-section">
-                            {projects.map((project, index: number) => (
-                              <Draggable key={`project-${index}`} draggableId={`project-${index}`} index={index}>
-                                {(provided) => (
+                            {projects.map((project, index) => (
+                              <Draggable key={index} draggableId={`project-${index}`} index={index}>
+                                {(drag) => (
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className="space-y-2 mt-2 border p-3 rounded"
+                                    ref={drag.innerRef}
+                                    {...drag.draggableProps}
+                                    {...drag.dragHandleProps}
+                                    className="space-y-2 mt-2 border p-2 rounded"
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200">Project {index + 1}</h4>
-                                      <Button variant="ghost" size="icon" onClick={() => removeProject(index)} aria-label={`Remove Project ${index + 1}`}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
                                     <Input
                                       placeholder="Project Name (e.g., Portfolio Website)"
                                       value={project.name}
@@ -637,8 +513,8 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addProject} className="mt-3" aria-label="Add Project">
-                        <Plus className="h-4 w-4 mr-1" /> Add Project
+                      <Button onClick={addProject} className="mt-2" aria-label="Add Project">
+                        Add Project
                       </Button>
                     </DragDropContext>
                   )}
@@ -648,13 +524,13 @@ export default function PortfolioForm({
                       <Droppable droppableId="certifications" type="certifications">
                         {(provided) => (
                           <div ref={provided.innerRef} {...provided.droppableProps} className="certifications-section">
-                            {certifications.map((cert, index: number) => (
-                              <Draggable key={`cert-${index}`} draggableId={`cert-${index}`} index={index}>
-                                {(provided) => (
+                            {certifications.map((cert, index) => (
+                              <Draggable key={index} draggableId={`cert-${index}`} index={index}>
+                                {(drag) => (
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
+                                    ref={drag.innerRef}
+                                    {...drag.draggableProps}
+                                    {...drag.dragHandleProps}
                                     className="flex items-center gap-2 mt-2"
                                   >
                                     <Input
@@ -664,14 +540,6 @@ export default function PortfolioForm({
                                       className="flex-1"
                                       aria-label={`Certification ${index + 1}`}
                                     />
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => removeCertification(index)}
-                                      aria-label={`Remove Certification ${index + 1}`}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
                                   </div>
                                 )}
                               </Draggable>
@@ -680,8 +548,8 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addCertification} className="mt-3" aria-label="Add Certification">
-                        <Plus className="h-4 w-4 mr-1" /> Add Certification
+                      <Button onClick={addCertification} className="mt-2" aria-label="Add Certification">
+                        Add Certification
                       </Button>
                     </DragDropContext>
                   )}
@@ -691,29 +559,22 @@ export default function PortfolioForm({
                       <Droppable droppableId="media" type="media">
                         {(provided) => (
                           <div ref={provided.innerRef} {...provided.droppableProps} className="media-section">
-                            {media.map((item, index: number) => (
-                              <Draggable key={`media-${index}`} draggableId={`media-${index}`} index={index}>
-                                {(provided) => (
+                            {media.map((item, index) => (
+                              <Draggable key={index} draggableId={`media-${index}`} index={index}>
+                                {(drag) => (
                                   <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    className="space-y-2 mt-2 border p-3 rounded"
+                                    ref={drag.innerRef}
+                                    {...drag.draggableProps}
+                                    {...drag.dragHandleProps}
+                                    className="space-y-2 mt-2 border p-2 rounded"
                                   >
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200">Media {index + 1}</h4>
-                                      <Button variant="ghost" size="icon" onClick={() => removeMedia(index)} aria-label={`Remove Media ${index + 1}`}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-
                                     <Input
                                       placeholder="Title (e.g., Tech Talk Video)"
                                       value={item.title}
                                       onChange={(e) => updateMedia(index, 'title', e.target.value)}
                                       aria-label={`Media Title ${index + 1}`}
                                     />
-                                    {/* native select = simplest, no extra deps */}
+                                    {/* Native select is fine here */}
                                     <select
                                       value={item.type}
                                       onChange={(e) => updateMedia(index, 'type', e.target.value)}
@@ -739,8 +600,8 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addMedia} className="mt-3" aria-label="Add Media">
-                        <Plus className="h-4 w-4 mr-1" /> Add Media
+                      <Button onClick={addMedia} className="mt-2" aria-label="Add Media">
+                        Add Media
                       </Button>
                     </DragDropContext>
                   )}
