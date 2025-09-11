@@ -9,7 +9,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import JoyrideTour from '@/components/portfolio/JoyrideTour';
 import type { PortfolioData, PortfolioProject, PortfolioSocial, Media } from '@/lib/portfolio-types';
 
 /* ----------------- helpers (module scope = stable) ----------------- */
@@ -615,8 +614,7 @@ export default function PortfolioForm({
           </div>
         ))}
       </CardContent>
-
-      <JoyrideTour />
+      
     </Card>
   );
 }
