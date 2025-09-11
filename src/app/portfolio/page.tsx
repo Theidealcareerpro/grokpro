@@ -10,7 +10,7 @@ import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import type { PortfolioData } from '@/lib/portfolio-types';
-import Image from 'next/image'; // Added for image optimization
+import Image from 'next/image';
 
 export default function PortfolioBuilder() {
   const [portfolioData, setPortfolioData] = useState<PortfolioData>({
@@ -33,20 +33,23 @@ export default function PortfolioBuilder() {
     templateId: 'modern',
     username: '',
   });
+
   const { theme, setTheme } = useTheme();
   const [viewSize, setViewSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDonationPrompt, setShowDonationPrompt] = useState(false);
-  const [donationError, setDonationError] = useState<string | null>(null); // Kept as it’s used
+  const [donationError, setDonationError] = useState<string | null>(null);
   const [publishLoading, setPublishLoading] = useState(false);
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadFingerprintAndMetadata();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadFingerprintAndMetadata = async () => {
@@ -54,61 +57,50 @@ export default function PortfolioBuilder() {
       const fp = await FingerprintJS.load();
       const result = await fp.get();
       const visitorId = result.visitorId;
+      setFingerprint(visitorId);
 
+      // READ: allow 0 rows without 406
       const { data, error } = await supabase
         .from('portfolios')
         .select('expiry, donation_status, github_repo')
         .eq('fingerprint', visitorId)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching metadata:', error);
+      if (error) {
+        console.error('Supabase read error:', error);
       }
 
       if (data) {
+        // Expiry prompt
         const expiryDate = new Date(data.expiry);
-        if (new Date() > expiryDate) {
-          setShowDonationPrompt(true);
-        }
+        if (new Date() > expiryDate) setShowDonationPrompt(true);
+
+        // Live URL from owner/repo
         if (data.github_repo) {
-          setLiveUrl(`https://your-org.github.io/${data.github_repo.split('/')[1]}/`);
+          const [owner, repo] = String(data.github_repo).split('/');
+          if (owner && repo) setLiveUrl(`https://${owner}.github.io/${repo}/`);
         }
-      } else {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        const { data: recentData } = await supabase
-          .from('portfolios')
-          .select('created_at')
-          .eq('fingerprint', visitorId)
-          .gte('created_at', threeMonthsAgo.toISOString())
-          .limit(1);
-
-        if (recentData && recentData.length > 0) {
-          alert('You can only create one portfolio every 3 months. Please wait or donate to extend.');
-          setIsLoading(false);
-          return;
-        }
-
-        const newExpiry = new Date();
-        newExpiry.setDate(newExpiry.getDate() + 21);
-        await supabase
-          .from('portfolios')
-          .insert({
-            fingerprint: visitorId,
-            expiry: newExpiry.toISOString(),
-            donation_status: { amount: 0, extendedDays: 0 },
-          });
       }
-    } catch (error) {
-      console.error('Error loading fingerprint:', error);
+
+      // IMPORTANT:
+      // We DO NOT insert a placeholder row here anymore.
+      // Your schema requires github_repo (NOT NULL), so inserting here caused 400.
+      // The row is created during /api/publish instead.
+    } catch (err) {
+      console.error('Error loading fingerprint:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePublish = async () => {
-    if (Object.values(errors).some(e => e)) {
+    if (Object.values(errors).some((e) => e)) {
       alert('Please fix all errors before publishing.');
+      return;
+    }
+    if (!fingerprint) {
+      alert('Unable to determine fingerprint. Please reload the page and try again.');
       return;
     }
 
@@ -119,16 +111,17 @@ export default function PortfolioBuilder() {
       const response = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolioData }),
+        body: JSON.stringify({ portfolioData, fingerprint }), // ✅ send fingerprint
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Publish failed');
+      if (!response.ok) throw new Error(data?.error || 'Publish failed');
 
+      // Server returns the final GitHub Pages URL
       setLiveUrl(data.url);
       alert('Portfolio published successfully! Check the live URL below.');
-    } catch (error) {
-      console.error('Publish error:', error);
+    } catch (err) {
+      console.error('Publish error:', err);
       alert('Failed to publish portfolio. Check console for details.');
     } finally {
       setPublishLoading(false);
@@ -136,14 +129,10 @@ export default function PortfolioBuilder() {
   };
 
   const exportToPDF = () => {
-    if (previewRef.current && !Object.values(errors).some(e => e)) {
+    if (previewRef.current && !Object.values(errors).some((e) => e)) {
       html2canvas(previewRef.current, { scale: 2 }).then((canvas: HTMLCanvasElement) => {
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = 210;
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -156,7 +145,7 @@ export default function PortfolioBuilder() {
   };
 
   const exportToHTML = () => {
-    if (!Object.values(errors).some(e => e)) {
+    if (!Object.values(errors).some((e) => e)) {
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="en">
@@ -233,6 +222,9 @@ export default function PortfolioBuilder() {
 
   if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
 
+  // runtime-safe width for preview (no dynamic Tailwind class)
+  const previewMaxWidth = viewSize === 'mobile' ? 375 : viewSize === 'tablet' ? 768 : 1280;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white p-4">
       <header className="flex justify-between items-center mb-6">
@@ -241,40 +233,30 @@ export default function PortfolioBuilder() {
           Toggle Theme
         </Button>
       </header>
+
       <main className="max-w-[90vw] mx-auto flex flex-col lg:flex-row gap-8 px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
           className="bg-white dark:bg-zinc-800 p-8 rounded-lg shadow-md order-1 min-h-[400px]"
-          style={{
-            width: '45vw',
-            minWidth: '300px',
-            maxWidth: '800px',
-            transition: 'width 0.3s ease-in-out',
-          }}
+          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
-          <PortfolioForm 
-            portfolioData={portfolioData} 
-            setPortfolioData={setPortfolioData} 
-            errors={errors} 
+          <PortfolioForm
+            portfolioData={portfolioData}
+            setPortfolioData={setPortfolioData}
+            errors={errors}
             setErrors={setErrors}
           />
           <div className="mt-4 flex gap-2">
-            <Button
-              className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
-              onClick={resetForm}
-            >
+            <Button className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2" onClick={resetForm}>
               Reset
             </Button>
-            <Button
-              className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
-              onClick={handlePublish}
-              disabled={publishLoading}
-            >
+            <Button className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2" onClick={handlePublish} disabled={publishLoading}>
               {publishLoading ? 'Publishing...' : 'Publish'}
             </Button>
           </div>
+
           {showDonationPrompt && (
             <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-800 rounded-lg">
               <h3 className="text-lg font-semibold text-black dark:text-white">Portfolio Expired</h3>
@@ -284,35 +266,36 @@ export default function PortfolioBuilder() {
                   <Image
                     src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=theidealprogen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FF0000"
                     alt="Buy Me a Coffee"
-                    width={200} // Adjust based on actual image size
-                    height={50} // Adjust based on actual image size
+                    width={200}
+                    height={50}
                   />
                 </a>
               </div>
-              <p className="mt-2 text-sm text-black dark:text-white">Each $5 donation extends your portfolio by 30 days (max 6 months). Extension applies automatically after confirmation.</p>
+              <p className="mt-2 text-sm text-black dark:text-white">
+                Each $5 donation extends your portfolio by 30 days (max 6 months). Extension applies automatically after confirmation.
+              </p>
               {donationError && <p className="mt-2 text-red-500 dark:text-red-400">{donationError}</p>}
             </div>
           )}
+
           {liveUrl && (
             <div className="mt-4 p-4 bg-green-100 dark:bg-green-800 rounded-lg">
               <h3 className="text-lg font-semibold text-black dark:text-white">Live Portfolio</h3>
-              <p className="text-black dark:text-white">Your portfolio is live at: <a href={liveUrl} target="_blank" rel="noopener noreferrer">{liveUrl}</a></p>
+              <p className="text-black dark:text-white">
+                Your portfolio is live at: <a href={liveUrl} target="_blank" rel="noopener noreferrer">{liveUrl}</a>
+              </p>
             </div>
           )}
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className={`bg-gray-900 rounded-2xl shadow-xl order-2 min-h-[400px] ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-50 overflow-y-auto' : ''}`}
-          style={{
-            width: '45vw',
-            minWidth: '300px',
-            maxWidth: '800px',
-            transition: 'width 0.3s ease-in-out',
-          }}
+          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
-          <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
+          <div className="flex justify-between items-center px-4 py-1 bg-gray-8 00 rounded-t-xl">
             <div className="flex gap-1">
               <span className="w-3 h-3 bg-red-500 rounded-full" />
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
@@ -335,6 +318,7 @@ export default function PortfolioBuilder() {
               )}
             </div>
           </div>
+
           <div className="p-8 bg-white dark:bg-zinc-800 rounded-b-xl h-[calc(100%-2rem)] overflow-y-auto text-black dark:text-white">
             <div className="preview-section">
               <div className="flex justify-end space-x-2 mb-4">
@@ -342,11 +326,12 @@ export default function PortfolioBuilder() {
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')}>Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>Desktop</Button>
               </div>
-              <div ref={previewRef} className={`max-w-[${viewSize === 'mobile' ? '375' : viewSize === 'tablet' ? '768' : '1280'}px] mx-auto`}>
+
+              <div ref={previewRef} style={{ maxWidth: previewMaxWidth, marginLeft: 'auto', marginRight: 'auto' }}>
                 <PortfolioPreview data={portfolioData} />
                 <div className="mt-4 flex gap-2 justify-center">
-                  <Button onClick={exportToPDF} disabled={Object.values(errors).some(e => e)}>Export to PDF</Button>
-                  <Button onClick={exportToHTML} disabled={Object.values(errors).some(e => e)}>Export to HTML</Button>
+                  <Button onClick={exportToPDF} disabled={Object.values(errors).some((e) => e)}>Export to PDF</Button>
+                  <Button onClick={exportToHTML} disabled={Object.values(errors).some((e) => e)}>Export to HTML</Button>
                 </div>
               </div>
             </div>

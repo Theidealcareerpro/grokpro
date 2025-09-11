@@ -2,19 +2,20 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Document, Page, Text, StyleSheet } from '@react-pdf/renderer';
-import dynamic from 'next/dynamic'; // Added for client-only loading
+import dynamic from 'next/dynamic';
 import CLForm from '@/components/CLForm';
 import CLPreview from '@/components/CLPreview';
 import Section from '@/components/Section';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import Skeleton from '@/components/Skeleton';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
 import { CLData, STORAGE_KEY_CL, EMPTY_CL, sanitizeCLData } from '@/lib/types';
 
 const PDFDownloadLink = dynamic(
   () => import('@react-pdf/renderer').then((mod) => ({ default: mod.PDFDownloadLink })),
   { ssr: false }
-); // Dynamic import with ssr: false to load only on client
+);
 
 const SAMPLE_CL: CLData = {
   name: 'Jane Doe',
@@ -29,12 +30,15 @@ const SAMPLE_CL: CLData = {
   companyAddress: '123 Tech St',
   cityStateZip: 'London, UK, W1A 1AA',
   jobTitle: 'Senior Software Engineer',
-  intro: 'I am writing to express my strong interest in the Senior Software Engineer position at TechCorp Innovations. With a career focused on software engineering, I have consistently delivered solutions that combine innovation with measurable business results. I see this opportunity as the ideal next step to leverage my expertise in full-stack development while contributing to TechCorp Innovations’s mission of innovative tech solutions.',
+  intro:
+    'I am writing to express my strong interest in the Senior Software Engineer position at TechCorp Innovations. With a career focused on software engineering, I have consistently delivered solutions that combine innovation with measurable business results. I see this opportunity as the ideal next step to leverage my expertise in full-stack development while contributing to TechCorp Innovations’s mission of innovative tech solutions.',
   bodyParagraphs: [
-    'In my previous role at SkyNet Technologies, I: Developed and deployed scalable web applications, improving performance by 28%. Implemented CI/CD pipelines, which cut delivery time by 40% and boosted efficiency across teams. Designed feature systems that enhanced user experience for thousands of users. Introduced testing and optimization, resulting in increased reliability.'
+    'In my previous role at SkyNet Technologies, I: Developed and deployed scalable web applications, improving performance by 28%. Implemented CI/CD pipelines, which cut delivery time by 40% and boosted efficiency across teams. Designed feature systems that enhanced user experience for thousands of users. Introduced testing and optimization, resulting in increased reliability.',
   ],
-  excitement: 'What excites me most about joining TechCorp Innovations is its commitment to innovation and customer value. I was particularly impressed by recent project, which demonstrates your dedication to industry goals. I am eager to contribute my expertise in relevant skill to help expand on such initiatives and support the company’s continued growth and leadership in the field.',
-  thankYou: 'Thank you for considering my application. I would welcome the opportunity to discuss how my background in core skills, combined with my proven track record of key achievements, can contribute to the success of the Senior Software Engineer role at TechCorp Innovations.',
+  excitement:
+    'What excites me most about joining TechCorp Innovations is its commitment to innovation and customer value. I was particularly impressed by recent project, which demonstrates your dedication to industry goals. I am eager to contribute my expertise in relevant skill to help expand on such initiatives and support the company’s continued growth and leadership in the field.',
+  thankYou:
+    'Thank you for considering my application. I would welcome the opportunity to discuss how my background in core skills, combined with my proven track record of key achievements, can contribute to the success of the Senior Software Engineer role at TechCorp Innovations.',
   closing: 'Sincerely,\n\nJane Doe\njane.doe@example.com',
 };
 
@@ -48,7 +52,10 @@ const CLPDFDocument = ({ clData }: { clData: CLData }) => (
     <Page size="A4" style={styles.page}>
       <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.name}</Text>
       <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.address}</Text>
-      <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.email} | {clData.phone || ''} | {clData.linkedin ? `LinkedIn: ${clData.linkedin}` : ''} | {clData.portfolio ? `Portfolio/Website: ${clData.portfolio}` : ''}</Text>
+      <Text style={{ fontSize: 12, marginBottom: 10 }}>
+        {clData.email} | {clData.phone || ''} | {clData.linkedin ? `LinkedIn: ${clData.linkedin}` : ''} |{' '}
+        {clData.portfolio ? `Portfolio/Website: ${clData.portfolio}` : ''}
+      </Text>
       <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.date}</Text>
       <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.hiringManagerName}</Text>
       <Text style={{ fontSize: 12, marginBottom: 10 }}>{clData.companyName}</Text>
@@ -58,7 +65,9 @@ const CLPDFDocument = ({ clData }: { clData: CLData }) => (
       <Text style={{ fontSize: 12, marginBottom: 10 }}>Dear {clData.hiringManagerName},</Text>
       <Text style={styles.text}>{clData.intro}</Text>
       {clData.bodyParagraphs.map((paragraph, i) => (
-        <Text key={i} style={styles.text}>{paragraph}</Text>
+        <Text key={i} style={styles.text}>
+          {paragraph}
+        </Text>
       ))}
       <Text style={styles.text}>{clData.excitement}</Text>
       <Text style={styles.text}>{clData.thankYou}</Text>
@@ -81,7 +90,9 @@ export default function CLPage() {
         console.error('Invalid saved CL data');
       }
     }
-    setTimeout(() => setLoading(false), 600); // Simulate load for skeleton
+    // small delay for skeleton UX
+    const t = setTimeout(() => setLoading(false), 600);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -94,26 +105,29 @@ export default function CLPage() {
     <div className="min-h-screen flex flex-col p-4 bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
       <header className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-teal-700">Cover Letter Builder</h1>
-        <PDFDownloadLink document={<CLPDFDocument clData={SAMPLE_CL} />} fileName="sample-cover-letter.pdf" className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm">
+
+        {/* Header sample download — not nested inside a button */}
+        <PDFDownloadLink
+          document={<CLPDFDocument clData={SAMPLE_CL} />}
+          fileName="sample-cover-letter.pdf"
+          className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm"
+        >
           {({ loading }) => (loading ? 'Generating Sample Cover Letter...' : 'Download Sample Cover Letter')}
         </PDFDownloadLink>
       </header>
+
       <main className="mx-auto max-w-[90vw] px-6 flex flex-col lg:flex-row gap-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="bg-white dark:bg-zinc-800 p-8 rounded-lg shadow-md h-fit"
-          style={{
-            width: '45vw',
-            minWidth: '300px',
-            maxWidth: '800px',
-            transition: 'width 0.3s ease-in-out',
-          }}
+          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
           <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
             Build your professional cover letter. It updates live on the right.
           </div>
+
           {loading ? (
             <div className="space-y-4">
               <Skeleton className="h-10 w-full" />
@@ -123,25 +137,49 @@ export default function CLPage() {
           ) : (
             <CLForm clData={clData} setCLData={setCLData} />
           )}
+
           <div className="mt-4 flex items-center gap-2">
-            <button
-              className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
-              disabled={currentStep < 2}
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              {currentStep < 2 ? 'Complete Form to Download' : (
-                <PDFDownloadLink document={<CLPDFDocument clData={clData} />} fileName={`${clData.hiringManagerName}_CoverLetter.pdf`}>
-                  {({ loading }) => (loading ? 'Generating PDF...' : 'Download Cover Letter')}
+            {/* When incomplete, show a disabled button. When complete, render the link as the button. */}
+            {currentStep < 2 ? (
+              <Button
+                type="button"
+                disabled
+                className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
+              >
+                <ArrowDownTrayIcon className="h-5 w-5" />
+                Complete Form to Download
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                className="px-0 py-0 h-9 overflow-hidden"
+                variant="default"
+                asChild
+                aria-label="Download Cover Letter PDF"
+              >
+                <PDFDownloadLink
+                  document={<CLPDFDocument clData={clData} />}
+                  fileName={`${clData.hiringManagerName}_CoverLetter.pdf`}
+                  className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
+                >
+                  {({ loading }) => (
+                    <>
+                      <ArrowDownTrayIcon className="h-5 w-5" />
+                      {loading ? 'Generating PDF...' : 'Download Cover Letter'}
+                    </>
+                  )}
                 </PDFDownloadLink>
-              )}
-            </button>
-            <button
+              </Button>
+            )}
+
+            <Button
+              type="button"
               className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
               onClick={() => setCLData(EMPTY_CL)}
             >
               <ArrowPathIcon className="h-5 w-5" />
               Reset
-            </button>
+            </Button>
           </div>
         </motion.div>
 
@@ -149,13 +187,10 @@ export default function CLPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-50 overflow-y-auto' : ''}`}
-          style={{
-            width: '45vw',
-            minWidth: '300px',
-            maxWidth: '800px',
-            transition: 'width 0.3s ease-in-out',
-          }}
+          className={`bg-gray-900 rounded-2xl shadow-xl h-fit ${
+            isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-40 overflow-y-auto' : ''
+          }`}
+          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
           <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
@@ -163,13 +198,26 @@ export default function CLPage() {
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
               <span className="w-3 h-3 bg-green-500 rounded-full" />
             </div>
-            <button
-              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-              className="bg-teal-600 text-white py-1 px-3 rounded hover:bg-teal-700 text-sm"
-            >
-              {isPreviewExpanded ? 'Collapse' : 'Expand'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPreviewExpanded((v) => !v)}
+                className="bg-teal-600 text-white py-1 px-3 rounded hover:bg-teal-700 text-sm"
+              >
+                {isPreviewExpanded ? 'Collapse' : 'Expand'}
+              </button>
+              {isPreviewExpanded && (
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewExpanded(false)}
+                  className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
+                >
+                  Close
+                </button>
+              )}
+            </div>
           </div>
+
           <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-1 h-[calc(100%-2rem)] overflow-y-auto">
             {loading ? (
               <div className="space-y-4">
@@ -184,6 +232,7 @@ export default function CLPage() {
           </div>
         </motion.div>
       </main>
+
       <footer className="mt-20 max-w-6xl mx-auto px-6 text-center">
         <Section title="Stats">
           <div className="grid sm:grid-cols-3 gap-8">

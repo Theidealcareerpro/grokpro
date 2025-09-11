@@ -1,5 +1,0 @@
-[33mc1be71b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix infinite render loop in Select and PortfolioForm with native select and memoization
-[33m10eeac4[m Update pnpm-lock.yaml to include resend dependency
-[33m0b26060[m Merge branch 'main' of https://github.com/Theidealcareerpro/grokpro
-[33ma0f0f91[m Enhance cleanup.js with environment validation and function rename
-[33mb4f51a8[m Create .env.local
