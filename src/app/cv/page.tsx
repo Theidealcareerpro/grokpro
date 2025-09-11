@@ -1,7 +1,8 @@
 'use client';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import dynamic from 'next/dynamic'; // Added for client-only loading
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
 import Section from '@/components/Section';
@@ -9,6 +10,11 @@ import AnimatedCounter from '@/components/AnimatedCounter';
 import Skeleton from '@/components/Skeleton';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
+
+const PDFDownloadLink = dynamic(
+  () => import('@react-pdf/renderer').then((mod) => ({ default: mod.PDFDownloadLink })),
+  { ssr: false }
+); // Dynamic import with ssr: false
 
 const SAMPLE_CV: CVData = {
   name: 'Jane Doe',
