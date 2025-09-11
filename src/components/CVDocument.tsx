@@ -3,17 +3,19 @@ import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/rendere
 import { MapPinIcon } from '@heroicons/react/24/outline';
 
 // Register fonts
+// Note: Replace these src URLs with actual font file URLs (e.g., .ttf or .otf) or local file paths from your project
+// Example local paths: require('./fonts/Helvetica.ttf') or use public assets
 Font.register({
   family: 'Helvetica',
-  src: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js', // Placeholder, replace with actual font file URL if needed
+  src: 'path/to/Helvetica.ttf', // Replace with actual font file URL or local path
 });
 Font.register({
   family: 'Roboto',
-  src: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js', // Placeholder, replace with actual font file URL if needed
+  src: 'path/to/Roboto-Regular.ttf', // Replace with actual font file URL or local path
 });
 Font.register({
   family: 'Times',
-  src: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js', // Placeholder, replace with actual font file URL if needed
+  src: 'path/to/Times-Roman.ttf', // Replace with actual font file URL or local path
 });
 
 interface CVData {

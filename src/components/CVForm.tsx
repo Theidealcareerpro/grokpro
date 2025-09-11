@@ -33,8 +33,8 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
     name: '',
     email: '',
     phone: '',
-    education: Array(localData.education.length).fill(''), // Initialize with empty strings per entry
-    experience: Array(localData.experience.length).fill(''), // Initialize with empty strings per entry
+    education: Array(cvData.education.length).fill(''), // Sync with initial cvData
+    experience: Array(cvData.experience.length).fill(''), // Sync with initial cvData
   });
 
   useEffect(() => {
@@ -99,7 +99,19 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
   };
 
   const handleChange = (field: keyof CVData, value: string) => {
-    setLocalData(prev => ({ ...prev, [field]: value }));
+    setLocalData(prev => {
+      const updated = { ...prev, [field]: value };
+      // Type guard for Theme and FontChoice using literal checks
+      if (field === 'theme' && !['blue', 'emerald', 'rose'].includes(value as Theme)) {
+        console.warn(`Invalid theme: ${value}, defaulting to 'blue'`);
+        updated.theme = 'blue';
+      }
+      if (field === 'font' && !['Helvetica', 'Roboto', 'Times'].includes(value as FontChoice)) {
+        console.warn(`Invalid font: ${value}, defaulting to 'Helvetica'`);
+        updated.font = 'Helvetica';
+      }
+      return updated;
+    });
   };
 
   const handleEducationChange = (i: number, field: keyof EducationEntry, value: string) => {
@@ -185,6 +197,18 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
 
   const toggleSection = (section: keyof typeof collapsedSections) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleResetCV = () => {
+    localStorage.removeItem('cvData');
+    setLocalData(EMPTY_CV); // Sync with EMPTY_CV
+    setErrors({
+      name: '',
+      email: '',
+      phone: '',
+      education: Array(EMPTY_CV.education.length).fill(''),
+      experience: Array(EMPTY_CV.experience.length).fill(''),
+    });
   };
 
   return (
@@ -398,8 +422,9 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
             <option value="blue">Blue</option>
             <option value="emerald">Emerald</option>
             <option value="rose">Rose</option>
-            <option value="black">Black</option>
-            <option value="teal">Teal</option>
+            {/* Remove unsupported themes unless added to Theme type */}
+            {/* <option value="black">Black</option>
+            <option value="teal">Teal</option> */}
           </select>
           <select
             value={localData.font}
@@ -416,10 +441,7 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
       <Button
         type="button"
         className="w-full mt-4 bg-gray-600 hover:bg-gray-700"
-        onClick={() => {
-          localStorage.removeItem('cvData');
-          setLocalData(EMPTY_CV);
-        }}
+        onClick={handleResetCV}
       >
         Reset CV
       </Button>

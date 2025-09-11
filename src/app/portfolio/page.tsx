@@ -10,6 +10,7 @@ import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import type { PortfolioData } from '@/lib/portfolio-types';
+import Image from 'next/image'; // Added for image optimization
 
 export default function PortfolioBuilder() {
   const [portfolioData, setPortfolioData] = useState<PortfolioData>({
@@ -36,11 +37,9 @@ export default function PortfolioBuilder() {
   const [viewSize, setViewSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-  const [fingerprint, setFingerprint] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [expiry, setExpiry] = useState<Date | null>(null);
   const [showDonationPrompt, setShowDonationPrompt] = useState(false);
-  const [donationError, setDonationError] = useState<string | null>(null);
+  const [donationError, setDonationError] = useState<string | null>(null); // Kept as it’s used
   const [publishLoading, setPublishLoading] = useState(false);
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
 
@@ -55,7 +54,6 @@ export default function PortfolioBuilder() {
       const fp = await FingerprintJS.load();
       const result = await fp.get();
       const visitorId = result.visitorId;
-      setFingerprint(visitorId);
 
       const { data, error } = await supabase
         .from('portfolios')
@@ -68,12 +66,12 @@ export default function PortfolioBuilder() {
       }
 
       if (data) {
-        setExpiry(new Date(data.expiry));
+        const expiryDate = new Date(data.expiry);
+        if (new Date() > expiryDate) {
+          setShowDonationPrompt(true);
+        }
         if (data.github_repo) {
           setLiveUrl(`https://your-org.github.io/${data.github_repo.split('/')[1]}/`);
-        }
-        if (new Date() > new Date(data.expiry)) {
-          setShowDonationPrompt(true);
         }
       } else {
         const threeMonthsAgo = new Date();
@@ -100,7 +98,6 @@ export default function PortfolioBuilder() {
             expiry: newExpiry.toISOString(),
             donation_status: { amount: 0, extendedDays: 0 },
           });
-        setExpiry(newExpiry);
       }
     } catch (error) {
       console.error('Error loading fingerprint:', error);
@@ -284,7 +281,12 @@ export default function PortfolioBuilder() {
               <p className="text-black dark:text-white">Support us to extend your portfolio!</p>
               <div className="mt-2">
                 <a href="https://www.buymeacoffee.com/theidealprogen" target="_blank" rel="noopener noreferrer">
-                  <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=theidealprogen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FF0000" alt="Buy Me a Coffee" />
+                  <Image
+                    src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=theidealprogen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FF0000"
+                    alt="Buy Me a Coffee"
+                    width={200} // Adjust based on actual image size
+                    height={50} // Adjust based on actual image size
+                  />
                 </a>
               </div>
               <p className="mt-2 text-sm text-black dark:text-white">Each $5 donation extends your portfolio by 30 days (max 6 months). Extension applies automatically after confirmation.</p>
