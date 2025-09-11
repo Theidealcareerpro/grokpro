@@ -2,13 +2,16 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { Octokit } from '@octokit/rest';
 import simpleGit from 'simple-git';
 import * as fs from 'fs/promises';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
+    console.log('API /publish: Method not allowed:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  console.log('API /publish: Received request with body:', req.body);
 
   const { portfolioData } = req.body as { portfolioData: {
     fullName?: string;
@@ -25,22 +28,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cvFileDataUrl?: string;
     cvFileName?: string;
   } };
+
   if (!portfolioData) {
+    console.log('API /publish: Missing portfolioData');
     return res.status(400).json({ error: 'Portfolio data is required' });
   }
 
   const githubPat = process.env.GITHUB_PAT;
   if (!githubPat) {
+    console.log('API /publish: Missing GitHub PAT');
     return res.status(500).json({ error: 'Missing GitHub PAT' });
   }
 
   const octokit = new Octokit({ auth: githubPat });
   const orgName = 'your-org'; // Replace with your GitHub organization name
-  const uniqueId = Date.now().toString(); // Use timestamp as unique ID
+  const uniqueId = Date.now().toString();
   const repoName = `portfolio-${uniqueId}`;
 
   try {
-    // Create repo in organization
+    console.log('API /publish: Creating repo:', repoName);
     await octokit.repos.createInOrg({
       org: orgName,
       name: repoName,
@@ -48,7 +54,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       homepage: `https://${orgName}.github.io/${repoName}/`,
     });
 
-    // Generate HTML content with null checks
     const htmlContent = `
       <!DOCTYPE html>
       <html lang="en">
@@ -87,6 +92,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       </html>
     `;
 
+    console.log('API /publish: Generating HTML content');
+
     // Set up Git repo
     const tempDir = `/tmp/${repoName}`;
     await fs.mkdir(tempDir, { recursive: true });
@@ -106,6 +113,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await git.addRemote('origin', `https://x-access-token:${githubPat}@github.com/${orgName}/${repoName}.git`);
     await git.push('origin', 'main');
 
+    console.log('API /publish: Pushed to GitHub');
+
     // Enable GitHub Pages
     await octokit.repos.update({
       owner: orgName,
@@ -118,15 +127,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
+    console.log('API /publish: GitHub Pages enabled');
+
     // Store fingerprint and repo info in Supabase
     const fp = await FingerprintJS.load();
     const result = await fp.get();
-    await supabase.from('portfolios').insert({
+    const { error } = await supabase.from('portfolios').insert({
       fingerprint: result.visitorId,
       expiry: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(), // 21-day expiry
       donation_status: { amount: 0, extendedDays: 0 },
       github_repo: `${orgName}/${repoName}`,
     });
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return res.status(500).json({ error: 'Failed to save to database', details: error.message });
+    }
+
+    console.log('API /publish: Inserted to Supabase');
 
     return res.status(200).json({ message: 'Portfolio published successfully', url: `https://${orgName}.github.io/${repoName}/` });
   } catch (error) {
