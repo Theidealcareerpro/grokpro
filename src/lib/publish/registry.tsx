@@ -1,22 +1,19 @@
-import 'server-only';
-import type { FC } from 'react';
+import * as React from 'react';
 import type { PortfolioData } from '@/lib/portfolio-types';
+import Modern  from '@/lib/publish/templates/Modern';
+import Creative from '@/lib/publish/templates/Creative';
+import Tech from '@/lib/publish/templates/Tech';
+import Corporate from '@/lib/publish/templates/Corporate';
+import Minimal from '@/lib/publish/templates/Minimal';
+import Classic from '@/lib/publish/templates/Classic'; // ⟵ add this
 
-// ====== SERVER-SAFE templates (NO "use client", NO hooks, NO next/image) ======
-import ModernPro from './templates/ModernPro';
-import ClassicProLeft from './templates/ClassicProLeft';
-import CreativePro from './templates/CreativePro';
-import MinimalPro from './templates/MinimalPro';
-import CorporatePro from './templates/CorporatePro';
-import TechPro from './templates/TechPro';
+type TemplateId = PortfolioData['templateId'];
 
-export type ServerTemplate = FC<{ data: PortfolioData }>;
-
-export const PUBLISH_REGISTRY: Record<PortfolioData['templateId'], ServerTemplate> = {
-  modern: ModernPro,
-  classic: ClassicProLeft,
-  minimal: MinimalPro,
-  tech:    TechPro,
-  creative: CreativePro,
-  corporate: CorporatePro,
+export const PUBLISH_REGISTRY: Record<TemplateId, React.FC<{ data: PortfolioData }>> = {
+  modern: Modern,
+  creative: Creative,
+  tech: Tech,
+  corporate: Corporate,
+  classic: Classic,  // ⟵ now real classic
+  minimal: Minimal,   // (optional) keep fallback until you add a minimal clone
 };
