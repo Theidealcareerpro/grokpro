@@ -1,8 +1,7 @@
 // src/lib/publish/renderPortfolioHtml.ts
 import 'server-only';
 import * as React from 'react';
-// ⬇️ IMPORTANT: remove the static import that breaks Next 15
-// import { renderToStaticMarkup } from 'react-dom/server';
+// NOTE: no static import of react-dom/server here
 import type { PortfolioData } from '@/lib/portfolio-types';
 import { PUBLISH_REGISTRY } from './registry';
 
@@ -10,6 +9,9 @@ type TemplateKey = keyof typeof PUBLISH_REGISTRY;
 function toTemplateKey(val: unknown): TemplateKey {
   return (typeof val === 'string' && val in PUBLISH_REGISTRY) ? (val as TemplateKey) : 'modern';
 }
+
+// Narrower helper to avoid `any`
+type MaybeTemplateId = { templateId?: unknown };
 
 const TAILWIND_HEAD = `
 <script>
@@ -33,10 +35,10 @@ const TAILWIND_HEAD = `
 `.trim();
 
 export async function renderPortfolioHtml(data: PortfolioData): Promise<string> {
-  // ⬇️ Dynamic import satisfies Next 15 App Router constraint
+  // Dynamic import to satisfy Next 15 App Router constraint
   const { renderToStaticMarkup } = await import('react-dom/server');
 
-  const key = toTemplateKey((data as any)?.templateId);
+  const key = toTemplateKey((data as MaybeTemplateId)?.templateId);
   const Template = PUBLISH_REGISTRY[key];
   const app = renderToStaticMarkup(React.createElement(Template, { data }));
 
