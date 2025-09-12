@@ -4,7 +4,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { PortfolioData } from '@/lib/portfolio-types';
 import { PUBLISH_REGISTRY } from './registry';
 
-// Tailwind runtime config to mirror your tailwind.config.ts
+// 👇 add these 6 lines
+type TemplateKey = keyof typeof PUBLISH_REGISTRY;
+function toTemplateKey(val: unknown): TemplateKey {
+  return (typeof val === 'string' && val in PUBLISH_REGISTRY)
+    ? (val as TemplateKey)
+    : 'modern';
+}
+
 const TAILWIND_HEAD = `
 <script>
   window.tailwind = window.tailwind || {};
@@ -23,25 +30,23 @@ const TAILWIND_HEAD = `
     }
   }
 </script>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com/3.4.10"></script>
 `.trim();
 
 export function renderPortfolioHtml(data: PortfolioData): string {
-  const Template = PUBLISH_REGISTRY[data.templateId] ?? PUBLISH_REGISTRY.modern;
+  // 👇 use the typed key here (fixes TS7053)
+  const key = toTemplateKey((data as any)?.templateId);
+  const Template = PUBLISH_REGISTRY[key];
 
-  // Render the chosen publish template to static markup
   const app = renderToStaticMarkup(React.createElement(Template, { data }));
 
-  // Simple SEO fallbacks
   const title = `${data.fullName || 'Portfolio'}${data.role ? ' | ' + data.role : ''}`;
-  const desc =
-    data.tagline ||
-    'Personal portfolio';
+  const desc = (data.tagline || 'Personal portfolio').slice(0, 300).replace(/\s+/g, ' ').trim();
+  const lang = (data as any)?.lang || 'en';
 
-  // Wrap in a full HTML document and inject Tailwind runtime config so GitHub Pages matches preview
   return [
     '<!DOCTYPE html>',
-    `<html lang="en">`,
+    `<html lang="${escapeHtml(lang)}">`,
     '<head>',
     `<meta charset="utf-8" />`,
     `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
@@ -49,7 +54,6 @@ export function renderPortfolioHtml(data: PortfolioData): string {
     `<meta name="description" content="${escapeHtml(desc)}" />`,
     TAILWIND_HEAD,
     '</head>',
-    // You can toggle dark mode here if you add a setting later: <html class="dark"> …
     `<body class="min-h-screen">`,
     app,
     '</body>',
@@ -62,5 +66,6 @@ function escapeHtml(s: string) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
