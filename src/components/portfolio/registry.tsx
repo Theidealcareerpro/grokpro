@@ -13,7 +13,7 @@ import TechPro from '../portfolio/templates/TechPro';
 
 export type TemplateComponent = FC<{ data: PortfolioData }>;
 
-export const PREVIEW_REGISTRY: Record<PortfolioData['templateId'], TemplateComponent> = {
+export const CLIENT_REGISTRY: Record<PortfolioData['templateId'], TemplateComponent> = {
   modern: ModernPro,
   classic: ClassicProLeft,
   minimal: MinimalPro,
@@ -21,3 +21,11 @@ export const PREVIEW_REGISTRY: Record<PortfolioData['templateId'], TemplateCompo
   creative: CreativePro,
   corporate: CorporatePro,
 };
+
+
+// Small helper so callers can safely resolve with a fallback
+export function getClientTemplate(id?: PortfolioData['templateId']): TemplateComponent {
+  return CLIENT_REGISTRY[id ?? 'modern'] ?? ModernPro;
+}
+
+export default CLIENT_REGISTRY;
