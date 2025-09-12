@@ -1,3 +1,4 @@
+// src/lib/preview/templates/Classic.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -21,7 +22,7 @@ const SECTION_IDS = ['home', 'about', 'skills', 'projects', 'certifications', 'm
 type SectionId = (typeof SECTION_IDS)[number];
 
 export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
-  // ===== Data guards =====
+  // Data guards
   const fullName = data?.fullName || 'Your Name';
   const role = data?.role || 'Professional';
   const tagline = data?.tagline || 'Executive profile & selected work.';
@@ -54,7 +55,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     [data]
   );
 
-  // ===== UI state =====
+  // UI state
   const [scrollPct, setScrollPct] = useState(0);
   const [active, setActive] = useState<SectionId>('home');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,21 +73,18 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Reveal + active spy
+  // Reveal
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // reveals
     if (!prefersReduced) {
       const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
       const obs = new IntersectionObserver(
         (entries) => {
           entries.forEach((e) => {
             if (e.isIntersecting) {
-              const el = e.target as HTMLElement;
-              el.classList.add('in');
+              (e.target as HTMLElement).classList.add('in');
               obs.unobserve(e.target);
             }
           });
@@ -98,6 +96,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     }
   }, []);
 
+  // Scroll spy
   useEffect(() => {
     const spy = new IntersectionObserver(
       (entries) => {
@@ -125,7 +124,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       document.documentElement.style.setProperty('--mx', `${x}px`);
       document.documentElement.style.setProperty('--my', `${y}px`);
       if (prefersReduced) return;
-
       document.querySelectorAll<HTMLElement>('[data-magnet]').forEach((m) => {
         const r = m.getBoundingClientRect();
         const cx = r.left + r.width / 2;
@@ -195,9 +193,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               }}
               className="flex items-baseline gap-3"
             >
-              <span className="text-lg font-semibold tracking-wide text-[var(--ink)]">
-                {fullName}
-              </span>
+              <span className="text-lg font-semibold tracking-wide text-[var(--ink)]">{fullName}</span>
               <span className="hidden md:inline text-xs text-[var(--muted)]">{role}</span>
             </a>
 
@@ -230,6 +226,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
+
           {/* Drawer */}
           {menuOpen && (
             <div className="md:hidden border-t border-white/10 py-2">
@@ -246,10 +243,11 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         </div>
       </nav>
 
-      {/* HERO / HOME */}
+      {/* HERO */}
       <header id="home" className="relative overflow-hidden z-10">
         <div className="relative pt-16 pb-12 md:pt-20 md:pb-16">
           <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-[auto,1fr] gap-8 items-center">
+            {/* Photo frame (bigger) */}
             <figure
               className="group relative w-fit mx-auto md:mx-0 [transform-style:preserve-3d] will-change-transform"
               data-reveal="up"
@@ -265,10 +263,10 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               }}
             >
               <span aria-hidden className="absolute -inset-6 -z-10 rounded-3xl blur-3xl opacity-60 noir-glow" />
-              <div className="relative h-40 w-40 md:h-56 md:w-56 rounded-3xl p-[2px] noir-frame shadow-2xl">
+              <div className="relative h-56 w-56 md:h-64 md:w-64 rounded-3xl p-[2px] noir-frame shadow-2xl">
                 <div className="relative h-full w-full overflow-hidden rounded-[22px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
                   {photo ? (
-                    <Image src={photo} alt={fullName} fill sizes="240px" priority className="object-cover" />
+                    <Image src={photo} alt={fullName} fill sizes="256px" priority className="object-cover" />
                   ) : (
                     <span className="absolute inset-0 grid place-items-center text-slate-300/80">No Photo</span>
                   )}
@@ -281,14 +279,12 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
             </figure>
 
             <div className="text-center md:text-left" data-reveal="right">
-              <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-[var(--ink)]">
-                {fullName}
-              </h1>
+              <h1 className="text-4xl md:text-6xl font-semibold tracking-tight text-[var(--ink)]">{fullName}</h1>
               <p className="text-xl md:text-2xl text-[var(--muted)] mt-2">{role}</p>
               <p className="mt-3 text-sm md:text-base text-[var(--subtle)] max-w-2xl">{tagline}</p>
               {location && <p className="text-xs text-[var(--subtle)] mt-1">{location}</p>}
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="mt-7 flex flex-wrap items-center gap-3" data-reveal="up">
                 {data?.cvFileDataUrl && (
                   <a
                     data-magnet
@@ -318,14 +314,12 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
       {/* MAIN */}
       <main className="relative z-10 max-w-5xl mx-auto px-6 py-10 space-y-10">
-        {/* ABOUT */}
         {data?.about && (
           <Section id="about" icon={<Palette size={20} />} title="About" reveal="left">
             <p className="text-[var(--ink-soft)] leading-relaxed text-justify">{data.about}</p>
           </Section>
         )}
 
-        {/* SKILLS */}
         {skills.length > 0 && (
           <Section id="skills" icon={<Palette size={20} />} title="Skills" reveal="up">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -341,11 +335,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                     <span className="h-2 w-2 rounded-full bg-[var(--accent)]/90" />
                   </div>
                   <div className="mt-2 h-1.5 rounded bg-white/10 overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--accent)]/70"
-                      style={{ width: `${70 + (i % 4) * 6}%` }}
-                      aria-hidden
-                    />
+                    <div className="h-full bg-[var(--accent)]/70" style={{ width: `${70 + (i % 4) * 6}%` }} />
                   </div>
                 </div>
               ))}
@@ -353,7 +343,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </Section>
         )}
 
-        {/* PROJECTS */}
         {projects.length > 0 && (
           <Section id="projects" icon={<Palette size={20} />} title="Projects" reveal="right">
             <div className="flex flex-col gap-4">
@@ -364,19 +353,12 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   data-reveal="up"
                   style={{ animationDelay: `${(i % 6) * 60}ms` }}
                 >
-                  <h3 className="text-lg font-medium text-[var(--ink)]">
-                    {p.name?.trim() || `Project ${i + 1}`}
-                  </h3>
+                  <h3 className="text-lg font-medium text-[var(--ink)]">{p.name?.trim() || `Project ${i + 1}`}</h3>
                   {p.description?.trim() && (
                     <p className="text-[var(--subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>
                   )}
                   {p.link && (
-                    <a
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline mt-3"
-                    >
+                    <a href={p.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline mt-3">
                       <LinkIcon size={16} /> View
                     </a>
                   )}
@@ -386,7 +368,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </Section>
         )}
 
-        {/* CERTIFICATIONS */}
         {certifications.length > 0 && (
           <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications" reveal="left">
             <div className="flex flex-col gap-3">
@@ -407,7 +388,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </Section>
         )}
 
-        {/* MEDIA */}
         {media.length > 0 && (
           <Section id="media" icon={<Palette size={20} />} title="Media" reveal="right">
             <div className="flex flex-col gap-4">
@@ -424,12 +404,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                     <h3 className="text-lg font-medium text-[var(--ink)]">{title}</h3>
                     <p className="text-[var(--subtle)] mt-1 text-justify">{label}</p>
                     {m.link && (
-                      <a
-                        href={m.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline mt-2"
-                      >
+                      <a href={m.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--accent)] hover:underline mt-2">
                         <LinkIcon size={16} /> View
                       </a>
                     )}
@@ -440,7 +415,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </Section>
         )}
 
-        {/* CONTACT */}
         <Section id="contact" icon={<Mail size={20} />} title="Contact" reveal="up">
           <div className="text-[var(--ink-soft)] space-y-2">
             {data?.email && (
@@ -454,12 +428,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               </a>
             )}
             {data?.linkedin && (
-              <a
-                href={data.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[var(--accent)] hover:underline"
-              >
+              <a href={data.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[var(--accent)] hover:underline">
                 <Linkedin size={16} /> LinkedIn
               </a>
             )}
@@ -468,13 +437,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 <h3 className="text-base font-medium text-[var(--subtle)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
-                    <a
-                      key={i}
-                      href={s.url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[var(--accent)] hover:underline"
-                    >
+                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
                       {s.label}
                     </a>
                   ))}
@@ -482,11 +445,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               </div>
             )}
             {data?.cvFileDataUrl && (
-              <a
-                href={data.cvFileDataUrl}
-                download={data.cvFileName ?? 'cv.pdf'}
-                className="mt-3 inline-flex items-center gap-2 text-[var(--accent)] hover:underline"
-              >
+              <a href={data.cvFileDataUrl} download={data.cvFileName ?? 'cv.pdf'} className="mt-3 inline-flex items-center gap-2 text-[var(--accent)] hover:underline">
                 <Download size={16} /> Download CV
               </a>
             )}
@@ -537,7 +496,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           border-radius: 22px; padding: 2px;
         }
 
-        /* Section shells */
         .section-shell {
           border-radius: 16px;
           border: 1px solid rgba(255,255,255,0.08);
@@ -546,7 +504,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           box-shadow: 0 10px 30px rgba(0,0,0,.18);
         }
 
-        /* Reveal animations */
+        /* Reveals */
         [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
         [data-reveal].in { opacity: 1; transform: translateY(0); }
         [data-reveal="left"] { transform: translateX(-18px); }
