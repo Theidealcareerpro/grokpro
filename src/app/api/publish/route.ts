@@ -8,7 +8,7 @@ import { sanitizePortfolioData, type PortfolioData as StrictPortfolioData } from
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/* ---------- Narrow input-only types (loose, optional) ---------- */
+/* ---------- Input types (loose) ---------- */
 type PortfolioProjectIn = { name?: string; description?: string; link?: string };
 type PortfolioSocialIn  = { label?: string; url?: string };
 type MediaIn = { title?: string; type?: 'video' | 'podcast' | 'article'; link?: string };
@@ -35,15 +35,13 @@ type PortfolioDataIn = {
 };
 
 type PublishInput = {
-  /** Optional: literal HTML of the preview DOM (parity path) */
   bodyHtml?: string;
-  /** Preferred: structured data to render on the server */
   portfolioData?: PortfolioDataIn;
   fingerprint?: string;
   seo?: { title?: string; description?: string };
 };
 
-/* ---------- Small utils ---------- */
+/* ---------- Utils ---------- */
 const toB64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
 const nice = (s?: string) => (s && `${s}`.trim() ? `${s}`.trim() : '');
 const esc = (s = '') =>
@@ -99,11 +97,11 @@ export async function POST(req: Request) {
 
     const octokit = new Octokit({ auth: GITHUB_PAT });
 
-    // Repo name
+    // repo name
     const base = nice(portfolioData?.username) || 'portfolio';
     const repoName = `${base}-${Date.now()}`;
 
-    // Create repo
+    // create repo
     if (GITHUB_OWNER_TYPE === 'org') {
       await octokit.repos.createInOrg({
         org: GITHUB_OWNER,
@@ -124,12 +122,12 @@ export async function POST(req: Request) {
     // ✅ Sanitize to strict shape expected by renderer
     const strictData: StrictPortfolioData = sanitizePortfolioData(portfolioData);
 
-    // Build page HTML
+    // ✅ Build page HTML (await the async renderer)
     const fullHtml = bodyHtml
       ? wrapHtmlShell(String(bodyHtml), seo, portfolioData)
-      : renderPortfolioHtml(strictData);
+      : await renderPortfolioHtml(strictData);
 
-    // Commit files
+    // commit files
     await octokit.repos.createOrUpdateFileContents({
       owner, repo: repoName, path: 'index.html',
       message: 'Add generated portfolio (static)',
@@ -146,7 +144,7 @@ export async function POST(req: Request) {
       content: toB64(''), branch: 'main',
     });
 
-    // Enable GitHub Pages
+    // enable GitHub Pages
     await octokit.request('POST /repos/{owner}/{repo}/pages', {
       owner, repo: repoName, source: { branch: 'main', path: '/' },
     }).catch(async (err: any) => {
@@ -159,7 +157,7 @@ export async function POST(req: Request) {
 
     const pagesUrl = `https://${owner}.github.io/${repoName}/`;
 
-    // Save metadata
+    // save metadata
     const rowFingerprint = fingerprint || crypto.randomUUID();
     const expiryIso = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString();
     const { data, error } = await supabase
