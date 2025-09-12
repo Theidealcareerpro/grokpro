@@ -1,32 +1,22 @@
-import type { FC } from 'react';
+import 'server-only';
+import type { ComponentType } from 'react';
 import type { PortfolioData } from '@/lib/portfolio-types';
-import Modern  from '@/lib/publish/templates/Modern';
-import Creative from '@/lib/publish/templates/Creative';
-import Tech from '@/lib/publish/templates/Tech';
-import Corporate from '@/lib/publish/templates/Corporate';
-import Minimal from '@/lib/publish/templates/Minimal';
-import Classic from '@/lib/publish/templates/Classic'; // ⟵ add this
 
-type TemplateId = PortfolioData['templateId'];
-type Publisher = FC<{ data: PortfolioData }>;
+import Classic from './templates/Classic';
+import Corporate from './templates/Corporate';
+import Minimal from './templates/Minimal';
+import Modern from './templates/Modern';
+import Tech from './templates/Tech';
+import Creative from './templates/Creative';
 
-export const PUBLISH_REGISTRY: Record<TemplateId, React.FC<{ data: PortfolioData }>> = {
-  modern: Modern,
-  creative: Creative,
-  tech: Tech,
+export const TEMPLATE_IDS = ['classic','corporate','minimal','modern','tech','creative'] as const;
+export type TemplateKey = typeof TEMPLATE_IDS[number];
+
+export const PUBLISH_REGISTRY: Record<TemplateKey, ComponentType<{ data: PortfolioData }>> = {
+  classic: Classic,
   corporate: Corporate,
-  classic: Classic,  // ⟵ now real classic
-  minimal: Minimal,   // (optional) keep fallback until you add a minimal clone
+  minimal: Minimal,
+  modern: Modern,
+  tech: Tech,
+  creative: Creative,
 };
-
-// Helper in case an unexpected id sneaks in at runtime
-export function getPublishComponent(id: TemplateId): Publisher {
-  return (PUBLISH_REGISTRY as Record<string, Publisher>)[id] ?? PUBLISH_REGISTRY.modern;
-}
-
-// Useful for pickers/menus
-export const AVAILABLE_TEMPLATES = Object.keys(PUBLISH_REGISTRY) as TemplateId[];
-
-// Optional default export
-export default PUBLISH_REGISTRY;
-

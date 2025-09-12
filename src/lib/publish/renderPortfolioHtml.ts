@@ -1,15 +1,13 @@
 // src/lib/publish/renderPortfolioHtml.ts
+import 'server-only';
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { PortfolioData } from '@/lib/portfolio-types';
 import { PUBLISH_REGISTRY } from './registry';
 
-// 👇 add these 6 lines
 type TemplateKey = keyof typeof PUBLISH_REGISTRY;
 function toTemplateKey(val: unknown): TemplateKey {
-  return (typeof val === 'string' && val in PUBLISH_REGISTRY)
-    ? (val as TemplateKey)
-    : 'modern';
+  return (typeof val === 'string' && val in PUBLISH_REGISTRY) ? (val as TemplateKey) : 'modern';
 }
 
 const TAILWIND_HEAD = `
@@ -30,23 +28,20 @@ const TAILWIND_HEAD = `
     }
   }
 </script>
-<script src="https://cdn.tailwindcss.com/3.4.10"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 `.trim();
 
 export function renderPortfolioHtml(data: PortfolioData): string {
-  // 👇 use the typed key here (fixes TS7053)
   const key = toTemplateKey((data as any)?.templateId);
   const Template = PUBLISH_REGISTRY[key];
-
   const app = renderToStaticMarkup(React.createElement(Template, { data }));
 
   const title = `${data.fullName || 'Portfolio'}${data.role ? ' | ' + data.role : ''}`;
   const desc = (data.tagline || 'Personal portfolio').slice(0, 300).replace(/\s+/g, ' ').trim();
-  const lang = (data as any)?.lang || 'en';
 
   return [
     '<!DOCTYPE html>',
-    `<html lang="${escapeHtml(lang)}">`,
+    `<html lang="en">`,
     '<head>',
     `<meta charset="utf-8" />`,
     `<meta name="viewport" content="width=device-width, initial-scale=1" />`,
