@@ -1,4 +1,3 @@
-// app/api/publish/route.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
@@ -53,8 +52,8 @@ const nice = (s?: string) => (s && s.trim() ? s.trim() : '');
 /* ---------- Tailwind runtime config (matches your tailwind.config.ts) ---------- */
 const TAILWIND_RUNTIME_CONFIG = `
 <script>
-  window.tailwind = window.tailwind || {};
-  window.tailwind.config = {
+  tailwind = window.tailwind || {};
+  tailwind.config = {
     darkMode: 'class',
     theme: {
       screens: { sm:'640px', md:'768px', lg:'1024px', xl:'1280px' },
@@ -67,7 +66,7 @@ const TAILWIND_RUNTIME_CONFIG = `
         }
       }
     }
-  }
+  };
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 `;

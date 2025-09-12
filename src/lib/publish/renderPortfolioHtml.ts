@@ -1,14 +1,13 @@
-// src/lib/publish/renderPortfolioHtml.ts
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { PortfolioData } from '@/lib/portfolio-types';
 import { PUBLISH_REGISTRY } from './registry';
 
-// Tailwind runtime config to mirror your tailwind.config.ts
+// Tailwind runtime config to mirror your tailwind.config.ts (must be BEFORE the CDN script)
 const TAILWIND_HEAD = `
 <script>
-  window.tailwind = window.tailwind || {};
-  window.tailwind.config = {
+  tailwind = window.tailwind || {};
+  tailwind.config = {
     darkMode: 'class',
     theme: {
       screens: { sm:'640px', md:'768px', lg:'1024px', xl:'1280px' },
@@ -21,7 +20,7 @@ const TAILWIND_HEAD = `
         }
       }
     }
-  }
+  };
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 `.trim();

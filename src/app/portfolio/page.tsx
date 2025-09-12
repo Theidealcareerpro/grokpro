@@ -1,4 +1,5 @@
 'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
@@ -157,10 +158,9 @@ export default function PortfolioBuilder() {
     const socials = (portfolioData.socials || []).filter(s => s?.label && s?.url);
 
     const head = `
-<!-- Tailwind runtime config so exported HTML matches your Tailwind theme -->
 <script>
-  window.tailwind = window.tailwind || {};
-  window.tailwind.config = {
+  tailwind = window.tailwind || {};
+  tailwind.config = {
     darkMode: 'class',
     theme: {
       screens: { sm:'640px', md:'768px', lg:'1024px', xl:'1280px' },
@@ -173,7 +173,7 @@ export default function PortfolioBuilder() {
         }
       }
     }
-  }
+  };
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
