@@ -54,19 +54,26 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
   const [scrollPct, setScrollPct] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll progress (top bar)
+  // Scroll progress (top bar) - optimized with requestAnimationFrame
   useEffect(() => {
+    let rafId: number;
     const onScroll = () => {
-      const el = document.documentElement;
-      const h = el.scrollHeight - el.clientHeight;
-      setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const el = document.documentElement;
+        const h = el.scrollHeight - el.clientHeight;
+        setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
+      });
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
-  // Section reveal (reduced-motion aware)
+  // Enhanced section reveal (reduced-motion aware, with staggered child animations)
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
@@ -74,27 +81,34 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) return;
 
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal-section]'));
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
             e.target.classList.add('reveal-in');
+            // Stagger child elements
+            const children = Array.from(e.target.querySelectorAll<HTMLElement>('[data-reveal-child]'));
+            children.forEach((child, idx) => {
+              child.style.transitionDelay = `${idx * 0.1}s`;
+              child.classList.add('reveal-child-in');
+            });
             obs.unobserve(e.target);
           }
         });
       },
-      { rootMargin: '0px 0px -10% 0px', threshold: 0.1 }
+      { rootMargin: '0px 0px -15% 0px', threshold: 0.15 }
     );
-    nodes.forEach((n) => obs.observe(n));
+    sections.forEach((s) => obs.observe(s));
     return () => obs.disconnect();
   }, []);
 
-  // Clipboard helper
+  // Clipboard helper - added haptic feedback if available
   const copy = async (label: 'email' | 'phone', value: string) => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(label);
+      if ('vibrate' in navigator) navigator.vibrate(50);
       setTimeout(() => setCopied(null), 1400);
     } catch {}
   };
@@ -102,80 +116,80 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
   return (
     <div
       ref={containerRef}
-      className="font-sans bg-gradient-to-r from-[#0d0b1e] via-[#1a0f2e] to-[#250e3a] text-white min-h-screen antialiased"
+      className="font-sans bg-gradient-to-br from-[#0d0b1e] via-[#1a0f2e] to-[#250e3a] text-white min-h-screen antialiased"
     >
-      {/* Skip link */}
+      {/* Skip link - improved focus styles */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] rounded-lg bg-white/15 px-4 py-2.5 ring-2 ring-white/25 backdrop-blur-md shadow-lg"
       >
         Skip to content
       </a>
 
-      {/* Top scroll progress */}
+      {/* Top scroll progress - smoother gradient */}
       <div
         aria-hidden
-        className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[#00CFFF] via-fuchsia-400 to-violet-400 transition-[width]"
-        style={{ width: `${scrollPct}%` }}
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[#00CFFF] via-fuchsia-500 to-violet-500 origin-left scale-x-0 transition-transform duration-300 ease-out"
+        style={{ transform: `scaleX(${scrollPct / 100})` }}
       />
 
       {/* ===== HEADER / HERO ===== */}
-      <header className="relative overflow-hidden py-12 text-center">
-        {/* ambient glow + subtle grid */}
+      <header className="relative overflow-hidden py-16 text-center">
+        {/* Enhanced ambient glow + parallax subtle grid */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_60%_at_50%_10%,rgba(255,0,204,0.22)_0%,transparent_70%)] opacity-100"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)]"
+          className="pointer-events-none absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent_0,transparent_24px,rgba(255,255,255,0.12)_25px,transparent_26px)] parallax-bg"
         />
-        <div className="relative z-10 max-w-4xl mx-auto px-6">
-          {/* Avatar: vibrant glass + conic neon ring */}
-          <figure className="group relative w-fit mx-auto mb-6" data-reveal>
+        <div className="relative z-10 max-w-5xl mx-auto px-8">
+          {/* Avatar: modern circular frame with 3D tilt effect, enhanced neon ring, and glow */}
+          <figure className="group relative w-fit mx-auto mb-8 tilt-avatar" data-reveal-section>
             <span
               aria-hidden
-              className="absolute -inset-10 -z-10 rounded-[36px] blur-3xl opacity-70 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(255,0,204,0.28)_0%,transparent_60%)]"
+              className="absolute -inset-12 -z-10 rounded-full blur-3xl opacity-75 bg-[radial-gradient(80%_80%_at_50%_50%,rgba(255,0,204,0.32)_0%,transparent_70%)]"
             />
-            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
-            <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-fuchsia-400 via-pink-400 to-[color:var(--neon)] shadow-2xl">
-              <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
+            <span aria-hidden className="avatar-ring absolute inset-[-16px] rounded-full" />
+            <div className="relative h-44 w-44 rounded-full p-[4px] bg-gradient-to-br from-fuchsia-500 via-pink-500 to-[color:var(--neon)] shadow-xl ring-1 ring-white/15">
+              <div className="relative h-full w-full overflow-hidden rounded-full bg-white/8 backdrop-blur-md">
                 {photo ? (
-                  <Image src={photo} alt={fullName} fill sizes="160px" priority className="object-cover" />
+                  <Image src={photo} alt={fullName} fill sizes="176px" priority className="object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
+                  <span className="absolute inset-0 grid place-items-center text-pink-200/80 text-lg">No Photo</span>
                 )}
-                {/* sheen on hover */}
+                {/* Enhanced sheen on hover */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.14),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
+                  className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-[linear-gradient(45deg,transparent,rgba(255,255,255,0.18),transparent)] transition-transform duration-1000 ease-out group-hover:translate-x-[150%]"
                 />
               </div>
             </div>
           </figure>
 
-          <h1 className="text-4xl font-bold tracking-tight reveal" data-reveal>
+          <h1 className="text-5xl font-bold tracking-tight" data-reveal-child>
             {fullName}
           </h1>
-          <p className="text-xl text-pink-200 mt-2 reveal" data-reveal>
+          <p className="text-2xl text-pink-200 mt-3" data-reveal-child>
             {role}
           </p>
-          <p className="text-sm text-pink-100 mt-1 text-justify reveal" data-reveal>
+          <p className="text-base text-pink-100 mt-2 max-w-xl mx-auto leading-relaxed" data-reveal-child>
             {tagline}
           </p>
-          <p className="text-xs text-pink-200/70 mt-1 reveal" data-reveal>
+          <p className="text-sm text-pink-200/70 mt-2" data-reveal-child>
             {location}
           </p>
 
-          {/* CTAs */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
+          {/* CTAs - with subtle lift on hover */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4" data-reveal-child>
             {data?.cvFileDataUrl && (
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-5 py-2 font-semibold text-gray-900 shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.45)]"
+                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-6 py-3 font-semibold text-gray-900 shadow-lg transition-transform hover:-translate-y-1 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
               >
-                <Download className="h-4 w-4" /> Download CV
+                <Download className="h-5 w-5" /> Download CV
               </a>
             )}
             {data?.linkedin && (
@@ -183,9 +197,9 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--neon)] px-5 py-2 font-semibold text-[color:var(--neon)] shadow-md transition hover:bg-[color:var(--neon)] hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.45)]"
+                className="inline-flex items-center gap-2 rounded-full border-2 border-[color:var(--neon)] px-6 py-3 font-semibold text-[color:var(--neon)] shadow-lg transition-transform hover:-translate-y-1 hover:bg-[color:var(--neon)] hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
               >
-                <Linkedin className="h-4 w-4" /> LinkedIn
+                <Linkedin className="h-5 w-5" /> LinkedIn
               </a>
             )}
           </div>
@@ -193,62 +207,63 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       </header>
 
       {/* ===== MAIN ===== */}
-      <main id="main" className="max-w-4xl mx-auto px-6 py-10 space-y-8">
-        {/* ABOUT */}
+      <main id="main" className="max-w-5xl mx-auto px-8 py-12 space-y-12">
+        {/* ABOUT - intro effect: fade + slide up */}
         {data?.about && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition reveal"
-                   data-reveal aria-label="About">
-            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-              <Palette size={20} className="mr-2" /> About Me
+          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="About">
+            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+              <Palette size={24} className="text-[color:var(--neon)]" /> About Me
             </h2>
-            <p className="text-pink-100 leading-relaxed text-justify">{data.about}</p>
+            <p className="text-pink-100 leading-relaxed text-justify" data-reveal-child>{data.about}</p>
           </section>
         )}
 
-        {/* SKILLS */}
+        {/* SKILLS - intro effect: staggered scale in */}
         {skills.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Skills">
-            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-              <Palette size={20} className="mr-2" /> Skills
+          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Skills">
+            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+              <Palette size={24} className="text-[color:var(--neon)]" /> Skills
             </h2>
-            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+            <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {skills.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between rounded-lg bg-fuchsia-900/20 p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.35)]"
+                  className="flex items-center justify-between rounded-lg bg-fuchsia-900/25 p-4 ring-1 ring-white/12 transition-all hover:-translate-y-1 hover:shadow-xl hover:ring-[rgba(0,207,255,0.4)]"
+                  data-reveal-child
                 >
-                  <span className="text-sm text-pink-100 text-justify">{String(s)}</span>
-                  <span className="h-2 w-2 rounded-full bg-[color:var(--neon)]/90" />
+                  <span className="text-base text-pink-100">{String(s)}</span>
+                  <span className="h-3 w-3 rounded-full bg-[color:var(--neon)] shadow-md" />
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* PROJECTS */}
+        {/* PROJECTS - intro effect: fade + expand */}
         {projects.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Projects">
-            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-              <Palette size={20} className="mr-2" /> Projects
+          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Projects">
+            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+              <Palette size={24} className="text-[color:var(--neon)]" /> Projects
             </h2>
-            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+            <div className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
               {projects.map((p, i) => (
                 <article
                   key={i}
-                  className="rounded-lg border border-white/10 bg-purple-950/40 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[rgba(0,207,255,0.35)]"
+                  className="rounded-lg border border-white/12 bg-purple-950/50 p-6 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl hover:border-[rgba(0,207,255,0.4)]"
+                  data-reveal-child
                 >
-                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  <h3 className="text-2xl font-medium text-pink-200">{p.name?.trim() || `Project ${i + 1}`}</h3>
                   {p.description?.trim() && (
-                    <p className="text-pink-100 mt-2 text-justify leading-relaxed">{p.description}</p>
+                    <p className="text-pink-100 mt-3 leading-relaxed">{p.description}</p>
                   )}
                   {p.link && (
                     <a
                       href={p.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-3"
+                      className="inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline mt-4 font-medium"
                     >
-                      <LinkIcon size={16} /> View
+                      <LinkIcon size={18} /> View Project
                     </a>
                   )}
                 </article>
@@ -257,53 +272,55 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </section>
         )}
 
-        {/* CERTIFICATIONS */}
+        {/* CERTIFICATIONS - intro effect: staggered flip in */}
         {certifications.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Certifications">
-            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-              <BookOpen size={20} className="mr-2" /> Certifications
+          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Certifications">
+            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+              <BookOpen size={24} className="text-[color:var(--neon)]" /> Certifications
             </h2>
-            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+            <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-4">
               {certifications.map((cert, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-purple-950/40 p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.3)]"
+                  className="flex items-center gap-4 rounded-lg border border-white/12 bg-purple-950/50 p-4 ring-1 ring-white/8 transition-all hover:-translate-y-1 hover:shadow-xl hover:ring-[rgba(0,207,255,0.4)]"
+                  data-reveal-child
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[rgba(0,207,255,0.15)] ring-1 ring-[rgba(0,207,255,0.35)]">
-                    <Award className="h-6 w-6 text-[color:var(--neon)]" />
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(0,207,255,0.2)] ring-2 ring-[rgba(0,207,255,0.4)]">
+                    <Award className="h-7 w-7 text-[color:var(--neon)]" />
                   </span>
-                  <p className="text-pink-100 text-justify">{String(cert)}</p>
+                  <p className="text-pink-100 font-medium">{String(cert)}</p>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* MEDIA */}
+        {/* MEDIA - intro effect: slide from left */}
         {media.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Media">
-            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-              <Palette size={20} className="mr-2" /> Media
+          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Media">
+            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+              <Palette size={24} className="text-[color:var(--neon)]" /> Media
             </h2>
-            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+            <div className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
               {media.map((m, i) => {
                 const label = m.type ? String(m.type) : 'Media';
                 const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
                 return (
                   <div
                     key={i}
-                    className="rounded-lg border border-white/10 bg-purple-950/40 p-4 transition hover:border-[rgba(0,207,255,0.35)]"
+                    className="rounded-lg border border-white/12 bg-purple-950/50 p-6 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-[rgba(0,207,255,0.4)]"
+                    data-reveal-child
                   >
-                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-pink-100 mt-1 text-justify">{labelNice}</p>
+                    <h3 className="text-2xl font-medium text-pink-200">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-pink-100 mt-2 font-medium">{labelNice}</p>
                     {m.link && (
                       <a
                         href={m.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-2"
+                        className="inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline mt-4 font-medium"
                       >
-                        <LinkIcon size={16} /> View
+                        <LinkIcon size={18} /> View Media
                       </a>
                     )}
                   </div>
@@ -313,37 +330,37 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           </section>
         )}
 
-        {/* CONTACT */}
-        <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Contact">
-          <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
-            <Mail size={20} className="mr-2" /> Contact
+        {/* CONTACT - intro effect: fade + scale */}
+        <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Contact">
+          <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
+            <Mail size={24} className="text-[color:var(--neon)]" /> Contact
           </h2>
-          <div className="text-pink-100 space-y-2">
+          <div className="text-pink-100 space-y-4" data-reveal-child>
             {data?.email && (
-              <div className="flex items-center gap-2">
-                <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
-                  <Mail size={16} /> {data.email}
+              <div className="flex items-center gap-3">
+                <a href={`mailto:${data.email}`} className="flex items-center gap-3 hover:text-[color:var(--neon)] transition-colors">
+                  <Mail size={18} /> {data.email}
                 </a>
                 <button
                   onClick={() => copy('email', data.email!)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm ring-1 ring-white/20 hover:bg-white/10 transition-all"
                   aria-label="Copy email"
                 >
-                  {copied === 'email' ? <Check size={14} /> : <Copy size={14} />} {copied === 'email' ? 'Copied' : 'Copy'}
+                  {copied === 'email' ? <Check size={16} /> : <Copy size={16} />} {copied === 'email' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             )}
             {data?.phone && (
-              <div className="flex items-center gap-2">
-                <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
-                  <Phone size={16} /> {data.phone}
+              <div className="flex items-center gap-3">
+                <a href={`tel:${data.phone}`} className="flex items-center gap-3 hover:text-[color:var(--neon)] transition-colors">
+                  <Phone size={18} /> {data.phone}
                 </a>
                 <button
                   onClick={() => copy('phone', data.phone!)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm ring-1 ring-white/20 hover:bg-white/10 transition-all"
                   aria-label="Copy phone"
                 >
-                  {copied === 'phone' ? <Check size={14} /> : <Copy size={14} />} {copied === 'phone' ? 'Copied' : 'Copy'}
+                  {copied === 'phone' ? <Check size={16} /> : <Copy size={16} />} {copied === 'phone' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             )}
@@ -352,18 +369,18 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+                className="flex items-center gap-3 text-[color:var(--neon)] hover:underline transition-colors"
               >
-                <Linkedin size={16} /> LinkedIn
+                <Linkedin size={18} /> LinkedIn
               </a>
             )}
 
             {socials.length > 0 && (
-              <div className="pt-2">
-                <h3 className="text-base font-medium text-pink-100/90">Social Links</h3>
-                <div className="mt-1 grid grid-cols-1 gap-1">
+              <div className="pt-4">
+                <h3 className="text-lg font-medium text-pink-100/90">Social Links</h3>
+                <div className="mt-2 grid grid-cols-1 gap-2">
                   {socials.map((s, i) => (
-                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[color:var(--neon)] hover:underline">
+                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[color:var(--neon)] hover:underline transition-colors">
                       {s.label}
                     </a>
                   ))}
@@ -375,37 +392,49 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="mt-3 inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+                className="mt-4 inline-flex items-center gap-3 text-[color:var(--neon)] hover:underline transition-colors"
               >
-                <Download size={16} /> Download CV
+                <Download size={18} /> Download CV
               </a>
             )}
           </div>
         </section>
       </main>
 
-      {/* Back to top FAB */}
+      {/* Back to top FAB - with visibility based on scroll */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon)]"
+        className={`fixed bottom-6 right-6 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/12 ring-2 ring-white/25 backdrop-blur-md hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon)] transition-all duration-300 ${scrollPct > 20 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         aria-label="Back to top"
       >
-        <ChevronUp className="h-5 w-5" />
+        <ChevronUp className="h-6 w-6" />
       </button>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-[#130a22] py-4 text-center text-pink-200/70">
-        <p>© {new Date().getFullYear()} {fullName} | Classic Portfolio</p>
+      <footer className="bg-[#130a22] py-6 text-center text-pink-200/70 text-sm">
+        <p>© {new Date().getFullYear()} {fullName} | Enhanced Classic Portfolio</p>
       </footer>
 
-      {/* Global helpers */}
+      {/* Global helpers - enhanced animations and tilt */}
       <style jsx global>{`
-        :root { --neon:#00CFFF; }
+        :root { --neon: #00CFFF; }
 
-        /* Reveal in */
-        .reveal { opacity: 0; transform: translateY(8px); }
-        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        /* Reveal section */
+        [data-reveal-section] { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
+        .reveal-in { opacity: 1; transform: translateY(0); }
 
+        /* Staggered child reveal */
+        [data-reveal-child] { opacity: 0; transform: translateY(12px) scale(0.98); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+        .reveal-child-in { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* Parallax bg */
+        .parallax-bg { transform: translateY(calc(var(--scroll-pct, 0) * -0.2)); }
+
+        /* Avatar tilt (CSS 3D) */
+        .tilt-avatar { perspective: 1000px; transition: transform 0.3s ease-out; }
+        .tilt-avatar:hover { transform: rotateY(8deg) rotateX(8deg); }
+
+        /* Enhanced avatar ring */
         @keyframes spin360 { to { transform: rotate(360deg); } }
         .avatar-ring::before {
           content: '';
@@ -414,29 +443,29 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           border-radius: inherit;
           background: conic-gradient(
             from 0deg,
-            rgba(0,207,255,0.00) 0deg,
-            rgba(255,0,204,0.45) 80deg,
-            rgba(0,207,255,0.70) 160deg,
-            rgba(168,85,247,0.55) 240deg,
-            rgba(0,207,255,0.00) 360deg
+            rgba(0,207,255,0.1) 0deg,
+            rgba(255,0,204,0.5) 90deg,
+            rgba(0,207,255,0.8) 180deg,
+            rgba(168,85,247,0.6) 270deg,
+            rgba(0,207,255,0.1) 360deg
           );
-          animation: spin360 16s linear infinite;
-          opacity: 0.9;
-          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
-                  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
+          animation: spin360 12s linear infinite;
+          opacity: 0.95;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0);
+                  mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0);
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .avatar-ring::before { animation: none !important; }
-          .reveal { opacity: 1 !important; transform: none !important; }
+          .avatar-ring::before, .tilt-avatar:hover, [data-reveal-section], [data-reveal-child] { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; }
         }
 
-        /* Print-friendly */
+        /* Print-friendly - enhanced */
         @media print {
-          .bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)] { display:none !important; }
-          .bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)] { display:none !important; }
-          button, a[href^="#"] { display: none !important; }
-          body { background: #fff !important; color: #111 !important; }
+          .bg-[radial-gradient], .bg-[repeating-linear-gradient], button, a[href^="#"], .fixed { display: none !important; }
+          body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+          section { page-break-inside: avoid; border: none !important; box-shadow: none !important; }
+          h2 { color: #333 !important; }
+          p, a { color: #555 !important; }
         }
       `}</style>
     </div>
