@@ -1,7 +1,8 @@
 // src/lib/publish/renderPortfolioHtml.ts
 import 'server-only';
 import * as React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+// ⬇️ IMPORTANT: remove the static import that breaks Next 15
+// import { renderToStaticMarkup } from 'react-dom/server';
 import type { PortfolioData } from '@/lib/portfolio-types';
 import { PUBLISH_REGISTRY } from './registry';
 
@@ -31,7 +32,10 @@ const TAILWIND_HEAD = `
 <script src="https://cdn.tailwindcss.com"></script>
 `.trim();
 
-export function renderPortfolioHtml(data: PortfolioData): string {
+export async function renderPortfolioHtml(data: PortfolioData): Promise<string> {
+  // ⬇️ Dynamic import satisfies Next 15 App Router constraint
+  const { renderToStaticMarkup } = await import('react-dom/server');
+
   const key = toTemplateKey((data as any)?.templateId);
   const Template = PUBLISH_REGISTRY[key];
   const app = renderToStaticMarkup(React.createElement(Template, { data }));

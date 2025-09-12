@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     const homepage = `https://${owner}.github.io/${repoName}/`;
 
     // 2) Generate static HTML from the SAME React template you preview
-    const html = renderPortfolioHtml(portfolioData);
+    const html = await renderPortfolioHtml(portfolioData); // <-- await the async renderer
 
     // 3) Commit files (Pages-friendly)
     const toB64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
