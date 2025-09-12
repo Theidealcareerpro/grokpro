@@ -1,158 +1,301 @@
-import 'server-only';
+import * as React from 'react';
+import { Palette, BookOpen, Link as LinkIcon, Mail, Phone, Linkedin, Download, Award } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
 export default function Classic({ data }: { data: PortfolioData }) {
   const fullName = data?.fullName || 'Your Name';
-  const role = data?.role ? ` | ${data.role}` : '';
-  const tagline = data?.tagline || 'Delivering expertise with precision and insight';
+  const role = data?.role || 'Classic Professional';
+  const tagline = data?.tagline || 'Classic Tagline';
+  const location = data?.location || 'Location';
+  const photo = data?.photoDataUrl;
 
   const skills = Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : [];
-  const projects = Array.isArray(data?.projects) ? data!.projects.filter(p => (p?.name?.trim?.() || p?.description?.trim?.())) : [];
-  const certs   = Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : [];
+  const projects = Array.isArray(data?.projects)
+    ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+    : [];
+  const certifications = Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : [];
+  const media = Array.isArray(data?.media)
+    ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+    : [];
+  const socials = Array.isArray(data?.socials)
+    ? data!.socials.filter((s) => s && s.label && s.url)
+    : [];
 
   return (
-    <div className="font-serif bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 min-h-screen antialiased">
-      {/* NAV */}
-      <header className="sticky top-0 z-50 backdrop-blur bg-white/85 shadow-sm border-b border-slate-200">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between" aria-label="Primary">
-          <div className="flex items-center gap-3">
-            {data?.photoDataUrl
-              ? (
-                <span className="relative inline-block h-8 w-8 overflow-hidden rounded-full ring-2 ring-[#0A1E4F]/20">
-                  <img src={data.photoDataUrl} alt={fullName} className="object-cover h-full w-full" />
-                </span>
-              ) : <span aria-hidden className="h-8 w-8 rounded-full bg-slate-200" />}
-            <div className="text-xl sm:text-2xl font-bold text-[#0A1E4F] tracking-tight">{fullName}</div>
-          </div>
-          <div className="hidden md:flex items-center gap-6 font-medium">
-            {['home','about','skills','projects','certifications','contact'].map(id => (
-              <a key={id} href={`#${id}`} className="relative px-1 py-2 outline-none transition text-slate-600 hover:text-[#0A1E4F]">
-                {id[0].toUpperCase()+id.slice(1)}
-              </a>
-            ))}
-          </div>
-        </nav>
-      </header>
+    <div className="font-sans bg-gradient-to-r from-[#0d0b1e] via-[#1a0f2e] to-[#250e3a] text-white min-h-screen antialiased">
+      {/* Top scroll progress bar */}
+      <div id="__progress" aria-hidden className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[#00CFFF] via-fuchsia-400 to-violet-400 w-0" />
 
-      {/* HERO */}
-      <section id="home" className="relative flex min-h-[70vh] items-center justify-center overflow-hidden px-6 text-center scroll-mt-24" aria-label="Hero">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,#cbd5e1_0%,transparent_60%),radial-gradient(40%_40%_at_80%_10%,#00CFFF33_0%,transparent_70%),radial-gradient(45%_45%_at_20%_5%,#FF7AF533_0%,transparent_70%),linear-gradient(to_bottom,#ffffff,#f1f5f9)] animate-[gradientShift_14s_ease_in_out_infinite] bg-[length:160%_160%]" />
-        <div className="mx-auto flex max-w-4xl flex-col items-center">
-          {data?.photoDataUrl
-            ? (
-              <figure className="relative mb-6 inline-block rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-                <div className="relative h-48 w-48 overflow-hidden rounded-xl">
-                  <img src={data.photoDataUrl} alt={fullName} className="object-cover h-full w-full" />
-                </div>
-                <figcaption className="mt-2 text-sm text-slate-500">{fullName}</figcaption>
-              </figure>
-            ) : <span className="mb-6 inline-block h-48 w-48 rounded-xl bg-slate-200" />}
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-[#0A1E4F]">{fullName}{role}</h1>
-          <p className="mt-4 text-lg md:text-xl max-w-2xl text-slate-600">{tagline}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+      {/* Skip link */}
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur">
+        Skip to content
+      </a>
+
+      {/* ===== HEADER / HERO ===== */}
+      <header className="relative overflow-hidden py-12 text-center">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)]" />
+        <div className="relative z-10 max-w-4xl mx-auto px-6">
+          <figure className="group relative w-fit mx-auto mb-6 reveal" data-reveal>
+            <span aria-hidden className="absolute -inset-10 -z-10 rounded-[36px] blur-3xl opacity-70 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(255,0,204,0.28)_0%,transparent_60%)]" />
+            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+            <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-fuchsia-400 via-pink-400 to-[color:var(--neon)] shadow-2xl">
+              <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
+                {photo ? (
+                  // Use <img> for static output compatibility
+                  <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
+                )}
+                <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.14),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]" />
+              </div>
+            </div>
+          </figure>
+
+          <h1 className="text-4xl font-bold tracking-tight reveal" data-reveal>{fullName}</h1>
+          <p className="text-xl text-pink-200 mt-2 reveal" data-reveal>{role}</p>
+          <p className="text-sm text-pink-100 mt-1 text-justify reveal" data-reveal>{tagline}</p>
+          <p className="text-xs text-pink-200/70 mt-1 reveal" data-reveal>{location}</p>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
-              <a href={data.cvFileDataUrl} download={data.cvFileName ?? 'cv.pdf'} className="inline-flex items-center gap-2 rounded-full bg-[#FFD700] px-6 py-3 font-semibold text-[#0A1E4F] shadow-lg transition hover:bg-[#e6c200]">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg> Download CV
+              <a
+                href={data.cvFileDataUrl}
+                download={data.cvFileName ?? 'cv.pdf'}
+                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-5 py-2 font-semibold text-gray-900 shadow-md transition hover:brightness-110"
+              >
+                <Download className="h-4 w-4" /> Download CV
               </a>
             )}
             {data?.linkedin && (
-              <a href={data.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[#00CFFF] px-6 py-3 font-semibold text-[#0A1E4F] shadow-lg transition hover:bg-[#00CFFF] hover:text-white">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V24h-4zM8.5 8h3.8v2.3h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V24h-4v-7.6c0-1.8-.03-4.1-2.5-4.1-2.5 0-2.88 1.95-2.88 4v7.7h-4z"/></svg> LinkedIn
+              <a
+                href={data.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--neon)] px-5 py-2 font-semibold text-[color:var(--neon)] shadow-md transition hover:bg-[color:var(--neon)] hover:text-gray-900"
+              >
+                <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
             )}
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* ABOUT */}
-      {data?.about && (
-        <section id="about" className="mx-auto max-w-5xl scroll-mt-24 px-6 py-20" aria-label="About">
-          <h2 className="relative mb-10 text-3xl font-bold text-[#0A1E4F] inline-block">About Me</h2>
-          <p className="text-lg leading-relaxed text-justify text-slate-600/90">{data.about}</p>
-        </section>
-      )}
+      {/* ===== MAIN ===== */}
+      <main id="main" className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+        {data?.about && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition reveal" data-reveal aria-label="About">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> About Me
+            </h2>
+            <p className="text-pink-100 leading-relaxed text-justify">{data.about}</p>
+          </section>
+        )}
 
-      {/* SKILLS */}
-      {skills.length > 0 && (
-        <section id="skills" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Skills">
-          <h2 className="relative mb-10 text-3xl font-bold text-[#0A1E4F] text-center mx-auto w-fit">Expertise</h2>
-          <div className="mx-auto max-w-3xl flex flex-col gap-6">
-            {skills.map((s, i) => (
-              <div key={i} className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md hover:ring-1 hover:ring-[#00CFFF]/40">
-                <svg className="h-7 w-7 text-[#0A1E4F]" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3l2.5 2.5M12 3L9.5 5.5M12 3v6M4 13l2.5-2.5M4 13l2.5 2.5M4 13h6M20 13l-2.5-2.5M20 13l-2.5 2.5M20 13h-6"/></svg>
-                <p className="font-medium text-slate-800">{String(s)}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        {skills.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Skills">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Skills
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {skills.map((s, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg bg-fuchsia-900/20 p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.35)]">
+                  <span className="text-sm text-pink-100 text-justify">{String(s)}</span>
+                  <span className="h-2 w-2 rounded-full bg-[color:var(--neon)]/90" />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* PROJECTS */}
-      {projects.length > 0 && (
-        <section id="projects" className="mx-auto max-w-3xl scroll-mt-24 px-6 py-20" aria-label="Projects">
-          <h2 className="relative mb-10 text-3xl font-bold text-[#0A1E4F] text-center mx-auto w-fit">Projects</h2>
-          <div className="flex flex-col gap-6">
-            {projects.map((p, i) => (
-              <article key={i} className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md hover:ring-1 hover:ring-[#FF7AF5]/40">
-                <svg className="h-8 w-8 flex-shrink-0 text-[#FF7AF5]" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                <div>
-                  <h3 className="text-xl font-semibold text-[#0A1E4F]">{p?.name || `Project ${i+1}`}</h3>
-                  {p?.description && <p className="mt-1 text-justify text-slate-600">{p.description}</p>}
-                  {p?.link && (
-                    <a href={p.link} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[#00CFFF] underline-offset-4 hover:underline">
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 1 7 7l-2 2M14 17a5 5 0 0 1-7-7l2-2"/></svg>
-                      Visit
+        {projects.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Projects">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Projects
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {projects.map((p, i) => (
+                <article key={i} className="rounded-lg border border-white/10 bg-purple-950/40 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[rgba(0,207,255,0.35)]">
+                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  {p.description?.trim() && <p className="text-pink-100 mt-2 text-justify leading-relaxed">{p.description}</p>}
+                  {p.link && (
+                    <a href={p.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-3">
+                      <LinkIcon size={16} /> View
                     </a>
                   )}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {certifications.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Certifications">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <BookOpen size={20} className="mr-2" /> Certifications
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {certifications.map((cert, index) => (
+                <div key={index} className="flex items-center gap-3 rounded-lg border border-white/10 bg-purple-950/40 p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.3)]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[rgba(0,207,255,0.15)] ring-1 ring-[rgba(0,207,255,0.35)]">
+                    <Award className="h-6 w-6 text-[color:var(--neon)]" />
+                  </span>
+                  <p className="text-pink-100 text-justify">{String(cert)}</p>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* CERTS */}
-      {certs.length > 0 && (
-        <section id="certifications" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Certifications">
-          <h2 className="relative mb-10 text-3xl font-bold text-[#0A1E4F] text-center mx-auto w-fit">Certifications</h2>
-          <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {certs.map((c, i) => (
-              <div key={i} className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFD700]/20 ring-1 ring-[#FFD700]/60">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#0A1E4F" strokeWidth="2" className="h-6 w-6">
-                    <circle cx="12" cy="10" r="5"/><path d="M8 21v-3.5a6.97 6.97 0 0 0 8 0V21l-4-2Z"/>
-                  </svg>
-                </span>
-                <p className="pt-1 text-lg text-slate-800">{String(c)}</p>
+        {media.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Media">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Media
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {media.map((m, i) => {
+                const label = m.type ? String(m.type) : 'Media';
+                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
+                return (
+                  <div key={i} className="rounded-lg border border-white/10 bg-purple-950/40 p-4 transition hover:border-[rgba(0,207,255,0.35)]">
+                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-pink-100 mt-1 text-justify">{labelNice}</p>
+                    {m.link && (
+                      <a href={m.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-2">
+                        <LinkIcon size={16} /> View
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* CONTACT */}
+        <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Contact">
+          <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+            <Mail size={20} className="mr-2" /> Contact
+          </h2>
+          <div className="text-pink-100 space-y-2">
+            {data?.email && (
+              <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
+                <Mail size={16} /> {data.email}
+              </a>
+            )}
+            {data?.phone && (
+              <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
+                <Phone size={16} /> {data.phone}
+              </a>
+            )}
+            {data?.linkedin && (
+              <a href={data.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[color:var(--neon)] hover:underline">
+                <Linkedin size={16} /> LinkedIn
+              </a>
+            )}
+
+            {socials.length > 0 && (
+              <div className="pt-2">
+                <h3 className="text-base font-medium text-pink-100/90">Social Links</h3>
+                <div className="mt-1 grid grid-cols-1 gap-1">
+                  {socials.map((s, i) => (
+                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[color:var(--neon)] hover:underline">
+                      {s.label}
+                    </a>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
+
+            {data?.cvFileDataUrl && (
+              <a href={data.cvFileDataUrl} download={data.cvFileName ?? 'cv.pdf'} className="mt-3 inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline">
+                <Download size={16} /> Download CV
+              </a>
+            )}
           </div>
         </section>
-      )}
+      </main>
 
-      {/* CONTACT */}
-      <section id="contact" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Contact">
-        <h2 className="relative mb-10 text-3xl font-bold text-[#0A1E4F] text-center mx-auto w-fit">Contact</h2>
-        <div className="flex flex-wrap justify-center gap-6 text-lg">
-          {data?.email && <a href={`mailto:${data.email}`} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-[#0A1E4F] transition hover:text-[#00CFFF]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 6h16v12H4z"/><path d="m22 6-10 7L2 6"/></svg>{data.email}</a>}
-          {data?.phone && <a href={`tel:${data.phone}`} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-[#0A1E4F] transition hover:text-[#00CFFF]"><svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.15 11 19.79 19.79 0 0 1 .08 2.37 2 2 0 0 1 2.05.19h3a2 2 0 0 1 2 1.72A12.66 12.66 0 0 0 7.1 5.7a2 2 0 0 1-.45 2L5.6 8.75a16 16 0 0 0 6.65 6.65l1.05-1.05a2 2 0 0 1 2-.45 12.66 12.66 0 0 0 3.79.07A2 2 0 0 1 22 16.92z"/></svg>{data.phone}</a>}
-        </div>
-      </section>
-
-      <footer className="bg-white py-6 text-center text-slate-500 border-t border-slate-200">
-        <p>© {new Date().getFullYear()} {fullName} | Professional Portfolio</p>
+      {/* ===== FOOTER ===== */}
+      <footer className="bg-[#130a22] py-4 text-center text-pink-200/70">
+        <p>© {new Date().getFullYear()} {fullName} | Classic Portfolio</p>
       </footer>
 
+      {/* Global helpers + minimal runtime for reveal & progress (vanilla, R-M aware) */}
       <style>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 0%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 0%; }
+        :root { --neon:#00CFFF; }
+
+        .reveal { opacity: 0; transform: translateY(8px); }
+        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+
+        @keyframes spin360 { to { transform: rotate(360deg); } }
+        .avatar-ring::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: conic-gradient(
+            from 0deg,
+            rgba(0,207,255,0.00) 0deg,
+            rgba(255,0,204,0.45) 80deg,
+            rgba(0,207,255,0.70) 160deg,
+            rgba(168,85,247,0.55) 240deg,
+            rgba(0,207,255,0.00) 360deg
+          );
+          animation: spin360 16s linear infinite;
+          opacity: 0.9;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
+                  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
         }
+
         @media (prefers-reduced-motion: reduce) {
-          .animate-[gradientShift_14s_ease_in_out_infinite] { animation: none !important; }
+          .avatar-ring::before { animation: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
+        }
+
+        @media print {
+          .bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)] { display:none !important; }
+          .bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)] { display:none !important; }
+          body { background: #fff !important; color: #111 !important; }
+          a[href^="#"], button { display: none !important; }
         }
       `}</style>
+
+      {/* Tiny inline script to mirror preview interactivity on static GitHub Pages */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              var doc = document.documentElement;
+              var bar = document.getElementById('__progress');
+              function onScroll() {
+                var h = doc.scrollHeight - doc.clientHeight;
+                var pct = h > 0 ? (doc.scrollTop / h) * 100 : 0;
+                if (bar) bar.style.width = pct + '%';
+              }
+              onScroll();
+              window.addEventListener('scroll', onScroll, { passive: true });
+
+              try {
+                var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (!reduce && 'IntersectionObserver' in window) {
+                  var obs = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                      if (e.isIntersecting) {
+                        e.target.classList.add('reveal-in');
+                        obs.unobserve(e.target);
+                      }
+                    });
+                  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.1 });
+                  document.querySelectorAll('[data-reveal]').forEach(function (n) { obs.observe(n); });
+                } else {
+                  document.querySelectorAll('.reveal').forEach(function (n) { n.classList.add('reveal-in'); });
+                }
+              } catch (_) {}
+            })();
+          `,
+        }}
+      />
     </div>
   );
 }

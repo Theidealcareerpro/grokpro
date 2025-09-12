@@ -1,205 +1,179 @@
 'use client';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
-  Briefcase,
-  BarChart3,
-  Code,
+  Palette,
   BookOpen,
-  Lightbulb,
-  Users,
-  Database,
-  PieChart,
-  Rocket,
-  Laptop,
-  TrendingUp,
   Link as LinkIcon,
   Mail,
   Phone,
   Linkedin,
   Download,
-  Menu,
-  X,
   Award,
+  Check,
+  Copy,
+  ChevronUp,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
-const defaultSkillIcons = [Briefcase, BarChart3, Code, BookOpen, Lightbulb, Users];
-const defaultProjectIcons = [Briefcase, Database, PieChart, Rocket, Laptop, TrendingUp];
+export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
+  // ===== Data guards =====
+  const fullName = data?.fullName || 'Your Name';
+  const role = data?.role || 'Classic Professional';
+  const tagline = data?.tagline || 'Classic Tagline';
+  const location = data?.location || 'Location';
+  const photo = data?.photoDataUrl;
 
-const SECTIONS = [
-  { id: 'home', label: 'Home' },
-  { id: 'about', label: 'About' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'certifications', label: 'Certifications' },
-  { id: 'contact', label: 'Contact' },
-] as const;
-
-type SectionId = (typeof SECTIONS)[number]['id'];
-
-export default function PortfolioTemplateModern({ data }: { data: PortfolioData }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [active, setActive] = useState<SectionId>('home');
-  const prefersReducedMotion = usePrefersReducedMotion();
-
-  const skills = useMemo(() => (Array.isArray(data?.skills) ? data.skills.filter(Boolean) : []), [data]);
-  const certifications = useMemo(
-    () => (Array.isArray(data?.certifications) ? data.certifications.filter(Boolean) : []),
+  const skills = useMemo(() => (Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : []), [data]);
+  const projects = useMemo(
+    () =>
+      Array.isArray(data?.projects)
+        ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+        : [],
     [data]
   );
-  const projects = useMemo(() => (Array.isArray(data?.projects) ? data.projects : []), [data]);
+  const certifications = useMemo(
+    () => (Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : []),
+    [data]
+  );
+  const media = useMemo(
+    () =>
+      Array.isArray(data?.media)
+        ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+        : [],
+    [data]
+  );
+  const socials = useMemo(
+    () => (Array.isArray(data?.socials) ? data!.socials.filter((s) => s && s.label && s.url) : []),
+    [data]
+  );
 
-  useScrollSpy(setActive);
+  // ===== UX niceties =====
+  const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
+  const [scrollPct, setScrollPct] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Scroll progress (top bar)
   useEffect(() => {
-    const close = () => setMobileOpen(false);
-    window.addEventListener('hashchange', close);
-    return () => window.removeEventListener('hashchange', close);
+    const onScroll = () => {
+      const el = document.documentElement;
+      const h = el.scrollHeight - el.clientHeight;
+      setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    history.replaceState(null, '', `#${id}`);
+  // Section reveal (reduced-motion aware)
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('reveal-in');
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.1 }
+    );
+    nodes.forEach((n) => obs.observe(n));
+    return () => obs.disconnect();
+  }, []);
+
+  // Clipboard helper
+  const copy = async (label: 'email' | 'phone', value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1400);
+    } catch {}
   };
 
   return (
-    <div className="font-serif bg-gradient-to-b from-[#0f1a1a] to-[#1b2b2b] text-gray-100 min-h-screen antialiased">
-      {/* NAVIGATION */}
-      <header className="sticky top-0 z-50 backdrop-blur bg-[#0d1a1a]/90 shadow-lg border-b border-white/5">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between" aria-label="Primary">
-          <div className="flex items-center gap-3">
-            {data?.photoDataUrl ? (
-              <span className="relative inline-block h-8 w-8 overflow-hidden rounded-full ring-2 ring-teal-400/80">
-                <Image src={data.photoDataUrl} alt={data.fullName || 'Avatar'} fill sizes="32px" className="object-cover" />
-              </span>
-            ) : (
-              <span aria-hidden className="h-8 w-8 rounded-full bg-white/10 ring-2 ring-teal-400/40" />
-            )}
-            <div className="text-xl sm:text-2xl font-bold text-teal-400 tracking-tight">
-              {data?.fullName || 'Your Name'}
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-6 font-medium">
-            {SECTIONS.map(({ id, label }) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                onClick={(e) => handleAnchorClick(e, id)}
-                className={
-                  'relative px-1 py-2 outline-none transition ' +
-                  (active === id
-                    ? 'text-teal-300 after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-gradient-to-r after:from-teal-300 after:to-teal-500'
-                    : 'text-gray-200 hover:text-teal-300 focus-visible:text-teal-300')
-                }
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-          <button
-            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 hover:bg-white/5 focus-visible:outline-none focus-visible:ring focus-visible:ring-teal-400/70"
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileOpen}
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </nav>
-        {mobileOpen && (
-          <div className="md:hidden border-t border-white/10 bg-[#0d1a1a]/95">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 grid grid-cols-2 gap-3">
-              {SECTIONS.map(({ id, label }) => (
-                <a
-                  key={id}
-                  href={`#${id}`}
-                  onClick={(e) => handleAnchorClick(e, id)}
-                  className={
-                    'rounded-md px-3 py-2 text-sm font-medium ring-1 ring-inset ring-white/10 hover:bg-white/5 ' +
-                    (active === id ? 'text-teal-300' : 'text-gray-200')
-                  }
-                >
-                  {label}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
-
-      {/* HERO */}
-      <section
-        id="home"
-        className="relative flex min-h-[88vh] items-center justify-center overflow-hidden px-6 text-center scroll-mt-24"
-        aria-label="Hero"
+    <div
+      ref={containerRef}
+      className="font-sans bg-gradient-to-r from-[#0d0b1e] via-[#1a0f2e] to-[#250e3a] text-white min-h-screen antialiased"
+    >
+      {/* Skip link */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur"
       >
+        Skip to content
+      </a>
+
+      {/* Top scroll progress */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[#00CFFF] via-fuchsia-400 to-violet-400 transition-[width]"
+        style={{ width: `${scrollPct}%` }}
+      />
+
+      {/* ===== HEADER / HERO ===== */}
+      <header className="relative overflow-hidden py-12 text-center">
+        {/* ambient glow + subtle grid */}
         <div
           aria-hidden
-          className={
-            'pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,#1a3a3a_0%,transparent_60%),radial-gradient(40%_40%_at_80%_10%,#14b8a633_0%,transparent_70%),linear-gradient(to_bottom,#0d1a1a,#1a2f2f)] ' +
-            (prefersReducedMotion ? '' : 'animate-[gradientShift_14s_ease_in_out_infinite] bg-[length:160%_160%]')
-          }
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)]"
         />
-
-        <div className="mx-auto flex max-w-4xl flex-col items-center">
-          {/* Modern, vibrant photo holder */}
-          <figure className="group relative mb-8">
-            {/* soft aura */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)]"
+        />
+        <div className="relative z-10 max-w-4xl mx-auto px-6">
+          {/* Avatar: vibrant glass + conic neon ring */}
+          <figure className="group relative w-fit mx-auto mb-6" data-reveal>
             <span
               aria-hidden
-              className={
-                'absolute -inset-8 -z-10 rounded-full blur-2xl opacity-60 ' +
-                'bg-[radial-gradient(60%_60%_at_50%_50%,rgba(20,184,166,0.35)_0%,transparent_60%)]'
-              }
+              className="absolute -inset-10 -z-10 rounded-[36px] blur-3xl opacity-70 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(255,0,204,0.28)_0%,transparent_60%)]"
             />
-            {/* spinning conic ring */}
-            {!prefersReducedMotion && (
-              <span aria-hidden className="avatar-ring absolute inset-[-10px] rounded-full" />
-            )}
-
-            <div className="relative h-44 w-44 md:h-52 md:w-52 rounded-[28px] p-[3px] bg-gradient-to-b from-teal-300 via-cyan-300 to-emerald-400 shadow-2xl">
+            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+            <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-fuchsia-400 via-pink-400 to-[color:var(--neon)] shadow-2xl">
               <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
-                {data?.photoDataUrl ? (
-                  <Image
-                    src={data.photoDataUrl}
-                    alt={data.fullName || 'Profile photo'}
-                    fill
-                    sizes="208px"
-                    priority
-                    className="object-cover"
-                  />
+                {photo ? (
+                  <Image src={photo} alt={fullName} fill sizes="160px" priority className="object-cover" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center text-teal-300/70">No Photo</span>
+                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
                 )}
-                {/* subtle highlight sweep on hover */}
+                {/* sheen on hover */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.12),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
-                />
-                {/* inner radial tint */}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 mix-blend-soft-light bg-[radial-gradient(80%_80%_at_50%_0%,rgba(20,184,166,0.25)_0%,transparent_60%)]"
+                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.14),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
                 />
               </div>
             </div>
           </figure>
 
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm">
-            {data?.fullName || 'Your Name'} {data?.role ? `| ${data.role}` : ''}
+          <h1 className="text-4xl font-bold tracking-tight reveal" data-reveal>
+            {fullName}
           </h1>
-          <p className="mt-4 text-lg md:text-xl max-w-2xl text-gray-200">
-            {data?.tagline || 'Delivering expertise with precision and insight'}
+          <p className="text-xl text-pink-200 mt-2 reveal" data-reveal>
+            {role}
+          </p>
+          <p className="text-sm text-pink-100 mt-1 text-justify reveal" data-reveal>
+            {tagline}
+          </p>
+          <p className="text-xs text-pink-200/70 mt-1 reveal" data-reveal>
+            {location}
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          {/* CTAs */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="inline-flex items-center gap-2 rounded-full bg-teal-400 px-6 py-3 font-semibold text-[#0c1616] shadow-lg transition hover:bg-teal-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300/60"
+                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-5 py-2 font-semibold text-gray-900 shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.45)]"
               >
                 <Download className="h-4 w-4" /> Download CV
               </a>
@@ -209,140 +183,230 @@ export default function PortfolioTemplateModern({ data }: { data: PortfolioData 
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-teal-400 px-6 py-3 font-semibold text-teal-300 shadow-lg transition hover:bg-teal-400 hover:text-[#0c1616] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300/60"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--neon)] px-5 py-2 font-semibold text-[color:var(--neon)] shadow-md transition hover:bg-[color:var(--neon)] hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.45)]"
               >
                 <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
             )}
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* ABOUT */}
-      {data?.about && (
-        <section id="about" className="mx-auto max-w-5xl scroll-mt-24 px-6 py-20" aria-label="About">
-          <SectionTitle>About Me</SectionTitle>
-          <p className="text-lg leading-relaxed text-justify text-gray-200/90">{data.about}</p>
-        </section>
-      )}
+      {/* ===== MAIN ===== */}
+      <main id="main" className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+        {/* ABOUT */}
+        {data?.about && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition reveal"
+                   data-reveal aria-label="About">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> About Me
+            </h2>
+            <p className="text-pink-100 leading-relaxed text-justify">{data.about}</p>
+          </section>
+        )}
 
-      {/* SKILLS (single-column) */}
-      {skills.length > 0 && (
-        <section id="skills" className="scroll-mt-24 bg-[#1a2b2b] px-6 py-20" aria-label="Skills">
-          <SectionTitle center>Expertise</SectionTitle>
-          <div className="mx-auto max-w-3xl flex flex-col gap-6">
-            {skills.map((s, i) => {
-              if (!s) return null;
-              const Icon = defaultSkillIcons[i % defaultSkillIcons.length];
-              return (
+        {/* SKILLS */}
+        {skills.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Skills">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Skills
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {skills.map((s, i) => (
                 <div
                   key={i}
-                  className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-5 shadow-md transition hover:-translate-y-1 hover:shadow-xl hover:border-teal-300/40"
+                  className="flex items-center justify-between rounded-lg bg-fuchsia-900/20 p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.35)]"
                 >
-                  <Icon className="h-7 w-7 text-teal-300" />
-                  <p className="font-medium text-gray-100">{s}</p>
+                  <span className="text-sm text-pink-100 text-justify">{String(s)}</span>
+                  <span className="h-2 w-2 rounded-full bg-[color:var(--neon)]/90" />
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* PROJECTS (single-column) */}
-      {projects.filter((p) => (p?.name?.trim?.() || p?.description?.trim?.())).length > 0 && (
-        <section id="projects" className="mx-auto max-w-3xl scroll-mt-24 px-6 py-20" aria-label="Projects">
-          <SectionTitle center>Projects</SectionTitle>
-          <div className="flex flex-col gap-6">
-            {projects.map((p, i) => {
-              const show = Boolean(p?.name?.trim?.() || p?.description?.trim?.());
-              if (!show) return null;
-              const Icon = defaultProjectIcons[i % defaultProjectIcons.length];
-              return (
+        {/* PROJECTS */}
+        {projects.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Projects">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Projects
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {projects.map((p, i) => (
                 <article
                   key={i}
-                  className="group flex items-start gap-4 rounded-xl border border-white/10 bg-white/5 p-5 shadow-md transition hover:-translate-y-1 hover:shadow-xl hover:border-teal-300/40"
+                  className="rounded-lg border border-white/10 bg-purple-950/40 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[rgba(0,207,255,0.35)]"
                 >
-                  <Icon className="h-8 w-8 flex-shrink-0 text-teal-300" />
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">{p?.name}</h3>
-                    {p?.description && <p className="mt-1 text-justify text-gray-200/90">{p.description}</p>}
-                    {p?.link && (
+                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  {p.description?.trim() && (
+                    <p className="text-pink-100 mt-2 text-justify leading-relaxed">{p.description}</p>
+                  )}
+                  {p.link && (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-3"
+                    >
+                      <LinkIcon size={16} /> View
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* CERTIFICATIONS */}
+        {certifications.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Certifications">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <BookOpen size={20} className="mr-2" /> Certifications
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {certifications.map((cert, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-purple-950/40 p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.3)]"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[rgba(0,207,255,0.15)] ring-1 ring-[rgba(0,207,255,0.35)]">
+                    <Award className="h-6 w-6 text-[color:var(--neon)]" />
+                  </span>
+                  <p className="text-pink-100 text-justify">{String(cert)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* MEDIA */}
+        {media.length > 0 && (
+          <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Media">
+            <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+              <Palette size={20} className="mr-2" /> Media
+            </h2>
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {media.map((m, i) => {
+                const label = m.type ? String(m.type) : 'Media';
+                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
+                return (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-white/10 bg-purple-950/40 p-4 transition hover:border-[rgba(0,207,255,0.35)]"
+                  >
+                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-pink-100 mt-1 text-justify">{labelNice}</p>
+                    {m.link && (
                       <a
-                        href={p.link}
+                        href={m.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-teal-300 underline-offset-4 hover:underline"
+                        className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-2"
                       >
-                        <LinkIcon size={16} aria-hidden /> Visit
+                        <LinkIcon size={16} /> View
                       </a>
                     )}
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-      {/* CERTIFICATIONS (cards) */}
-      {certifications.length > 0 && (
-        <section id="certifications" className="scroll-mt-24 bg-[#1a2b2b] px-6 py-20" aria-label="Certifications">
-          <SectionTitle center>Certifications</SectionTitle>
-          <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {certifications.map((cert, idx) => (
-              <div
-                key={idx}
-                className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg hover:border-teal-300/35"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-300/15 ring-1 ring-teal-300/40">
-                  <Award className="h-6 w-6 text-teal-300" />
-                </span>
-                <p className="text-lg text-gray-100/95">{cert}</p>
+        {/* CONTACT */}
+        <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm reveal" data-reveal aria-label="Contact">
+          <h2 className="text-2xl font-semibold text-pink-200 mb-4 flex items-center">
+            <Mail size={20} className="mr-2" /> Contact
+          </h2>
+          <div className="text-pink-100 space-y-2">
+            {data?.email && (
+              <div className="flex items-center gap-2">
+                <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
+                  <Mail size={16} /> {data.email}
+                </a>
+                <button
+                  onClick={() => copy('email', data.email!)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
+                  aria-label="Copy email"
+                >
+                  {copied === 'email' ? <Check size={14} /> : <Copy size={14} />} {copied === 'email' ? 'Copied' : 'Copy'}
+                </button>
               </div>
-            ))}
+            )}
+            {data?.phone && (
+              <div className="flex items-center gap-2">
+                <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
+                  <Phone size={16} /> {data.phone}
+                </a>
+                <button
+                  onClick={() => copy('phone', data.phone!)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
+                  aria-label="Copy phone"
+                >
+                  {copied === 'phone' ? <Check size={14} /> : <Copy size={14} />} {copied === 'phone' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+            {data?.linkedin && (
+              <a
+                href={data.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+              >
+                <Linkedin size={16} /> LinkedIn
+              </a>
+            )}
+
+            {socials.length > 0 && (
+              <div className="pt-2">
+                <h3 className="text-base font-medium text-pink-100/90">Social Links</h3>
+                <div className="mt-1 grid grid-cols-1 gap-1">
+                  {socials.map((s, i) => (
+                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[color:var(--neon)] hover:underline">
+                      {s.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data?.cvFileDataUrl && (
+              <a
+                href={data.cvFileDataUrl}
+                download={data.cvFileName ?? 'cv.pdf'}
+                className="mt-3 inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+              >
+                <Download size={16} /> Download CV
+              </a>
+            )}
           </div>
         </section>
-      )}
+      </main>
 
-      {/* CONTACT */}
-      <section id="contact" className="scroll-mt-24 bg-[#1a2b2b] px-6 py-20" aria-label="Contact">
-        <SectionTitle center>Contact</SectionTitle>
-        <div className="flex flex-wrap justify-center gap-6 text-lg">
-          {data?.email && (
-            <a
-              href={`mailto:${data.email}`}
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-gray-100 transition hover:text-teal-300"
-            >
-              <Mail className="h-5 w-5" /> {data.email}
-            </a>
-          )}
-          {data?.phone && (
-            <a
-              href={`tel:${data.phone}`}
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-gray-100 transition hover:text-teal-300"
-            >
-              <Phone className="h-5 w-5" /> {data.phone}
-            </a>
-          )}
-        </div>
-      </section>
+      {/* Back to top FAB */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon)]"
+        aria-label="Back to top"
+      >
+        <ChevronUp className="h-5 w-5" />
+      </button>
 
-      <footer className="bg-[#0d1a1a] py-6 text-center text-gray-400">
-        <p>
-          © {new Date().getFullYear()} {data?.fullName || 'Your Name'} | Professional Portfolio
-        </p>
+      {/* ===== FOOTER ===== */}
+      <footer className="bg-[#130a22] py-4 text-center text-pink-200/70">
+        <p>© {new Date().getFullYear()} {fullName} | Classic Portfolio</p>
       </footer>
 
+      {/* Global helpers */}
       <style jsx global>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 0%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 0%; }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        /* Spinning conic ring around avatar (with Safari support) */
+        :root { --neon:#00CFFF; }
+
+        /* Reveal in */
+        .reveal { opacity: 0; transform: translateY(8px); }
+        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+
+        @keyframes spin360 { to { transform: rotate(360deg); } }
         .avatar-ring::before {
           content: '';
           position: absolute;
@@ -350,78 +414,31 @@ export default function PortfolioTemplateModern({ data }: { data: PortfolioData 
           border-radius: inherit;
           background: conic-gradient(
             from 0deg,
-            rgba(20,184,166,0.0) 0deg,
-            rgba(20,184,166,0.45) 90deg,
-            rgba(6,182,212,0.65) 160deg,
-            rgba(34,197,94,0.45) 220deg,
-            rgba(20,184,166,0.0) 360deg
+            rgba(0,207,255,0.00) 0deg,
+            rgba(255,0,204,0.45) 80deg,
+            rgba(0,207,255,0.70) 160deg,
+            rgba(168,85,247,0.55) 240deg,
+            rgba(0,207,255,0.00) 360deg
           );
-          animation: spin 12s linear infinite;
+          animation: spin360 16s linear infinite;
           opacity: 0.9;
           -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
                   mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
         }
+
         @media (prefers-reduced-motion: reduce) {
-          .animate-[gradientShift_14s_ease_in_out_infinite] { animation: none !important; }
           .avatar-ring::before { animation: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
+        }
+
+        /* Print-friendly */
+        @media print {
+          .bg-[radial-gradient(80%_50%_at_50%_0%,rgba(255,0,204,0.18)_0%,transparent_60%)] { display:none !important; }
+          .bg-[repeating-linear-gradient(90deg,transparent_0,transparent_28px,rgba(255,255,255,0.16)_29px,transparent_30px)] { display:none !important; }
+          button, a[href^="#"] { display: none !important; }
+          body { background: #fff !important; color: #111 !important; }
         }
       `}</style>
     </div>
   );
-}
-
-function SectionTitle({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
-  return (
-    <h2
-      className={
-        'relative mb-10 text-3xl font-bold text-white ' + (center ? 'text-center mx-auto w-fit' : 'inline-block')
-      }
-    >
-      {children}
-      <span
-        className={
-          'absolute -bottom-2 ' +
-          (center ? 'left-1/2 -translate-x-1/2' : 'left-0') +
-          ' h-1 w-28 bg-gradient-to-r from-teal-300 via-cyan-300 to-emerald-400'
-        }
-        aria-hidden
-      />
-    </h2>
-  );
-}
-
-function useScrollSpy(onChange: (id: SectionId) => void) {
-  const lastId = useRef<SectionId>('home');
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target?.id) {
-          const id = visible.target.id as SectionId;
-          if (id !== lastId.current) {
-            lastId.current = id;
-            onChange(id);
-          }
-        }
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as Element[];
-    els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [onChange]);
-}
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const listener = (e: MediaQueryListEvent) => setReduced(e.matches);
-    setReduced(mql.matches);
-    mql.addEventListener?.('change', listener);
-    return () => mql.removeEventListener?.('change', listener);
-  }, []);
-  return reduced;
 }
