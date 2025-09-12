@@ -14,8 +14,15 @@ import {
   Check,
   Copy,
   ChevronUp,
+  Sparkles,
+  SunMedium,
+  MoonStar,
+  Circle,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
+
+const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
+type SectionId = (typeof SECTION_IDS)[number];
 
 export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
   // ===== Data guards =====
@@ -49,318 +56,427 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     [data]
   );
 
+  // ===== Theme (Classic / Noir / Porcelain) =====
+  type Theme = 'classic' | 'noir' | 'porcelain';
+  const [theme, setTheme] = useState<Theme>('classic');
+  useEffect(() => {
+    const t = (localStorage.getItem('__classic_theme') as Theme) || 'classic';
+    setTheme(t);
+    document.documentElement.setAttribute('data-classic-theme', t);
+  }, []);
+  const toggleTheme = () => {
+    const order: Theme[] = ['classic', 'noir', 'porcelain'];
+    const next = order[(order.indexOf(theme) + 1) % order.length];
+    setTheme(next);
+    document.documentElement.setAttribute('data-classic-theme', next);
+    localStorage.setItem('__classic_theme', next);
+  };
+
   // ===== UX niceties =====
   const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
   const [scrollPct, setScrollPct] = useState(0);
+  const [active, setActive] = useState<SectionId>('about');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll progress (top bar) - optimized with requestAnimationFrame
+  // Scroll progress
   useEffect(() => {
-    let rafId: number;
     const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const el = document.documentElement;
-        const h = el.scrollHeight - el.clientHeight;
-        setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
-      });
+      const el = document.documentElement;
+      const h = el.scrollHeight - el.clientHeight;
+      setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      cancelAnimationFrame(rafId);
-    };
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Enhanced section reveal (reduced-motion aware, with staggered child animations)
+  // Section reveal + active spy + parallax
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
 
-    const sections = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal-section]'));
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add('reveal-in');
-            // Stagger child elements
-            const children = Array.from(e.target.querySelectorAll<HTMLElement>('[data-reveal-child]'));
-            children.forEach((child, idx) => {
-              child.style.transitionDelay = `${idx * 0.1}s`;
-              child.classList.add('reveal-child-in');
-            });
-            obs.unobserve(e.target);
-          }
-        });
-      },
-      { rootMargin: '0px 0px -15% 0px', threshold: 0.15 }
-    );
-    sections.forEach((s) => obs.observe(s));
-    return () => obs.disconnect();
+    // Reveal
+    if (!prefersReduced) {
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add('reveal-in');
+              obs.unobserve(e.target);
+            }
+          });
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
+      );
+      nodes.forEach((n, i) => {
+        n.style.setProperty('--stagger', String(i % 8));
+        obs.observe(n);
+      });
+      return () => obs.disconnect();
+    }
   }, []);
 
-  // Clipboard helper - added haptic feedback if available
+  useEffect(() => {
+    // Active section spy
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const id = visible?.target?.id as SectionId | undefined;
+        if (id && SECTION_IDS.includes(id)) setActive(id);
+      },
+      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.5, 0.8, 1] }
+    );
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, []);
+
+  // Spotlight cursor + parallax layers + magnetic CTAs + 3D tilt
+  useEffect(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = containerRef.current;
+    if (!root) return;
+
+    const onMove = (e: MouseEvent) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      document.documentElement.style.setProperty('--mx', `${x}px`);
+      document.documentElement.style.setProperty('--my', `${y}px`);
+
+      if (prefersReduced) return;
+
+      // Parallax layers
+      const layers = root.querySelectorAll<HTMLElement>('[data-parallax]');
+      layers.forEach((l) => {
+        const depth = parseFloat(l.dataset.parallax || '0');
+        const dx = (x / window.innerWidth - 0.5) * depth * 12;
+        const dy = (y / window.innerHeight - 0.5) * depth * 12;
+        l.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      });
+
+      // Magnetic buttons
+      const mags = root.querySelectorAll<HTMLElement>('[data-magnet]');
+      mags.forEach((m) => {
+        const r = m.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dist = Math.hypot(x - cx, y - cy);
+        const pull = Math.max(0, 1 - dist / 260);
+        const tx = (x - cx) * 0.08 * pull;
+        const ty = (y - cy) * 0.08 * pull;
+        m.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+      });
+    };
+
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  // Keyboard jumps (1..6)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const idx = Number(e.key) - 1;
+      if (idx >= 0 && idx < SECTION_IDS.length) {
+        const id = SECTION_IDS[idx];
+        const el = document.getElementById(id);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Clipboard helper
   const copy = async (label: 'email' | 'phone', value: string) => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(label);
-      if ('vibrate' in navigator) navigator.vibrate(50);
-      setTimeout(() => setCopied(null), 1400);
+      setTimeout(() => setCopied(null), 1200);
     } catch {}
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="font-sans bg-gradient-to-br from-[#0d0b1e] via-[#1a0f2e] to-[#250e3a] text-white min-h-screen antialiased"
-    >
-      {/* Skip link - improved focus styles */}
+    <div ref={containerRef} className="classic-surface text-white min-h-screen antialiased">
+      {/* Skip link */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] rounded-lg bg-white/15 px-4 py-2.5 ring-2 ring-white/25 backdrop-blur-md shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur"
       >
         Skip to content
       </a>
 
-      {/* Top scroll progress - smoother gradient */}
+      {/* Spotlight cursor */}
+      <div aria-hidden className="fixed inset-0 pointer-events-none z-[1]" id="__spotlight" />
+
+      {/* Top scroll progress */}
       <div
         aria-hidden
-        className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[#00CFFF] via-fuchsia-500 to-violet-500 origin-left scale-x-0 transition-transform duration-300 ease-out"
-        style={{ transform: `scaleX(${scrollPct / 100})` }}
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-gradient-to-r from-[var(--c-accent)] via-fuchsia-400 to-violet-400 transition-[width]"
+        style={{ width: `${scrollPct}%` }}
       />
 
-      {/* ===== HEADER / HERO ===== */}
-      <header className="relative overflow-hidden py-16 text-center">
-        {/* Enhanced ambient glow + parallax subtle grid */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(100%_60%_at_50%_10%,rgba(255,0,204,0.22)_0%,transparent_70%)] opacity-100"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent_0,transparent_24px,rgba(255,255,255,0.12)_25px,transparent_26px)] parallax-bg"
-        />
-        <div className="relative z-10 max-w-5xl mx-auto px-8">
-          {/* Avatar: modern circular frame with 3D tilt effect, enhanced neon ring, and glow */}
-          <figure className="group relative w-fit mx-auto mb-8 tilt-avatar" data-reveal-section>
-            <span
-              aria-hidden
-              className="absolute -inset-12 -z-10 rounded-full blur-3xl opacity-75 bg-[radial-gradient(80%_80%_at_50%_50%,rgba(255,0,204,0.32)_0%,transparent_70%)]"
-            />
-            <span aria-hidden className="avatar-ring absolute inset-[-16px] rounded-full" />
-            <div className="relative h-44 w-44 rounded-full p-[4px] bg-gradient-to-br from-fuchsia-500 via-pink-500 to-[color:var(--neon)] shadow-xl ring-1 ring-white/15">
-              <div className="relative h-full w-full overflow-hidden rounded-full bg-white/8 backdrop-blur-md">
+      {/* Header controls */}
+      <div className="fixed right-4 top-3 z-50 flex items-center gap-2">
+        <button
+          onClick={toggleTheme}
+          className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/20 hover:bg-white/15 backdrop-blur"
+          aria-label="Toggle theme"
+        >
+          {theme === 'classic' ? <Sparkles size={14} /> : theme === 'noir' ? <MoonStar size={14} /> : <SunMedium size={14} />}
+          {theme.charAt(0).toUpperCase() + theme.slice(1)}
+        </button>
+      </div>
+
+      {/* ===== Auroral background with parallax layers ===== */}
+      <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden">
+        <div data-parallax="0.5" className="absolute -inset-[20%] opacity-80 classic-aurora" />
+        <div data-parallax="0.18" className="absolute -inset-[40%] opacity-40 classic-aurora alt" />
+        <div className="absolute inset-0 noise" />
+      </div>
+
+      {/* ===== HERO ===== */}
+      <header className="relative overflow-hidden py-16 text-center z-10">
+        <div className="relative z-10 max-w-4xl mx-auto px-6">
+          {/* Frame: gilt + conic ring + 3D tilt */}
+          <figure
+            className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
+            onMouseMove={(e) => {
+              const el = e.currentTarget;
+              const r = el.getBoundingClientRect();
+              const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
+              const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
+              el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
+            }}
+            data-reveal
+          >
+            <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
+            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+            <div className="relative h-40 w-40 md:h-44 md:w-44 rounded-[28px] p-[2px] classic-frame shadow-2xl">
+              <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
                 {photo ? (
-                  <Image src={photo} alt={fullName} fill sizes="176px" priority className="object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
+                  <Image src={photo} alt={fullName} fill sizes="176px" priority className="object-cover" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center text-pink-200/80 text-lg">No Photo</span>
+                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
                 )}
-                {/* Enhanced sheen on hover */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-[linear-gradient(45deg,transparent,rgba(255,255,255,0.18),transparent)] transition-transform duration-1000 ease-out group-hover:translate-x-[150%]"
+                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
                 />
               </div>
             </div>
           </figure>
 
-          <h1 className="text-5xl font-bold tracking-tight" data-reveal-child>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>
             {fullName}
           </h1>
-          <p className="text-2xl text-pink-200 mt-3" data-reveal-child>
+          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>
             {role}
           </p>
-          <p className="text-base text-pink-100 mt-2 max-w-xl mx-auto leading-relaxed" data-reveal-child>
+          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>
             {tagline}
           </p>
-          <p className="text-sm text-pink-200/70 mt-2" data-reveal-child>
+          <p className="text-xs text-[var(--c-muted)] mt-1 reveal" data-reveal>
             {location}
           </p>
 
-          {/* CTAs - with subtle lift on hover */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4" data-reveal-child>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
               <a
+                data-magnet
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-6 py-3 font-semibold text-gray-900 shadow-lg transition-transform hover:-translate-y-1 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-5 py-2 font-semibold text-gray-900 shadow-md transition will-change-transform"
               >
-                <Download className="h-5 w-5" /> Download CV
+                <Download className="h-4 w-4" /> Download CV
               </a>
             )}
             {data?.linkedin && (
               <a
+                data-magnet
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border-2 border-[color:var(--neon)] px-6 py-3 font-semibold text-[color:var(--neon)] shadow-lg transition-transform hover:-translate-y-1 hover:bg-[color:var(--neon)] hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--c-accent)] px-5 py-2 font-semibold text-[var(--c-accent)] shadow-md transition will-change-transform hover:bg-[var(--c-accent)] hover:text-gray-900"
               >
-                <Linkedin className="h-5 w-5" /> LinkedIn
+                <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
             )}
           </div>
         </div>
       </header>
 
+      {/* ===== RIGHT DOT NAV ===== */}
+      <aside
+        aria-label="Sections"
+        className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col gap-3"
+      >
+        {SECTION_IDS.map((id) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            aria-label={id}
+            className={`grid place-items-center h-6 w-6 rounded-full ring-1 ring-white/30 transition hover:ring-[var(--c-accent)] ${
+              active === id ? 'bg-[var(--c-accent)] text-black' : 'bg-white/10'
+            }`}
+            title={id.charAt(0).toUpperCase() + id.slice(1)}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            <Circle className="h-3 w-3" />
+          </a>
+        ))}
+      </aside>
+
       {/* ===== MAIN ===== */}
-      <main id="main" className="max-w-5xl mx-auto px-8 py-12 space-y-12">
-        {/* ABOUT - intro effect: fade + slide up */}
+      <main id="main" className="relative z-10 max-w-4xl mx-auto px-6 py-10 space-y-10">
+        {/* ABOUT */}
         {data?.about && (
-          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="About">
-            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-              <Palette size={24} className="text-[color:var(--neon)]" /> About Me
-            </h2>
-            <p className="text-pink-100 leading-relaxed text-justify" data-reveal-child>{data.about}</p>
-          </section>
+          <Section id="about" icon={<Palette size={20} />} title="About Me">
+            <p className="text-[var(--c-text)] leading-relaxed text-justify">{data.about}</p>
+          </Section>
         )}
 
-        {/* SKILLS - intro effect: staggered scale in */}
+        {/* SKILLS */}
         {skills.length > 0 && (
-          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Skills">
-            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-              <Palette size={24} className="text-[color:var(--neon)]" /> Skills
-            </h2>
-            <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Section id="skills" icon={<Palette size={20} />} title="Skills">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
               {skills.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between rounded-lg bg-fuchsia-900/25 p-4 ring-1 ring-white/12 transition-all hover:-translate-y-1 hover:shadow-xl hover:ring-[rgba(0,207,255,0.4)]"
-                  data-reveal-child
+                  className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
+                  data-reveal
                 >
-                  <span className="text-base text-pink-100">{String(s)}</span>
-                  <span className="h-3 w-3 rounded-full bg-[color:var(--neon)] shadow-md" />
+                  <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                  <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
                 </div>
               ))}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* PROJECTS - intro effect: fade + expand */}
+        {/* PROJECTS */}
         {projects.length > 0 && (
-          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Projects">
-            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-              <Palette size={24} className="text-[color:var(--neon)]" /> Projects
-            </h2>
-            <div className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Section id="projects" icon={<Palette size={20} />} title="Projects">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
               {projects.map((p, i) => (
                 <article
                   key={i}
-                  className="rounded-lg border border-white/12 bg-purple-950/50 p-6 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl hover:border-[rgba(0,207,255,0.4)]"
-                  data-reveal-child
+                  className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
+                  data-reveal
                 >
-                  <h3 className="text-2xl font-medium text-pink-200">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
                   {p.description?.trim() && (
-                    <p className="text-pink-100 mt-3 leading-relaxed">{p.description}</p>
+                    <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>
                   )}
                   {p.link && (
                     <a
                       href={p.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline mt-4 font-medium"
+                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
                     >
-                      <LinkIcon size={18} /> View Project
+                      <LinkIcon size={16} /> View
                     </a>
                   )}
                 </article>
               ))}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* CERTIFICATIONS - intro effect: staggered flip in */}
+        {/* CERTIFICATIONS */}
         {certifications.length > 0 && (
-          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Certifications">
-            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-              <BookOpen size={24} className="text-[color:var(--neon)]" /> Certifications
-            </h2>
-            <div className="mx-auto max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
               {certifications.map((cert, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 rounded-lg border border-white/12 bg-purple-950/50 p-4 ring-1 ring-white/8 transition-all hover:-translate-y-1 hover:shadow-xl hover:ring-[rgba(0,207,255,0.4)]"
-                  data-reveal-child
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-[var(--card-bg)] p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
+                  data-reveal
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(0,207,255,0.2)] ring-2 ring-[rgba(0,207,255,0.4)]">
-                    <Award className="h-7 w-7 text-[color:var(--neon)]" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+                    <Award className="h-6 w-6 text-[var(--c-accent)]" />
                   </span>
-                  <p className="text-pink-100 font-medium">{String(cert)}</p>
+                  <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
                 </div>
               ))}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* MEDIA - intro effect: slide from left */}
+        {/* MEDIA */}
         {media.length > 0 && (
-          <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Media">
-            <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-              <Palette size={24} className="text-[color:var(--neon)]" /> Media
-            </h2>
-            <div className="mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Section id="media" icon={<Palette size={20} />} title="Media">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
               {media.map((m, i) => {
                 const label = m.type ? String(m.type) : 'Media';
                 const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
                 return (
                   <div
                     key={i}
-                    className="rounded-lg border border-white/12 bg-purple-950/50 p-6 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-[rgba(0,207,255,0.4)]"
-                    data-reveal-child
+                    className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
+                    data-reveal
                   >
-                    <h3 className="text-2xl font-medium text-pink-200">{m.title?.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-pink-100 mt-2 font-medium">{labelNice}</p>
+                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
                     {m.link && (
                       <a
                         href={m.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline mt-4 font-medium"
+                        className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2"
                       >
-                        <LinkIcon size={18} /> View Media
+                        <LinkIcon size={16} /> View
                       </a>
                     )}
                   </div>
                 );
               })}
             </div>
-          </section>
+          </Section>
         )}
 
-        {/* CONTACT - intro effect: fade + scale */}
-        <section className="rounded-2xl border border-white/12 bg-white/8 p-8 shadow-md hover:shadow-lg transition-all duration-300" data-reveal-section aria-label="Contact">
-          <h2 className="text-3xl font-semibold text-pink-200 mb-6 flex items-center gap-3" data-reveal-child>
-            <Mail size={24} className="text-[color:var(--neon)]" /> Contact
-          </h2>
-          <div className="text-pink-100 space-y-4" data-reveal-child>
+        {/* CONTACT */}
+        <Section id="contact" icon={<Mail size={20} />} title="Contact">
+          <div className="text-[var(--c-text)] space-y-2">
             {data?.email && (
-              <div className="flex items-center gap-3">
-                <a href={`mailto:${data.email}`} className="flex items-center gap-3 hover:text-[color:var(--neon)] transition-colors">
-                  <Mail size={18} /> {data.email}
+              <div className="flex items-center gap-2" data-reveal>
+                <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
+                  <Mail size={16} /> {data.email}
                 </a>
                 <button
                   onClick={() => copy('email', data.email!)}
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm ring-1 ring-white/20 hover:bg-white/10 transition-all"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
                   aria-label="Copy email"
                 >
-                  {copied === 'email' ? <Check size={16} /> : <Copy size={16} />} {copied === 'email' ? 'Copied' : 'Copy'}
+                  {copied === 'email' ? <Check size={14} /> : <Copy size={14} />} {copied === 'email' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             )}
             {data?.phone && (
-              <div className="flex items-center gap-3">
-                <a href={`tel:${data.phone}`} className="flex items-center gap-3 hover:text-[color:var(--neon)] transition-colors">
-                  <Phone size={18} /> {data.phone}
+              <div className="flex items-center gap-2" data-reveal>
+                <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
+                  <Phone size={16} /> {data.phone}
                 </a>
                 <button
                   onClick={() => copy('phone', data.phone!)}
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm ring-1 ring-white/20 hover:bg-white/10 transition-all"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-white/15 hover:bg-white/5"
                   aria-label="Copy phone"
                 >
-                  {copied === 'phone' ? <Check size={16} /> : <Copy size={16} />} {copied === 'phone' ? 'Copied' : 'Copy'}
+                  {copied === 'phone' ? <Check size={14} /> : <Copy size={14} />} {copied === 'phone' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             )}
@@ -369,18 +485,25 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 text-[color:var(--neon)] hover:underline transition-colors"
+                className="flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-reveal
               >
-                <Linkedin size={18} /> LinkedIn
+                <Linkedin size={16} /> LinkedIn
               </a>
             )}
 
             {socials.length > 0 && (
-              <div className="pt-4">
-                <h3 className="text-lg font-medium text-pink-100/90">Social Links</h3>
-                <div className="mt-2 grid grid-cols-1 gap-2">
+              <div className="pt-2" data-reveal>
+                <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
+                <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
-                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[color:var(--neon)] hover:underline transition-colors">
+                    <a
+                      key={i}
+                      href={s.url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--c-accent)] hover:underline"
+                    >
                       {s.label}
                     </a>
                   ))}
@@ -392,49 +515,119 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="mt-4 inline-flex items-center gap-3 text-[color:var(--neon)] hover:underline transition-colors"
+                className="mt-3 inline-flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-reveal
               >
-                <Download size={18} /> Download CV
+                <Download size={16} /> Download CV
               </a>
             )}
           </div>
-        </section>
+        </Section>
       </main>
 
-      {/* Back to top FAB - with visibility based on scroll */}
+      {/* Back to top FAB */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className={`fixed bottom-6 right-6 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/12 ring-2 ring-white/25 backdrop-blur-md hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--neon)] transition-all duration-300 ${scrollPct > 20 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-accent)]"
         aria-label="Back to top"
       >
-        <ChevronUp className="h-6 w-6" />
+        <ChevronUp className="h-5 w-5" />
       </button>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-[#130a22] py-6 text-center text-pink-200/70 text-sm">
-        <p>© {new Date().getFullYear()} {fullName} | Enhanced Classic Portfolio</p>
+      <footer className="bg-[var(--footer-bg)] py-5 text-center text-[var(--c-subtle)]">
+        <p>
+          © {new Date().getFullYear()} {fullName} | Classic Portfolio
+        </p>
       </footer>
 
-      {/* Global helpers - enhanced animations and tilt */}
+      {/* Global style tokens + effects */}
       <style jsx global>{`
-        :root { --neon: #00CFFF; }
+        :root {
+          --mx: 50vw;
+          --my: 50vh;
+        }
+        /* Themes */
+        :root[data-classic-theme='classic'] {
+          --c-accent:#00CFFF;
+          --c-text:#ffeafe;
+          --c-subtle:#ffd7fb;
+          --c-muted:#f4c8f6cc;
+          --bg1:#0d0b1e; --bg2:#1a0f2e; --bg3:#250e3a;
+          --chip-bg: rgba(236, 72, 153, 0.18);
+          --chip-ring: rgba(0,207,255,0.35);
+          --card-bg: rgba(76, 29, 149, 0.28);
+          --card-ring: rgba(0,207,255,0.35);
+          --badge-bg: rgba(0,207,255,0.15);
+          --badge-ring: rgba(0,207,255,0.35);
+          --footer-bg:#130a22;
+        }
+        :root[data-classic-theme='noir'] {
+          --c-accent:#26f0d7;
+          --c-text:#e8fffb;
+          --c-subtle:#a7ffef;
+          --c-muted:#a7ffefcc;
+          --bg1:#041016; --bg2:#071b22; --bg3:#0b2830;
+          --chip-bg: rgba(38, 240, 215, 0.1);
+          --chip-ring: rgba(38, 240, 215, 0.35);
+          --card-bg: rgba(8, 145, 178, 0.18);
+          --card-ring: rgba(38, 240, 215, 0.35);
+          --badge-bg: rgba(38, 240, 215, 0.15);
+          --badge-ring: rgba(38, 240, 215, 0.35);
+          --footer-bg:#06141a;
+        }
+        :root[data-classic-theme='porcelain'] {
+          --c-accent:#ff7ad9;
+          --c-text:#1f1b24;
+          --c-subtle:#3c2b46;
+          --c-muted:#4b3a56cc;
+          --bg1:#fff8ff; --bg2:#fdf3ff; --bg3:#faeaff;
+          --chip-bg: rgba(255, 122, 217, 0.12);
+          --chip-ring: rgba(255,122,217,0.35);
+          --card-bg: rgba(255,255,255,0.75);
+          --card-ring: rgba(255,122,217,0.35);
+          --badge-bg: rgba(255, 122, 217, 0.15);
+          --badge-ring: rgba(255,122,217,0.35);
+          --footer-bg:#efe3f7;
+        }
 
-        /* Reveal section */
-        [data-reveal-section] { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease-out, transform 0.8s ease-out; }
-        .reveal-in { opacity: 1; transform: translateY(0); }
+        .classic-surface {
+          background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3));
+        }
+        .classic-aurora {
+          background: radial-gradient(60% 50% at 50% 0%, rgba(255,0,204,0.18) 0%, transparent 60%),
+                      radial-gradient(40% 40% at 80% 10%, rgba(0,207,255,0.22) 0%, transparent 70%),
+                      radial-gradient(40% 40% at 20% 20%, rgba(168,85,247,0.22) 0%, transparent 70%),
+                      linear-gradient(to bottom, var(--bg1), var(--bg2));
+          filter: saturate(120%);
+        }
+        .classic-aurora.alt {
+          background: radial-gradient(45% 50% at 20% 10%, rgba(255,122,245,0.18) 0%, transparent 70%),
+                      radial-gradient(40% 40% at 80% 10%, rgba(0,207,255,0.18) 0%, transparent 70%),
+                      linear-gradient(to bottom, transparent, var(--bg3));
+          mix-blend-mode: screen;
+        }
+        .noise {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+          background-size: 220px 220px;
+          opacity: .6;
+          mix-blend-mode: overlay;
+        }
 
-        /* Staggered child reveal */
-        [data-reveal-child] { opacity: 0; transform: translateY(12px) scale(0.98); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
-        .reveal-child-in { opacity: 1; transform: translateY(0) scale(1); }
+        .classic-glow { background: radial-gradient(60% 60% at 50% 50%, rgba(255,0,204,0.28) 0%, transparent 60%); }
+        .classic-frame {
+          background:
+            conic-gradient(from 210deg, rgba(255,255,255,.4), rgba(255,255,255,0) 30% 70%, rgba(255,255,255,.4)),
+            linear-gradient(180deg, #ffedd5, #facc15 30%, #f59e0b 60%, #eab308 100%);
+          border-radius: 28px;
+          padding: 2px;
+        }
 
-        /* Parallax bg */
-        .parallax-bg { transform: translateY(calc(var(--scroll-pct, 0) * -0.2)); }
+        /* Reveal */
+        .reveal { opacity: 0; transform: translateY(12px); }
+        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
 
-        /* Avatar tilt (CSS 3D) */
-        .tilt-avatar { perspective: 1000px; transition: transform 0.3s ease-out; }
-        .tilt-avatar:hover { transform: rotateY(8deg) rotateX(8deg); }
-
-        /* Enhanced avatar ring */
         @keyframes spin360 { to { transform: rotate(360deg); } }
         .avatar-ring::before {
           content: '';
@@ -443,31 +636,59 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           border-radius: inherit;
           background: conic-gradient(
             from 0deg,
-            rgba(0,207,255,0.1) 0deg,
-            rgba(255,0,204,0.5) 90deg,
-            rgba(0,207,255,0.8) 180deg,
-            rgba(168,85,247,0.6) 270deg,
-            rgba(0,207,255,0.1) 360deg
+            rgba(0,207,255,0.00) 0deg,
+            rgba(255,0,204,0.45) 80deg,
+            rgba(0,207,255,0.70) 160deg,
+            rgba(168,85,247,0.55) 240deg,
+            rgba(0,207,255,0.00) 360deg
           );
-          animation: spin360 12s linear infinite;
-          opacity: 0.95;
-          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0);
-                  mask: radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0);
+          animation: spin360 16s linear infinite;
+          opacity: 0.9;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
+                  mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
+        }
+
+        /* Spotlight cursor */
+        #__spotlight {
+          background: radial-gradient(350px 350px at var(--mx) var(--my), rgba(255,255,255,.08), transparent 60%);
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .avatar-ring::before, .tilt-avatar:hover, [data-reveal-section], [data-reveal-child] { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; }
+          .avatar-ring::before { animation: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
         }
 
-        /* Print-friendly - enhanced */
+        /* Print-friendly */
         @media print {
-          .bg-[radial-gradient], .bg-[repeating-linear-gradient], button, a[href^="#"], .fixed { display: none !important; }
-          body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
-          section { page-break-inside: avoid; border: none !important; box-shadow: none !important; }
-          h2 { color: #333 !important; }
-          p, a { color: #555 !important; }
+          #__spotlight, aside, .noise { display: none !important; }
+          button, a[href^="#"] { display: none !important; }
+          body { background: #fff !important; color: #111 !important; }
         }
       `}</style>
     </div>
+  );
+}
+
+function Section({
+  id,
+  title,
+  icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition" data-reveal>
+      <header className="mb-4 flex items-center gap-3">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+          {icon}
+        </span>
+        <h2 className="text-2xl font-semibold">{title}</h2>
+      </header>
+      {children}
+    </section>
   );
 }
