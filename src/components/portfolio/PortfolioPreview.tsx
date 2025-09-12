@@ -1,27 +1,28 @@
+// components/portfolio/PortfolioPreview.tsx
 'use client';
 
 import type { FC } from 'react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
-import PortfolioTemplateModern from './PortfolioTemplateModern';
-import PortfolioTemplateClassic from './PortfolioTemplateClassic';
-import PortfolioTemplateMinimal from './PortfolioTemplateMinimal';
-import PortfolioTemplateTech from './PortfolioTemplateTech';
-import PortfolioTemplateCreative from './PortfolioTemplateCreative';
-import PortfolioTemplateCorporate from './PortfolioTemplateCorporate';
+import ModernPro from '@/lib/publish/templates/ModernPro';
+import ClassicProLeft from '@/lib/publish/templates/ClassicProLeft';
+import MinimalPro from '@/lib/publish/templates/MinimalPro';
+import TechPro from '@/lib/publish/templates/TechPro';
+import CreativePro from '@/lib/publish/templates/CreativePro';
+import CorporatePro from '@/lib/publish/templates/CorporatePro';
 
 type TemplateComponent = FC<{ data: PortfolioData }>;
 
 const PREVIEW_REGISTRY: Record<PortfolioData['templateId'], TemplateComponent> = {
-  modern: PortfolioTemplateModern,
-  classic: PortfolioTemplateClassic,
-  minimal: PortfolioTemplateMinimal,
-  tech:    PortfolioTemplateTech,
-  creative: PortfolioTemplateCreative,
-  corporate: PortfolioTemplateCorporate,
+  modern: ModernPro,
+  classic: ClassicProLeft,
+  minimal: MinimalPro,
+  tech:    TechPro,
+  creative: CreativePro,
+  corporate: CorporatePro,
 };
 
 export default function PortfolioPreview({ data }: { data: PortfolioData }) {
-  const Comp = PREVIEW_REGISTRY[data.templateId] ?? PortfolioTemplateModern;
+  const Comp = PREVIEW_REGISTRY[data.templateId] ?? ModernPro;
   return <Comp data={data} />;
 }
