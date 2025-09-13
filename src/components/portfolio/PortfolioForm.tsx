@@ -359,10 +359,10 @@ export default function PortfolioForm({
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full py-2 px-4 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <SelectTrigger className="w-full py-2 px-4 border border-gray-300 rounded-md dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <SelectValue placeholder="Select Template" />
                           </SelectTrigger>
-                          <SelectContent className="w-full bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                          <SelectContent className="w-full dark:bg-zinc-800 border-gray-300 rounded-md shadow-lg z-10">
                             <SelectItem value="modern" className="py-2 px-4 hover:bg-gray-100">Modern</SelectItem>
                             <SelectItem value="classic" className="py-2 px-4 hover:bg-gray-100">Classic</SelectItem>
                             <SelectItem value="minimal" className="py-2 px-4 hover:bg-gray-100">Minimal</SelectItem>
