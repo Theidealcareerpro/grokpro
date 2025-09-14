@@ -14,10 +14,7 @@ import {
   Link as LinkIcon,
   Circle,
   Menu,
-  X,
   Sparkles,
-  SunMedium,
-  MoonStar,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
@@ -163,33 +160,32 @@ export default function Classic({ data }: { data: PortfolioData }) {
       {/* HERO */}
       <header className="relative overflow-hidden py-16 text-center z-10">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <figure
-            className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
-            onMouseMove={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              const r = el.getBoundingClientRect();
-              const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
-              const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
-              el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
-            }}
-            data-reveal
-          >
-            <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
-            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
-            <div className="relative h-48 w-48 md:h-56 md:w-56 rounded-[28px] p-[2px] classic-frame shadow-2xl">
-              <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
-                {photo ? (
+          {/* Avatar: show ONLY if photo exists */}
+          {photo && (
+            <figure
+              className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
+              onMouseMove={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                const r = el.getBoundingClientRect();
+                const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
+                const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
+                el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
+              }}
+              data-reveal
+            >
+              <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
+              <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+              <div className="relative h-48 w-48 md:h-56 md:w-56 rounded-[28px] p-[2px] classic-frame shadow-2xl">
+                <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
                   <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
-                )}
-                <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out" />
+                  <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out" />
+                </div>
               </div>
-            </div>
-          </figure>
+            </figure>
+          )}
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>{fullName}</h1>
           <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>{role}</p>
@@ -497,7 +493,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         /* Spotlight cursor */
         #__spotlight { background: radial-gradient(350px 350px at var(--mx) var(--my), rgba(255,255,255,.08), transparent 60%); }
 
-        /* ===== NEW: Section-level box reveal (entire card) ===== */
+        /* NEW: Section-level box reveal (entire card) */
         .section[data-entrance] {
           opacity: 0;
           transform: translateY(18px) scale(0.98);
