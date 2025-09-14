@@ -497,7 +497,26 @@ export default function Classic({ data }: { data: PortfolioData }) {
         /* Spotlight cursor */
         #__spotlight { background: radial-gradient(350px 350px at var(--mx) var(--my), rgba(255,255,255,.08), transparent 60%); }
 
-        /* ===== Section entrance orchestration (header first, then children) ===== */
+        /* ===== NEW: Section-level box reveal (entire card) ===== */
+        .section[data-entrance] {
+          opacity: 0;
+          transform: translateY(18px) scale(0.98);
+          filter: blur(6px);
+          will-change: opacity, transform, filter, box-shadow;
+        }
+        .section[data-entrance].in {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          box-shadow: 0 12px 40px rgba(0,0,0,.22);
+          transition:
+            opacity .6s ease,
+            transform .6s ease,
+            filter .6s ease,
+            box-shadow .6s ease;
+        }
+
+        /* Section entrance orchestration (header first, then children) */
         .section { position: relative; overflow: clip; }
         .section[data-entrance]::before {
           content: ''; position: absolute; inset: 0;
@@ -527,6 +546,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         @media (prefers-reduced-motion: reduce) {
           .avatar-ring::before { animation: none !important; }
           .reveal { opacity: 1 !important; transform: none !important; }
+          .section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; box-shadow: none !important; }
           .section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; }
           .section-head, .section-body > [data-seq-item] { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
           .navlink::after { transition: none !important; }
@@ -553,11 +573,11 @@ export default function Classic({ data }: { data: PortfolioData }) {
             var drawer = document.getElementById('__drawer');
             var isOpen = false;
 
-            // Inline SVGs (avoid react-dom/server in publish):
+            // Inline SVGs
             var MENU_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
             var X_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
-            // Theme init & toggle (classic/noir)
+            // Theme init & toggle
             try {
               var t = localStorage.getItem('__classic_theme') || 'noir';
               doc.setAttribute('data-classic-theme', t);
@@ -673,7 +693,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
               ${SECTION_IDS.map((id) => `var el_${id} = document.getElementById('${id}'); if (el_${id}) spy.observe(el_${id});`).join('\n')}
             } catch(_){}
 
-            // Section entrance orchestrator (header first, then items)
+            // Section entrance orchestrator (header first, then items) + full-card reveal
             (function(){
               if (!('IntersectionObserver' in window)) return;
               var seq = new IntersectionObserver(function(entries){
