@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
-  Palette,
   BookOpen,
   Link as LinkIcon,
   Mail,
@@ -62,7 +61,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     [data]
   );
 
-  // ===== Theme (Classic / Noir / Porcelain) =====
+  // ===== Theme (Classic / Noir) =====
   type Theme = 'classic' | 'noir';
   const [theme, setTheme] = useState<Theme>('classic');
   useEffect(() => {
@@ -99,30 +98,50 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Section reveal
+  // Section reveal (element-level) + Section entrance (box-level)
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (!prefersReduced) {
+      // 1) Existing per-node reveal (for inner bits using [data-reveal])
       const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
       const obs = new IntersectionObserver(
         (entries) => {
-          entries.forEach((e) => {
-            if (e.isIntersecting) {
-              e.target.classList.add('reveal-in');
-              obs.unobserve(e.target);
+          entries.forEach((entry, idx) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement;
+              el.classList.add('reveal-in');
+              el.style.setProperty('--stagger', String(idx % 8));
+              obs.unobserve(el);
             }
           });
         },
         { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
       );
-      nodes.forEach((n, i) => {
-        n.style.setProperty('--stagger', String(i % 8));
-        obs.observe(n);
-      });
-      return () => obs.disconnect();
+      nodes.forEach((n) => obs.observe(n));
+
+      // 2) Stronger section-level box reveal (fade + lift + slight scale + blur)
+      const sections = Array.from(root.querySelectorAll<HTMLElement>('section[data-entrance]'));
+      const secObs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement;
+              el.classList.add('in');
+              secObs.unobserve(el);
+            }
+          });
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
+      );
+      sections.forEach((s) => secObs.observe(s));
+
+      return () => {
+        obs.disconnect();
+        secObs.disconnect();
+      };
     }
   }, []);
 
@@ -133,7 +152,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        const id = visible?.target?.id as SectionId | undefined;
+        const id = (visible?.target as HTMLElement | null)?.id as SectionId | undefined;
         if (id && SECTION_IDS.includes(id)) setActive(id);
       },
       { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.5, 0.8, 1] }
@@ -355,37 +374,35 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       {/* ===== HERO ===== */}
       <header className="relative overflow-hidden py-16 text-center z-10">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          {/* Frame: 3D tilt */}
-          <figure
-            className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
-            onMouseMove={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              const r = el.getBoundingClientRect();
-              const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
-              const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
-              el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
-            }}
-            data-reveal
-          >
-            <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
-            <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
-            <div className="relative h-40 w-40 md:h-44 md:w-44 rounded-[28px] p-[2px] classic-frame shadow-2xl">
-              <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
-                {photo ? (
+          {/* Only render the avatar frame if a photo exists */}
+          {photo && (
+            <figure
+              className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
+              onMouseMove={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                const r = el.getBoundingClientRect();
+                const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
+                const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
+                el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
+              }}
+              data-reveal
+            >
+              <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
+              <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+              <div className="relative h-40 w-40 md:h-44 md:w-44 rounded-[28px] p-[2px] classic-frame shadow-2xl">
+                <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
                   <Image src={photo} alt={fullName} fill sizes="176px" priority className="object-cover" />
-                ) : (
-                  <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
-                )}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out"
-                />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out"
+                  />
+                </div>
               </div>
-            </div>
-          </figure>
+            </figure>
+          )}
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>
             {fullName}
@@ -455,7 +472,9 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         {/* ABOUT */}
         {data?.about && (
           <Section id="about" icon={<UserRound size={20} />} title="About Me">
-            <p className="text-[var(--c-text)] leading-relaxed text-justify">{data.about}</p>
+            <p className="text-[var(--c-text)] leading-relaxed text-justify" data-reveal>
+              {data.about}
+            </p>
           </Section>
         )}
 
@@ -708,7 +727,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           border-radius: 28px; padding: 2px;
         }
 
-        /* Reveal */
+        /* Reveal (per-element) */
         .reveal { opacity: 0; transform: translateY(12px); }
         .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
         [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
@@ -737,9 +756,36 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         }
         .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
 
+        /* ===== Stronger section-level box reveal ===== */
+        section[data-entrance] {
+          opacity: 0;
+          transform: translateY(18px) scale(.985);
+          filter: blur(6px);
+          will-change: opacity, transform, filter;
+        }
+        section[data-entrance].in {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          transition: opacity .65s cubic-bezier(.22,.75,.2,1), transform .65s cubic-bezier(.22,.75,.2,1), filter .65s ease;
+        }
+        /* Optional soft wash overlay as it enters */
+        section[data-entrance]::before {
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background:
+            radial-gradient(120% 120% at -20% 0%, rgba(255,255,255,.08), transparent 60%),
+            linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+          clip-path: inset(0 100% 0 0);
+          opacity: 0;
+          transition: clip-path .9s cubic-bezier(.22,.75,.2,1), opacity .9s ease;
+        }
+        section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .06; }
+
         @media (prefers-reduced-motion: reduce) {
           .avatar-ring::before { animation: none !important; }
           .reveal { opacity: 1 !important; transform: none !important; }
+          section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; }
+          section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; transition: none !important; }
           .navlink::after { transition: none !important; }
         }
 
@@ -766,8 +812,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition" data-reveal>
-      <header className="mb-4 flex items-center gap-3">
+    <section
+      id={id}
+      className="relative rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition"
+      data-entrance
+    >
+      <header className="mb-4 flex items-center gap-3" data-reveal>
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
           {icon}
         </span>
