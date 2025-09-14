@@ -186,7 +186,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
                 ) : (
                   <span className="absolute inset-0 grid place-items-center text-pink-200/80">No Photo</span>
                 )}
-                <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]" />
+                <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out" />
               </div>
             </div>
           </figure>

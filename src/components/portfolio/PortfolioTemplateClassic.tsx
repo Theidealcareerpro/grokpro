@@ -381,7 +381,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 )}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
+                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out"
                 />
               </div>
             </div>
