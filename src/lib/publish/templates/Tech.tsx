@@ -1,4 +1,4 @@
-// publish: Tech template (static-safe)
+// publish: Tech template (no-JS safe reveals)
 import * as React from 'react';
 import {
   Code,
@@ -49,7 +49,7 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
       <div id="__progress" aria-hidden className="fixed inset-x-0 top-0 z-[60] h-1 bg-[color:var(--neon)] w-0 transition-[width]" />
 
       {/* ===== NAVBAR ===== */}
-      <nav id="__nav" className="sticky top-0 z-50 bg-gray-950/60 backdrop-blur border-b border-transparent">
+      <nav id="__nav" className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex h-14 items-center justify-between">
             {/* Brand */}
@@ -128,7 +128,6 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
               <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-[#7dd3fc] via-[#38bdf8] to-[#00cfff] shadow-2xl">
                 <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
                   <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
-                  {/* sheen on hover (no hover = subtle idle sheen) */}
                   <span
                     aria-hidden
                     className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.12),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
@@ -371,19 +370,24 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
         }
         .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
 
-        /* Per-item reveal */
-        .reveal { opacity: 0; transform: translateY(12px); }
-        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
-        [data-reveal] { animation-delay: calc(var(--stagger, 0) * 18ms); }
+        /* === No-JS safe reveals ===
+           Default: visible. When JS runs, it adds 'js' to <html>. Only then do we apply hidden -> in animation.
+        */
+        /* per-item reveal */
+        [data-reveal] { /* visible by default */ }
+        html.js [data-reveal] { opacity: 0; transform: translateY(12px); }
+        html.js .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        html.js [data-reveal] { animation-delay: calc(var(--stagger, 0) * 18ms); }
 
-        /* Strong section box reveal */
-        section[data-entrance] {
+        /* strong section box reveal */
+        section[data-entrance] { /* visible by default */ }
+        html.js section[data-entrance] {
           opacity: 0;
           transform: translateY(18px) scale(.985);
           filter: blur(6px);
           will-change: opacity, transform, filter;
         }
-        section[data-entrance].in {
+        html.js section[data-entrance].in {
           opacity: 1;
           transform: none;
           filter: none;
@@ -391,7 +395,7 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
                       transform .65s cubic-bezier(.22,.75,.2,1),
                       filter .65s ease;
         }
-        section[data-entrance]::before {
+        html.js section[data-entrance]::before {
           content: '';
           position: absolute; inset: 0; pointer-events: none;
           background:
@@ -401,7 +405,7 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
           opacity: 0;
           transition: clip-path .9s cubic-bezier(.22,.75,.2,1), opacity .9s ease;
         }
-        section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .06; }
+        html.js section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .06; }
 
         /* Avatar neon ring */
         @keyframes spin360 { to { transform: rotate(360deg); } }
@@ -424,19 +428,22 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
 
         @media (prefers-reduced-motion: reduce) {
           .avatar-ring::before { animation: none !important; }
-          .reveal { opacity: 1 !important; transform: none !important; }
-          section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; }
-          section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; transition: none !important; }
+          html.js [data-reveal] { opacity: 1 !important; transform: none !important; }
+          html.js section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; }
+          html.js section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; transition: none !important; }
           .navlink::after { transition: none !important; }
         }
       `}</style>
 
-      {/* Tiny runtime (no hooks) */}
+      {/* Tiny runtime (adds 'js' class; safe fallbacks if JS blocked) */}
       <script
         dangerouslySetInnerHTML={{
           __html: `
           (function () {
             var doc = document.documentElement;
+            // mark that JS is available (enables animated states, otherwise content stays visible)
+            try { doc.classList.add('js'); } catch(_){}
+
             var prog = document.getElementById('__progress');
             var nav = document.getElementById('__nav');
             var hamburger = document.getElementById('__hamburger');
@@ -447,7 +454,7 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
             var MENU_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
             var X_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
-            // Smooth scroll for in-page links (nav & drawer)
+            // Smooth scroll for in-page links
             function enhanceAnchor(a){
               a.addEventListener('click', function(ev){
                 var href = a.getAttribute('href') || '';
@@ -469,8 +476,8 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
               var pct = h > 0 ? (doc.scrollTop / h) * 100 : 0;
               if (prog) prog.style.width = pct + '%';
               if (nav) {
-                if (window.scrollY > 8) nav.classList.add('shadow-[0_8px_30px_rgba(0,0,0,0.35)]', 'border-white/10');
-                else nav.classList.remove('shadow-[0_8px_30px_rgba(0,0,0,0.35)]', 'border-white/10');
+                if (window.scrollY > 8) nav.classList.add('shadow-[0_8px_30px_rgba(0,0,0,0.35)]');
+                else nav.classList.remove('shadow-[0_8px_30px_rgba(0,0,0,0.35)]');
               }
             }
             onScroll();
@@ -485,7 +492,7 @@ export default function TechPublish({ data }: { data: PortfolioData }) {
               });
             }
 
-            // Per-item reveal + Section entrance
+            // Per-item reveal + Section entrance (with fallbacks)
             var prefersReduced = false;
             try { prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_){}
             if (prefersReduced || !('IntersectionObserver' in window)) {
