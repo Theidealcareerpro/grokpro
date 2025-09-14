@@ -1,72 +1,157 @@
-// src/lib/publish/templates/TechPublish.tsx
-import 'server-only';
+// publish: Tech template (static-safe)
+import * as React from 'react';
+import {
+  Code,
+  BookOpen,
+  Link as LinkIcon,
+  Mail,
+  Phone,
+  Linkedin,
+  Download,
+  Award,
+} from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
-export default function Tech({ data }: { data: PortfolioData }) {
+const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
+
+export default function TechPublish({ data }: { data: PortfolioData }) {
+  // Safe guards for optional arrays/strings
   const fullName = data?.fullName || 'Your Name';
   const role = data?.role || 'Tech Professional';
   const tagline = data?.tagline || 'Tech Tagline';
   const location = data?.location || 'Location';
   const photo = data?.photoDataUrl;
 
-  const skills = Array.isArray(data?.skills) ? data.skills.filter(Boolean) : [];
+  const skills = Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : [];
   const projects = Array.isArray(data?.projects)
-    ? data.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+    ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
     : [];
-  const certs = Array.isArray(data?.certifications) ? data.certifications.filter(Boolean) : [];
+  const certifications = Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : [];
   const media = Array.isArray(data?.media)
-    ? data.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+    ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
     : [];
-  const socials = Array.isArray(data?.socials) ? data.socials.filter((s) => s && s.label && s.url) : [];
+  const socials = Array.isArray(data?.socials)
+    ? data!.socials.filter((s) => s && s.label && s.url)
+    : [];
+
+  const navItems: { id: (typeof SECTION_IDS)[number]; label: string; show: boolean }[] = [
+    { id: 'about', label: 'About', show: !!data?.about },
+    { id: 'skills', label: 'Skills', show: skills.length > 0 },
+    { id: 'projects', label: 'Projects', show: projects.length > 0 },
+    { id: 'certifications', label: 'Certifications', show: certifications.length > 0 },
+    { id: 'media', label: 'Media', show: media.length > 0 },
+    { id: 'contact', label: 'Contact', show: true },
+  ];
 
   return (
-    <div className="font-mono bg-gray-950 text-gray-100 min-h-screen antialiased">
-      {/* HEADER / HERO */}
+    <div className="bg-gray-950 text-gray-100 min-h-screen antialiased">
+      {/* ===== Top progress bar ===== */}
+      <div id="__progress" aria-hidden className="fixed inset-x-0 top-0 z-[60] h-1 bg-[color:var(--neon)] w-0 transition-[width]" />
+
+      {/* ===== NAVBAR ===== */}
+      <nav id="__nav" className="sticky top-0 z-50 bg-gray-950/60 backdrop-blur border-b border-transparent">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex h-14 items-center justify-between">
+            {/* Brand */}
+            <a href="#about" className="flex items-baseline gap-3">
+              <span className="text-lg font-semibold tracking-wide text-white">{fullName}</span>
+              <span className="hidden sm:inline text-xs text-gray-400">{role}</span>
+            </a>
+
+            {/* Desktop links */}
+            <div className="hidden md:flex items-center gap-1">
+              {navItems.filter((n) => n.show).map((n) => (
+                <a key={n.id} href={`#${n.id}`} className="navlink px-3 py-2 text-sm font-medium text-gray-400 hover:text-[color:var(--neon)]" aria-current="false">
+                  {n.label}
+                </a>
+              ))}
+              {data?.cvFileDataUrl && (
+                <a
+                  href={data.cvFileDataUrl}
+                  download={data.cvFileName ?? 'cv.pdf'}
+                  className="ml-2 inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-4 py-1.5 text-gray-900 font-semibold shadow-md hover:brightness-110"
+                >
+                  <Download className="h-4 w-4" /> CV
+                </a>
+              )}
+            </div>
+
+            {/* Mobile toggle */}
+            <button
+              id="__hamburger"
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/10 ring-1 ring-white/20"
+              aria-label="Toggle menu"
+            >
+              {/* default is menu icon; replaced in script */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+            </button>
+          </div>
+
+          {/* Mobile drawer */}
+          <div id="__drawer" className="hidden md:hidden border-t border-white/10 py-2">
+            <div className="flex flex-col">
+              {navItems.filter((n) => n.show).map((n) => (
+                <a key={n.id} href={`#${n.id}`} className="navlink px-3 py-2 text-sm font-medium text-gray-400 hover:text-[color:var(--neon)]" aria-current="false">
+                  {n.label}
+                </a>
+              ))}
+              {data?.cvFileDataUrl && (
+                <a
+                  href={data.cvFileDataUrl}
+                  download={data.cvFileName ?? 'cv.pdf'}
+                  className="mt-1 inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-4 py-2 text-gray-900 font-semibold shadow-md"
+                >
+                  <Download className="h-4 w-4" /> CV
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* ===== HERO ===== */}
       <header className="relative overflow-hidden bg-gradient-to-b from-gray-900 to-gray-950">
+        {/* subtle neon background glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_50%_at_50%_0%,rgba(0,207,255,0.22)_0%,transparent_60%)]"
         />
         <div className="max-w-4xl mx-auto px-6 py-12 text-center relative">
-          {/* Avatar with neon ring */}
-          <figure className="group relative w-fit mx-auto mb-6">
-            <span
-              aria-hidden
-              className="absolute -inset-8 -z-10 rounded-full blur-2xl opacity-60 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,207,255,0.26)_0%,transparent_60%)]"
-            />
-            <span aria-hidden className="avatar-ring absolute inset-[-10px] rounded-[28px]" />
-            <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-[#7dd3fc] via-[#38bdf8] to-[#00cfff] shadow-2xl">
-              <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
-                {photo ? (
-                  <img src={photo} alt={fullName} className="object-cover h-full w-full" />
-                ) : (
-                  <span className="absolute inset-0 grid place-items-center text-[color:var(--neon)]/70">No Photo</span>
-                )}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.12),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
-                />
+          {/* Avatar only if photo exists */}
+          {photo && (
+            <figure className="group relative w-fit mx-auto mb-6" data-reveal>
+              <span
+                aria-hidden
+                className="absolute -inset-8 -z-10 rounded-full blur-2xl opacity-60 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(0,207,255,0.26)_0%,transparent_60%)]"
+              />
+              <span aria-hidden className="avatar-ring absolute inset-[-10px] rounded-[28px]" />
+              <div className="relative h-36 w-36 md:h-40 md:w-40 rounded-[28px] p-[3px] bg-gradient-to-b from-[#7dd3fc] via-[#38bdf8] to-[#00cfff] shadow-2xl">
+                <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
+                  <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
+                  {/* sheen on hover (no hover = subtle idle sheen) */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.12),transparent)] transition-transform duration-[1200ms] ease-out group-hover:translate-x-[120%]"
+                  />
+                </div>
               </div>
-            </div>
-          </figure>
+            </figure>
+          )}
 
-          <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{fullName}</h1>
-          <p className="text-lg text-gray-400 mt-1">{role}</p>
-          <p className="text-sm text-gray-500 mt-1 text-justify">{tagline}</p>
-          <p className="text-xs text-gray-600 mt-1">{location}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight" data-reveal>{fullName}</h1>
+          <p className="text-lg text-gray-400 mt-1" data-reveal>{role}</p>
+          <p className="text-sm text-gray-500 mt-1 text-justify" data-reveal>{tagline}</p>
+          <p className="text-xs text-gray-600 mt-1" data-reveal>{location}</p>
 
           {/* CTAs */}
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3" data-reveal>
             {data?.cvFileDataUrl && (
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
                 className="inline-flex items-center gap-2 rounded-full bg-[color:var(--neon)] px-5 py-2 font-semibold text-gray-900 shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/>
-                </svg>
-                Download CV
+                <Download className="h-4 w-4" /> Download CV
               </a>
             )}
             {data?.linkedin && (
@@ -76,45 +161,38 @@ export default function Tech({ data }: { data: PortfolioData }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full border border-[color:var(--neon)] px-5 py-2 font-semibold text-[color:var(--neon)] shadow-md transition hover:bg-[color:var(--neon)] hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(0,207,255,0.5)]"
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V24h-4zM8.5 8h3.8v2.3h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V24h-4v-7.6c0-1.8-.03-4.1-2.5-4.1-2.5 0-2.88 1.95-2.88 4v7.7h-4z"/>
-                </svg>
-                LinkedIn
+                <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
             )}
           </div>
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* ===== MAIN ===== */}
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         {/* ABOUT */}
         {data?.about && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm hover:shadow-md transition">
-            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-2 flex items-center">
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 7h7v7H3z"/><path d="M14 7h7v7h-7z"/><path d="M3 18h7"/><path d="M14 18h7"/>
-              </svg>
-              About Me
+          <section id="about" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm hover:shadow-md transition" data-entrance>
+            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-2 flex items-center" data-reveal>
+              <Code size={20} className="mr-2" /> About Me
             </h2>
-            <p className="text-gray-300 leading-relaxed text-justify">{data.about}</p>
+            <p className="text-gray-300 leading-relaxed text-justify" data-reveal>{data.about}</p>
           </section>
         )}
 
         {/* SKILLS */}
         {skills.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center">
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 22s8-4 8-10a8 8 0 1 0-16 0c0 6 8 10 8 10Z"/>
-              </svg>
-              Skills
+          <section id="skills" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm" data-entrance>
+            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center" data-reveal>
+              <Code size={20} className="mr-2" /> Skills
             </h2>
             <div className="mx-auto max-w-3xl flex flex-col gap-3">
               {skills.map((s, i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between rounded-lg bg-gray-900/40 p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.35)]"
+                  data-reveal
+                  style={{ ['--stagger' as never]: String(i % 8) }}
                 >
                   <span className="text-sm text-gray-200 text-justify">{String(s)}</span>
                   <span className="h-2 w-2 rounded-full bg-[color:var(--neon)]/80" />
@@ -126,18 +204,17 @@ export default function Tech({ data }: { data: PortfolioData }) {
 
         {/* PROJECTS */}
         {projects.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center">
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M4 7h16M4 12h16M4 17h16"/>
-              </svg>
-              Projects
+          <section id="projects" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm" data-entrance>
+            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center" data-reveal>
+              <Code size={20} className="mr-2" /> Projects
             </h2>
             <div className="mx-auto max-w-3xl flex flex-col gap-4">
               {projects.map((p, i) => (
                 <article
                   key={i}
                   className="rounded-lg border border-white/10 bg-gray-900/40 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[rgba(0,207,255,0.35)]"
+                  data-reveal
+                  style={{ ['--stagger' as never]: String(i % 8) }}
                 >
                   <h3 className="text-lg font-medium text-white">{p.name?.trim() || `Project ${i + 1}`}</h3>
                   {p.description?.trim() && (
@@ -150,10 +227,7 @@ export default function Tech({ data }: { data: PortfolioData }) {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-3"
                     >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
-                        <path d="M10 13a5 5 0 0 1 7 7l-2 2"/><path d="M14 17a5 5 0 0 1-7-7l2-2"/>
-                      </svg>
-                      View
+                      <LinkIcon size={16} /> View
                     </a>
                   )}
                 </article>
@@ -163,24 +237,21 @@ export default function Tech({ data }: { data: PortfolioData }) {
         )}
 
         {/* CERTIFICATIONS */}
-        {certs.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center">
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M2 4h8a2 2 0 0 1 2 2v14a3 3 0 0 0-3-3H2z"/><path d="M22 4h-8a2 2 0 0 0-2 2v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-              Certifications
+        {certifications.length > 0 && (
+          <section id="certifications" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm" data-entrance>
+            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center" data-reveal>
+              <BookOpen size={20} className="mr-2" /> Certifications
             </h2>
             <div className="mx-auto max-w-3xl flex flex-col gap-3">
-              {certs.map((cert, index) => (
+              {certifications.map((cert, index) => (
                 <div
                   key={index}
                   className="flex items-center gap-3 rounded-lg border border-white/10 bg-gray-900/40 p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[rgba(0,207,255,0.3)]"
+                  data-reveal
+                  style={{ ['--stagger' as never]: String(index % 8) }}
                 >
                   <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[rgba(0,207,255,0.15)] ring-1 ring-[rgba(0,207,255,0.35)]">
-                    <svg className="h-6 w-6 text-[color:var(--neon)]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <circle cx="12" cy="10" r="5"/><path d="M8 21v-3.5a6.97 6.97 0 0 0 8 0V21l-4-2Z"/>
-                    </svg>
+                    <Award className="h-6 w-6 text-[color:var(--neon)]" />
                   </span>
                   <p className="text-gray-200 text-justify">{String(cert)}</p>
                 </div>
@@ -191,24 +262,23 @@ export default function Tech({ data }: { data: PortfolioData }) {
 
         {/* MEDIA */}
         {media.length > 0 && (
-          <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
-            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center">
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <rect x="3" y="4" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>
-              </svg>
-              Media
+          <section id="media" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm" data-entrance>
+            <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-3 flex items-center" data-reveal>
+              <Code size={20} className="mr-2" /> Media
             </h2>
             <div className="mx-auto max-w-3xl flex flex-col gap-4">
               {media.map((m, i) => {
-                const label = m.type ? String(m.type) : 'Media';
-                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
+                const labelRaw = m.type ? String(m.type) : 'Media';
+                const label = labelRaw.charAt(0).toUpperCase() + labelRaw.slice(1);
                 return (
                   <div
                     key={i}
                     className="rounded-lg border border-white/10 bg-gray-900/40 p-4 transition hover:border-[rgba(0,207,255,0.35)]"
+                    data-reveal
+                    style={{ ['--stagger' as never]: String(i % 8) }}
                   >
                     <h3 className="text-lg font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-gray-400 mt-1 text-justify">{labelNice}</p>
+                    <p className="text-gray-400 mt-1 text-justify">{label}</p>
                     {m.link && (
                       <a
                         href={m.link}
@@ -216,10 +286,7 @@ export default function Tech({ data }: { data: PortfolioData }) {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-[color:var(--neon)] hover:underline mt-2"
                       >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
-                          <path d="M10 13a5 5 0 0 1 7 7l-2 2"/><path d="M14 17a5 5 0 0 1-7-7l2-2"/>
-                        </svg>
-                        View
+                        <LinkIcon size={16} /> View
                       </a>
                     )}
                   </div>
@@ -230,28 +297,19 @@ export default function Tech({ data }: { data: PortfolioData }) {
         )}
 
         {/* CONTACT */}
-        <section className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm">
-          <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-2 flex items-center">
-            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M4 6h16v12H4z"/><path d="m22 6-10 7L2 6"/>
-            </svg>
-            Contact
+        <section id="contact" className="relative rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm" data-entrance>
+          <h2 className="text-xl font-semibold text-[color:var(--neon)] mb-2 flex items-center" data-reveal>
+            <Mail size={20} className="mr-2" /> Contact
           </h2>
           <div className="text-gray-300 space-y-2">
             {data?.email && (
-              <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
-                  <path d="M4 6h16v12H4z"/><path d="m22 6-10 7L2 6"/>
-                </svg>
-                {data.email}
+              <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]" data-reveal>
+                <Mail size={16} /> {data.email}
               </a>
             )}
             {data?.phone && (
-              <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
-                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 3.15 11 19.79 19.79 0 0 1 .08 2.37 2 2 0 0 1 2.05.19h3a2 2 0 0 1 2 1.72A12.66 12.66 0 0 0 7.1 5.7a2 2 0 0 1-.45 2L5.6 8.75a16 16 0 0 0 6.65 6.65l1.05-1.05a2 2 0 0 1 2-.45 12.66 12.66 0 0 0 3.79.07A2 2 0 0 1 22 16.92z"/>
-                </svg>
-                {data.phone}
+              <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[color:var(--neon)]" data-reveal>
+                <Phone size={16} /> {data.phone}
               </a>
             )}
             {data?.linkedin && (
@@ -260,16 +318,14 @@ export default function Tech({ data }: { data: PortfolioData }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+                data-reveal
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V24h-4zM8.5 8h3.8v2.3h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V24h-4v-7.6c0-1.8-.03-4.1-2.5-4.1-2.5 0-2.88 1.95-2.88 4V24h-4z"/>
-                </svg>
-                LinkedIn
+                <Linkedin size={16} /> LinkedIn
               </a>
             )}
 
             {socials.length > 0 && (
-              <div className="pt-2">
+              <div className="pt-2" data-reveal>
                 <h3 className="text-base font-medium text-gray-200/90">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
@@ -286,11 +342,9 @@ export default function Tech({ data }: { data: PortfolioData }) {
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
                 className="mt-3 inline-flex items-center gap-2 text-[color:var(--neon)] hover:underline"
+                data-reveal
               >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M12 3v12"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/>
-                </svg>
-                Download CV
+                <Download size={16} /> Download CV
               </a>
             )}
           </div>
@@ -301,15 +355,59 @@ export default function Tech({ data }: { data: PortfolioData }) {
         <p>© {new Date().getFullYear()} {fullName} | Tech Portfolio</p>
       </footer>
 
-      {/* Global helpers */}
+      {/* Global styles */}
       <style>{`
         :root { --neon:#00CFFF; }
+
+        /* Navbar underline animation */
+        .navlink { position: relative; }
+        .navlink::after {
+          content: '';
+          position: absolute; left: 0; right: 0; bottom: 4px; height: 2px;
+          background: linear-gradient(90deg, var(--neon), transparent);
+          transform: scaleX(0); transform-origin: left;
+          transition: transform .35s ease, opacity .35s ease;
+          opacity: .7;
+        }
+        .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
+
+        /* Per-item reveal */
+        .reveal { opacity: 0; transform: translateY(12px); }
+        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        [data-reveal] { animation-delay: calc(var(--stagger, 0) * 18ms); }
+
+        /* Strong section box reveal */
+        section[data-entrance] {
+          opacity: 0;
+          transform: translateY(18px) scale(.985);
+          filter: blur(6px);
+          will-change: opacity, transform, filter;
+        }
+        section[data-entrance].in {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          transition: opacity .65s cubic-bezier(.22,.75,.2,1),
+                      transform .65s cubic-bezier(.22,.75,.2,1),
+                      filter .65s ease;
+        }
+        section[data-entrance]::before {
+          content: '';
+          position: absolute; inset: 0; pointer-events: none;
+          background:
+            radial-gradient(120% 120% at -20% 0%, rgba(255,255,255,.08), transparent 60%),
+            linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+          clip-path: inset(0 100% 0 0);
+          opacity: 0;
+          transition: clip-path .9s cubic-bezier(.22,.75,.2,1), opacity .9s ease;
+        }
+        section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .06; }
+
+        /* Avatar neon ring */
         @keyframes spin360 { to { transform: rotate(360deg); } }
         .avatar-ring::before {
           content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
+          position: absolute; inset: 0; border-radius: inherit;
           background: conic-gradient(
             from 0deg,
             rgba(0,207,255,0.00) 0deg,
@@ -323,10 +421,129 @@ export default function Tech({ data }: { data: PortfolioData }) {
           -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
                   mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
         }
+
         @media (prefers-reduced-motion: reduce) {
           .avatar-ring::before { animation: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
+          section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; }
+          section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; transition: none !important; }
+          .navlink::after { transition: none !important; }
         }
       `}</style>
+
+      {/* Tiny runtime (no hooks) */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+          (function () {
+            var doc = document.documentElement;
+            var prog = document.getElementById('__progress');
+            var nav = document.getElementById('__nav');
+            var hamburger = document.getElementById('__hamburger');
+            var drawer = document.getElementById('__drawer');
+            var isOpen = false;
+
+            // Icons
+            var MENU_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+            var X_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+            // Smooth scroll for in-page links (nav & drawer)
+            function enhanceAnchor(a){
+              a.addEventListener('click', function(ev){
+                var href = a.getAttribute('href') || '';
+                if (href.startsWith('#')) {
+                  var target = document.getElementById(href.slice(1));
+                  if (target) {
+                    ev.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (isOpen && drawer) { drawer.classList.add('hidden'); isOpen = false; if (hamburger) hamburger.innerHTML = MENU_SVG; }
+                  }
+                }
+              });
+            }
+            document.querySelectorAll('a[href^="#"]').forEach(enhanceAnchor);
+
+            // Scroll progress + navbar shadow
+            function onScroll() {
+              var h = doc.scrollHeight - doc.clientHeight;
+              var pct = h > 0 ? (doc.scrollTop / h) * 100 : 0;
+              if (prog) prog.style.width = pct + '%';
+              if (nav) {
+                if (window.scrollY > 8) nav.classList.add('shadow-[0_8px_30px_rgba(0,0,0,0.35)]', 'border-white/10');
+                else nav.classList.remove('shadow-[0_8px_30px_rgba(0,0,0,0.35)]', 'border-white/10');
+              }
+            }
+            onScroll();
+            window.addEventListener('scroll', onScroll, { passive: true });
+
+            // Mobile drawer toggle
+            if (hamburger && drawer) {
+              hamburger.addEventListener('click', function(){
+                isOpen = !isOpen;
+                drawer.classList.toggle('hidden', !isOpen);
+                hamburger.innerHTML = isOpen ? X_SVG : MENU_SVG;
+              });
+            }
+
+            // Per-item reveal + Section entrance
+            var prefersReduced = false;
+            try { prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_){}
+            if (prefersReduced || !('IntersectionObserver' in window)) {
+              document.querySelectorAll('[data-reveal]').forEach(function(n){ n.classList.add('reveal-in'); });
+              document.querySelectorAll('section[data-entrance]').forEach(function(s){ s.classList.add('in'); });
+            } else {
+              var obs = new IntersectionObserver(function(entries){
+                entries.forEach(function(e, idx){
+                  if (e.isIntersecting) {
+                    var el = e.target;
+                    el.classList.add('reveal-in');
+                    el.style.setProperty('--stagger', String(idx % 8));
+                    obs.unobserve(el);
+                  }
+                });
+              }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+              document.querySelectorAll('[data-reveal]').forEach(function(n){ obs.observe(n); });
+
+              var sec = new IntersectionObserver(function(entries){
+                entries.forEach(function(e){
+                  if (e.isIntersecting) {
+                    e.target.classList.add('in');
+                    sec.unobserve(e.target);
+                  }
+                });
+              }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+              document.querySelectorAll('section[data-entrance]').forEach(function(s){ sec.observe(s); });
+            }
+
+            // Active link sync
+            try {
+              var spy = new IntersectionObserver(function(entries){
+                var visible = entries.filter(function(e){ return e.isIntersecting; }).sort(function(a,b){ return b.intersectionRatio - a.intersectionRatio; })[0];
+                if (!visible || !visible.target || !visible.target.id) return;
+                var id = visible.target.id;
+                document.querySelectorAll('.navlink').forEach(function(l){
+                  var href = l.getAttribute('href') || '';
+                  var match = href.replace('#','') === id;
+                  if (match) l.setAttribute('aria-current','true'); else l.removeAttribute('aria-current');
+                });
+              }, { rootMargin: '-40% 0px -50% 0px', threshold: [0, .2, .5, .8, 1] });
+              ${SECTION_IDS.map((id) => `var el_${id} = document.getElementById('${id}'); if (el_${id}) spy.observe(el_${id});`).join('\n')}
+            } catch (_){}
+
+            // Keyboard jumps (1..N)
+            window.addEventListener('keydown', function(e){
+              if (e.ctrlKey || e.metaKey || e.altKey) return;
+              var ids = ${JSON.stringify(SECTION_IDS)};
+              var idx = Number(e.key) - 1;
+              if (idx >= 0 && idx < ids.length) {
+                var el = document.getElementById(ids[idx]);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            });
+          })();
+        `,
+        }}
+      />
     </div>
   );
 }
