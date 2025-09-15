@@ -7,6 +7,15 @@ import {
   Link as LinkIcon,
   Mail,
   Phone,
+  Lightbulb,
+  Database,
+  PieChart,
+  Rocket,
+  Laptop,
+  Users,
+  TrendingUp,
+  Briefcase,
+  BarChart3,
   Linkedin,
   Download,
   Award,
@@ -22,6 +31,7 @@ import {
   MoonStar,
   Circle,
   Menu,
+  Code,
   X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';

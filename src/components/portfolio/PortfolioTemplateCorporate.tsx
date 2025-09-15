@@ -1,365 +1,878 @@
 'use client';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
-  Briefcase,
-  BarChart3,
-  Code,
   BookOpen,
+  Link as LinkIcon,
+  Mail,
+  Phone,
   Lightbulb,
-  Users,
   Database,
   PieChart,
   Rocket,
   Laptop,
+  Users,
   TrendingUp,
-  Link as LinkIcon,
-  Mail,
-  Phone,
+  Briefcase,
+  BarChart3,
   Linkedin,
   Download,
+  Award,
+  Check,
+  Image as ImageIcon,
+  Copy,
+  ChevronUp,
+  UserRound,
+  Wand2,
+  FolderGit2,
+  Sparkles,
+  SunMedium,
+  MoonStar,
+  Circle,
   Menu,
+  Code,
   X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
-// Palette
-// primary:   #0A1E4F (navy)
-// secondary: #FFD700 (gold)
-// accents:   #00CFFF (cyan), #FF7AF5 (pink)
+const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
+type SectionId = (typeof SECTION_IDS)[number];
 
-const defaultSkillIcons = [Briefcase, BarChart3, Code, BookOpen, Lightbulb, Users];
-const defaultProjectIcons = [Briefcase, Database, PieChart, Rocket, Laptop, TrendingUp];
+export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
+  // ===== Data guards =====
+  const fullName = data?.fullName || 'Your Name';
+  const role = data?.role || 'Classic Professional';
+  const tagline = data?.tagline || 'Classic Tagline';
+  const location = data?.location || 'Location';
+  const photo = data?.photoDataUrl;
 
-const SECTIONS = [
-  { id: 'home', label: 'Home' },
-  { id: 'about', label: 'About' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'certifications', label: 'Certifications' },
-  { id: 'contact', label: 'Contact' },
-] as const;
-
-type SectionId = (typeof SECTIONS)[number]['id'];
-
-export default function PortfolioTemplateModern({ data }: { data: PortfolioData }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [active, setActive] = useState<SectionId>('home');
-  const prefersReducedMotion = usePrefersReducedMotion();
-
-  const skills = useMemo(() => (Array.isArray(data?.skills) ? data.skills.filter(Boolean) : []), [data]);
-  const certifications = useMemo(
-    () => (Array.isArray(data?.certifications) ? data.certifications.filter(Boolean) : []),
+  const skills = useMemo(() => (Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : []), [data]);
+  const projects = useMemo(
+    () =>
+      Array.isArray(data?.projects)
+        ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+        : [],
     [data]
   );
-  const projects = useMemo(() => (Array.isArray(data?.projects) ? data.projects : []), [data]);
+  const certifications = useMemo(
+    () => (Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : []),
+    [data]
+  );
+  const media = useMemo(
+    () =>
+      Array.isArray(data?.media)
+        ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+        : [],
+    [data]
+  );
+  const socials = useMemo(
+    () => (Array.isArray(data?.socials) ? data!.socials.filter((s) => s && s.label && s.url) : []),
+    [data]
+  );
 
-  useScrollSpy(setActive);
-
+  // ===== Theme (Classic / Noir) =====
+  type Theme = 'classic' | 'noir';
+  const [theme, setTheme] = useState<Theme>('classic');
   useEffect(() => {
-    const close = () => setMobileOpen(false);
-    window.addEventListener('hashchange', close);
-    return () => window.removeEventListener('hashchange', close);
+    const t = (localStorage.getItem('__classic_theme') as Theme) || 'classic';
+    setTheme(t);
+    document.documentElement.setAttribute('data-classic-theme', t);
+  }, []);
+  const toggleTheme = () => {
+    const order: Theme[] = ['classic', 'noir'];
+    const next = order[(order.indexOf(theme) + 1) % order.length];
+    setTheme(next);
+    document.documentElement.setAttribute('data-classic-theme', next);
+    localStorage.setItem('__classic_theme', next);
+  };
+
+  // ===== UX niceties =====
+  const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
+  const [scrollPct, setScrollPct] = useState(0);
+  const [navShadow, setNavShadow] = useState(false);
+  const [active, setActive] = useState<SectionId>('about');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll progress + nav shadow
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const h = el.scrollHeight - el.clientHeight;
+      setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
+      setNavShadow(window.scrollY > 8);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    history.replaceState(null, '', `#${id}`);
+  // Section reveal (element-level) + Section entrance (box-level)
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!prefersReduced) {
+      // 1) Existing per-node reveal (for inner bits using [data-reveal])
+      const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
+      const obs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry, idx) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement;
+              el.classList.add('reveal-in');
+              el.style.setProperty('--stagger', String(idx % 8));
+              obs.unobserve(el);
+            }
+          });
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
+      );
+      nodes.forEach((n) => obs.observe(n));
+
+      // 2) Stronger section-level box reveal (fade + lift + slight scale + blur)
+      const sections = Array.from(root.querySelectorAll<HTMLElement>('section[data-entrance]'));
+      const secObs = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const el = entry.target as HTMLElement;
+              el.classList.add('in');
+              secObs.unobserve(el);
+            }
+          });
+        },
+        { rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
+      );
+      sections.forEach((s) => secObs.observe(s));
+
+      return () => {
+        obs.disconnect();
+        secObs.disconnect();
+      };
+    }
+  }, []);
+
+  // Active section spy
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const id = (visible?.target as HTMLElement | null)?.id as SectionId | undefined;
+        if (id && SECTION_IDS.includes(id)) setActive(id);
+      },
+      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.5, 0.8, 1] }
+    );
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, []);
+
+  // Spotlight cursor + parallax + magnets
+  useEffect(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const root = containerRef.current;
+    if (!root) return;
+
+    const onMove = (e: MouseEvent) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      document.documentElement.style.setProperty('--mx', `${x}px`);
+      document.documentElement.style.setProperty('--my', `${y}px`);
+
+      if (prefersReduced) return;
+
+      const layers = root.querySelectorAll<HTMLElement>('[data-parallax]');
+      layers.forEach((l) => {
+        const depth = parseFloat(l.dataset.parallax || '0');
+        const dx = (x / window.innerWidth - 0.5) * depth * 12;
+        const dy = (y / window.innerHeight - 0.5) * depth * 12;
+        l.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      });
+
+      const mags = root.querySelectorAll<HTMLElement>('[data-magnet]');
+      mags.forEach((m) => {
+        const r = m.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dist = Math.hypot(x - cx, y - cy);
+        const pull = Math.max(0, 1 - dist / 260);
+        const tx = (x - cx) * 0.08 * pull;
+        const ty = (y - cy) * 0.08 * pull;
+        m.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+      });
+    };
+
+    window.addEventListener('mousemove', onMove);
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
+  // Keyboard jumps (1..6)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const idx = Number(e.key) - 1;
+      if (idx >= 0 && idx < SECTION_IDS.length) {
+        const id = SECTION_IDS[idx];
+        const el = document.getElementById(id);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const copy = async (label: 'email' | 'phone', value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1200);
+    } catch {}
+  };
+
+  const navItems: { id: SectionId; label: string; show: boolean }[] = [
+    { id: 'about', label: 'About', show: !!data?.about },
+    { id: 'skills', label: 'Skills', show: skills.length > 0 },
+    { id: 'projects', label: 'Projects', show: projects.length > 0 },
+    { id: 'certifications', label: 'Certifications', show: certifications.length > 0 },
+    { id: 'media', label: 'Media', show: media.length > 0 },
+    { id: 'contact', label: 'Contact', show: true },
+  ];
+
+  const NavLink = ({ id, label }: { id: SectionId; label: string }) => {
+    const isActive = active === id;
+    return (
+      <a
+        href={`#${id}`}
+        onClick={(e) => {
+          e.preventDefault();
+          setMenuOpen(false);
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+        className={`navlink px-3 py-2 text-sm font-medium transition ${
+          isActive ? 'text-[var(--c-accent)]' : 'text-[var(--c-muted)] hover:text-[var(--c-accent)]'
+        }`}
+        aria-current={isActive ? 'true' : undefined}
+      >
+        {label}
+      </a>
+    );
   };
 
   return (
-    <div className="font-serif bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 min-h-screen antialiased">
-      {/* NAVIGATION */}
-      <header className="sticky top-0 z-50 backdrop-blur bg-white/85 shadow-sm border-b border-slate-200">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between" aria-label="Primary">
-          <div className="flex items-center gap-3">
-            {data?.photoDataUrl ? (
-              <span className="relative inline-block h-8 w-8 overflow-hidden rounded-full ring-2 ring-[#0A1E4F]/20">
-                <Image src={data.photoDataUrl} alt={data.fullName || 'Avatar'} fill sizes="32px" className="object-cover" />
-              </span>
-            ) : (
-              <span aria-hidden className="h-8 w-8 rounded-full bg-slate-200" />
-            )}
-            <div className="text-xl sm:text-2xl font-bold text-[#0A1E4F] tracking-tight">
-              {data?.fullName || 'Your Name'}
-            </div>
-          </div>
+    <div ref={containerRef} className="classic-surface text-white min-h-screen antialiased font-sans">
+      {/* Skip link */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur"
+      >
+        Skip to content
+      </a>
 
-          <div className="hidden md:flex items-center gap-6 font-medium">
-            {SECTIONS.map(({ id, label }) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                onClick={(e) => handleAnchorClick(e, id)}
-                className={
-                  'relative px-1 py-2 outline-none transition ' +
-                  (active === id
-                    ? 'text-[#0A1E4F] after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:bg-gradient-to-r after:from-[#00CFFF] after:to-[#FF7AF5]'
-                    : 'text-slate-600 hover:text-[#0A1E4F] focus-visible:text-[#0A1E4F]')
-                }
-              >
-                {label}
-              </a>
-            ))}
-          </div>
+      {/* Spotlight cursor */}
+      <div aria-hidden className="fixed inset-0 pointer-events-none z-[1]" id="__spotlight" />
 
-          <button
-            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring focus-visible:ring-[#00CFFF]/50"
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileOpen}
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </nav>
-        {mobileOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white/95">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 grid grid-cols-2 gap-3">
-              {SECTIONS.map(({ id, label }) => (
-                <a
-                  key={id}
-                  href={`#${id}`}
-                  onClick={(e) => handleAnchorClick(e, id)}
-                  className={
-                    'rounded-md px-3 py-2 text-sm font-medium hover:bg-slate-50 ' +
-                    (active === id ? 'text-[#0A1E4F]' : 'text-slate-600')
-                  }
-                >
-                  {label}
-                </a>
+      {/* Top scroll progress */}
+      <div
+        aria-hidden
+        className="fixed inset-x-0 top-0 z-[60] h-1 bg-gradient-to-r from-[var(--c-accent)] via-[var(--c-accent-soft)] to-[var(--c-accent)] transition-[width]"
+        style={{ width: `${scrollPct}%` }}
+      />
+
+      {/* ===== NAVBAR ===== */}
+      <nav
+        className={`sticky top-0 z-50 backdrop-blur bg-black/10 ${
+          navShadow ? 'border-b border-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.08)]' : 'border-b border-transparent'
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex h-14 items-center justify-between">
+            {/* Brand */}
+            <a
+              href="#about"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('about')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="flex items-baseline gap-3"
+            >
+              <span className="text-lg font-semibold tracking-wide text-[var(--c-text)]">{fullName}</span>
+              <span className="hidden md:inline text-xs text-[var(--c-muted)]">{role}</span>
+            </a>
+
+            {/* Desktop links */}
+            <div className="hidden md:flex items-center gap-1">
+              {navItems.filter((n) => n.show).map((n) => (
+                <NavLink key={n.id} id={n.id} label={n.label} />
               ))}
+              {data?.cvFileDataUrl && (
+                <a
+                  data-magnet
+                  href={data.cvFileDataUrl}
+                  download={data.cvFileName ?? 'cv.pdf'}
+                  className="ml-2 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-1.5 text-gray-900 font-semibold shadow-md hover:brightness-110"
+                >
+                  <Download className="h-4 w-4" /> CV
+                </a>
+              )}
             </div>
+
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/5 ring-1 ring-black/10"
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
-        )}
-      </header>
 
-      {/* HERO */}
-      <section id="home" className="relative flex min-h-[70vh] items-center justify-center overflow-hidden px-6 text-center scroll-mt-24" aria-label="Hero">
-        <div
-          aria-hidden
-          className={
-            'pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,#cbd5e1_0%,transparent_60%),radial-gradient(40%_40%_at_80%_10%,#00CFFF33_0%,transparent_70%),radial-gradient(45%_45%_at_20%_5%,#FF7AF533_0%,transparent_70%),linear-gradient(to_bottom,#ffffff,#f1f5f9)] ' +
-            (prefersReducedMotion ? '' : 'animate-[gradientShift_14s_ease_in_out_infinite] bg-[length:160%_160%]')
-          }
-        />
-        <div className="mx-auto flex max-w-4xl flex-col items-center">
-          {data?.photoDataUrl ? (
-            <figure className="relative mb-6 inline-block rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-              <div className="relative h-48 w-48 overflow-hidden rounded-xl">
-                <Image src={data.photoDataUrl} alt={data.fullName || 'Profile photo'} fill sizes="192px" priority className="object-cover" />
+          {/* Mobile drawer */}
+          {menuOpen && (
+            <div className="md:hidden border-t border-black/10 py-2 bg-white/60 backdrop-blur">
+              <div className="flex flex-col">
+                {navItems
+                  .filter((n) => n.show)
+                  .map((n) => (
+                    <NavLink key={n.id} id={n.id} label={n.label} />
+                  ))}
+                {data?.cvFileDataUrl && (
+                  <a
+                    href={data.cvFileDataUrl}
+                    download={data.cvFileName ?? 'cv.pdf'}
+                    className="mt-1 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-2 text-gray-900 font-semibold shadow-md"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Download className="h-4 w-4" /> CV
+                  </a>
+                )}
               </div>
-              {data?.fullName && <figcaption className="mt-2 text-sm text-slate-500">{data.fullName}</figcaption>}
-            </figure>
-          ) : (
-            <span className="mb-6 inline-block h-48 w-48 rounded-xl bg-slate-200" />
+            </div>
           )}
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-[#0A1E4F]">
-            {data?.fullName || 'Your Name'} {data?.role ? `| ${data.role}` : ''}
-          </h1>
-          <p className="mt-4 text-lg md:text-xl max-w-2xl text-slate-600">{data?.tagline || 'Delivering expertise with precision and insight'}</p>
+        </div>
+      </nav>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+      {/* Header controls (theme) */}
+      <div className="fixed right-4 top-3 z-[70] hidden md:flex items-center gap-2">
+        <button
+          onClick={toggleTheme}
+          className="inline-flex items-center gap-2 rounded-full bg-black/5 px-3 py-1.5 text-xs ring-1 ring-black/10 hover:bg-black/10 backdrop-blur"
+          aria-label="Toggle theme"
+        >
+          {theme === 'classic' ? <Sparkles size={14} /> : theme === 'noir' ? <MoonStar size={14} /> : <SunMedium size={14} />}
+          {theme.charAt(0).toUpperCase() + theme.slice(1)}
+        </button>
+      </div>
+
+      {/* ===== Auroral background with parallax layers ===== */}
+      <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden">
+        <div data-parallax="0.5" className="absolute -inset-[20%] opacity-70 classic-aurora" />
+        <div data-parallax="0.18" className="absolute -inset-[40%] opacity-40 classic-aurora alt" />
+        <div className="absolute inset-0 noise" />
+      </div>
+
+      {/* ===== HERO (text-only) ===== */}
+      <header className="relative overflow-hidden py-16 text-center z-10">
+        <div className="relative z-10 max-w-4xl mx-auto px-6">
+          <h1 className="text-4xl md:text-6xl font-semibold tracking-tight drop-shadow reveal" data-reveal>
+            {fullName}
+          </h1>
+          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>
+            {role}
+          </p>
+          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>
+            {tagline}
+          </p>
+          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>
+            {location}
+          </p>
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
               <a
+                data-magnet
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="inline-flex items-center gap-2 rounded-full bg-[#FFD700] px-6 py-3 font-semibold text-[#0A1E4F] shadow-lg transition hover:bg-[#e6c200] focus-visible:outline-none focus-visible:ring focus-visible:ring-[#FFD700]/60"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-5 py-2 font-semibold text-gray-900 shadow-md transition will-change-transform"
               >
                 <Download className="h-4 w-4" /> Download CV
               </a>
             )}
             {data?.linkedin && (
               <a
+                data-magnet
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[#00CFFF] px-6 py-3 font-semibold text-[#0A1E4F] shadow-lg transition hover:bg-[#00CFFF] hover:text-white focus-visible:outline-none focus-visible:ring focus-visible:ring-[#00CFFF]/50"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--c-accent)] px-5 py-2 font-semibold text-[var(--c-accent)] shadow-md transition will-change-transform hover:bg-[var(--c-accent)] hover:text-gray-900"
               >
                 <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
             )}
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* ABOUT */}
-      {data?.about && (
-        <section id="about" className="mx-auto max-w-5xl scroll-mt-24 px-6 py-20" aria-label="About">
-          <SectionTitle>About Me</SectionTitle>
-          <p className="text-lg leading-relaxed text-justify text-slate-600/90">{data.about}</p>
+      {/* ===== SHOWCASE PORTRAIT (after hero, before About) — NO rotation ===== */}
+      {photo && (
+        <section className="relative z-10 max-w-4xl mx-auto px-6 -mt-4 mb-6" aria-label="Profile image">
+          <figure
+            className="portrait group mx-auto w-fit [transform-style:preserve-3d]"
+            onMouseMove={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              const r = el.getBoundingClientRect();
+              const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -6;
+              const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 6;
+              el.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.transform = 'perspective(900px) rotateX(0) rotateY(0)';
+            }}
+            data-reveal
+          >
+            <span aria-hidden className="portrait-glow absolute -inset-10 -z-10 blur-3xl opacity-60" />
+            <div className="portrait-frame relative h-56 w-56 md:h-64 md:w-64 rounded-[30px] p-[2px] shadow-2xl">
+              <div className="relative h-full w-full overflow-hidden rounded-[28px] bg-white/70 backdrop-blur-md ring-1 ring-black/10">
+                <span
+                  aria-hidden
+                  className="absolute inset-0 opacity-[0.10]"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(to right, rgba(0,0,0,.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.06) 1px, transparent 1px)',
+                    backgroundSize: '22px 22px',
+                  }}
+                />
+                <Image src={photo} alt={fullName} fill sizes="256px" priority className="object-cover" />
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.32),transparent)] transition-transform duration-[1200ms] ease-out"
+                />
+              </div>
+            </div>
+          </figure>
         </section>
       )}
 
-      {/* SKILLS (single-column) */}
-      {skills.length > 0 && (
-        <section id="skills" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Skills">
-          <SectionTitle center>Expertise</SectionTitle>
-          <div className="mx-auto max-w-3xl flex flex-col gap-6">
-            {skills.map((s, i) => {
-              if (!s) return null;
-              const Icon = defaultSkillIcons[i % defaultSkillIcons.length];
-              return (
+      {/* ===== RIGHT DOT NAV ===== */}
+      <aside
+        aria-label="Sections"
+        className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col gap-3"
+      >
+        {SECTION_IDS.map((id) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            aria-label={id}
+            className={`grid place-items-center h-6 w-6 rounded-full ring-1 ring-black/10 transition hover:ring-[var(--c-accent)] ${
+              active === id ? 'bg-[var(--c-accent)] text-black' : 'bg-black/5'
+            }`}
+            title={id.charAt(0).toUpperCase() + id.slice(1)}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            <Circle className="h-3 w-3" />
+          </a>
+        ))}
+      </aside>
+
+      {/* ===== MAIN ===== */}
+      <main id="main" className="relative z-10 max-w-4xl mx-auto px-6 py-10 space-y-10">
+        {/* ABOUT */}
+        {data?.about && (
+          <Section id="about" icon={<UserRound size={20} />} title="About Me">
+            <p className="text-[var(--c-text)] leading-relaxed text-justify" data-reveal>
+              {data.about}
+            </p>
+          </Section>
+        )}
+
+        {/* SKILLS */}
+        {skills.length > 0 && (
+          <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {skills.map((s, i) => (
                 <div
                   key={i}
-                  className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md hover:ring-1 hover:ring-[#00CFFF]/40"
+                  className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
+                  data-reveal
                 >
-                  <Icon className="h-7 w-7 text-[#0A1E4F]" />
-                  <p className="font-medium text-slate-800">{s}</p>
+                  <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                  <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              ))}
+            </div>
+          </Section>
+        )}
 
-      {/* PROJECTS (single-column) */}
-      {projects.filter((p) => (p?.name?.trim?.() || p?.description?.trim?.())).length > 0 && (
-        <section id="projects" className="mx-auto max-w-3xl scroll-mt-24 px-6 py-20" aria-label="Projects">
-          <SectionTitle center>Projects</SectionTitle>
-          <div className="flex flex-col gap-6">
-            {projects.map((p, i) => {
-              const show = Boolean(p?.name?.trim?.() || p?.description?.trim?.());
-              if (!show) return null;
-              const Icon = defaultProjectIcons[i % defaultProjectIcons.length];
-              return (
+        {/* PROJECTS */}
+        {projects.length > 0 && (
+          <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {projects.map((p, i) => (
                 <article
                   key={i}
-                  className="group flex items-start gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md hover:ring-1 hover:ring-[#FF7AF5]/40"
+                  className="rounded-lg border border-black/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
+                  data-reveal
                 >
-                  <Icon className="h-8 w-8 flex-shrink-0 text-[#FF7AF5]" />
-                  <div>
-                    <h3 className="text-xl font-semibold text-[#0A1E4F]">{p?.name}</h3>
-                    {p?.description && <p className="mt-1 text-justify text-slate-600">{p.description}</p>}
-                    {p?.link && (
+                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  {p.description?.trim() && (
+                    <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>
+                  )}
+                  {p.link && (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
+                    >
+                      <LinkIcon size={16} /> View
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* CERTIFICATIONS */}
+        {certifications.length > 0 && (
+          <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {certifications.map((cert, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded-lg border border-black/10 bg-[var(--card-bg)] p-3 ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
+                  data-reveal
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+                    <Award className="h-6 w-6 text-[var(--c-accent)]" />
+                  </span>
+                  <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* MEDIA */}
+        {media.length > 0 && (
+          <Section id="media" icon={<ImageIcon size={20} />} title="Media">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {media.map((m, i) => {
+                const label = m.type ? String(m.type) : 'Media';
+                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
+                return (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-black/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
+                    data-reveal
+                  >
+                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
+                    {m.link && (
                       <a
-                        href={p.link}
+                        href={m.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-[#00CFFF] underline-offset-4 hover:underline"
+                        className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2"
                       >
-                        <LinkIcon size={16} aria-hidden /> Visit
+                        <LinkIcon size={16} /> View
                       </a>
                     )}
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
+                );
+              })}
+            </div>
+          </Section>
+        )}
 
-      {/* CERTIFICATIONS */}
-      {certifications.length > 0 && (
-        <section id="certifications" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Certifications">
-          <SectionTitle center>Certifications</SectionTitle>
-          <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {certifications.map((cert, idx) => (
-              <div
-                key={idx}
-                className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFD700]/20 ring-1 ring-[#FFD700]/60">
-                  {/* award icon via lucide */}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#0A1E4F" strokeWidth="2" className="h-6 w-6">
-                    <circle cx="12" cy="10" r="5"/>
-                    <path d="M8 21v-3.5a6.97 6.97 0 0 0 8 0V21l-4-2Z"/>
-                  </svg>
-                </span>
-                <p className="pt-1 text-lg text-slate-800">{cert}</p>
+        {/* CONTACT */}
+        <Section id="contact" icon={<Mail size={20} />} title="Contact">
+          <div className="text-[var(--c-text)] space-y-2">
+            {data?.email && (
+              <div className="flex items-center gap-2" data-reveal>
+                <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
+                  <Mail size={16} /> {data.email}
+                </a>
+                <button
+                  onClick={() => copy('email', data.email!)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
+                  aria-label="Copy email"
+                >
+                  {copied === 'email' ? <Check size={14} /> : <Copy size={14} />} {copied === 'email' ? 'Copied' : 'Copy'}
+                </button>
               </div>
-            ))}
+            )}
+            {data?.phone && (
+              <div className="flex items-center gap-2" data-reveal>
+                <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
+                  <Phone size={16} /> {data.phone}
+                </a>
+                <button
+                  onClick={() => copy('phone', data.phone!)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
+                  aria-label="Copy phone"
+                >
+                  {copied === 'phone' ? <Check size={14} /> : <Copy size={14} />} {copied === 'phone' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+            {data?.linkedin && (
+              <a
+                href={data.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-reveal
+              >
+                <Linkedin size={16} /> LinkedIn
+              </a>
+            )}
+
+            {socials.length > 0 && (
+              <div className="pt-2" data-reveal>
+                <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
+                <div className="mt-1 grid grid-cols-1 gap-1">
+                  {socials.map((s, i) => (
+                    <a
+                      key={i}
+                      href={s.url!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--c-accent)] hover:underline"
+                    >
+                      {s.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data?.cvFileDataUrl && (
+              <a
+                href={data.cvFileDataUrl}
+                download={data.cvFileName ?? 'cv.pdf'}
+                className="mt-3 inline-flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-reveal
+              >
+                <Download size={16} /> Download CV
+              </a>
+            )}
           </div>
-        </section>
-      )}
+        </Section>
+      </main>
 
-      {/* CONTACT */}
-      <section id="contact" className="scroll-mt-24 bg-white px-6 py-20" aria-label="Contact">
-        <SectionTitle center>Contact</SectionTitle>
-        <div className="flex flex-wrap justify-center gap-6 text-lg">
-          {data?.email && (
-            <a href={`mailto:${data.email}`} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-[#0A1E4F] transition hover:text-[#00CFFF]">
-              <Mail className="h-5 w-5" /> {data.email}
-            </a>
-          )}
-          {data?.phone && (
-            <a href={`tel:${data.phone}`} className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-[#0A1E4F] transition hover:text-[#00CFFF]">
-              <Phone className="h-5 w-5" /> {data.phone}
-            </a>
-          )}
-        </div>
-      </section>
+      {/* Back to top FAB */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/5 ring-1 ring-black/10 backdrop-blur hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-accent)]"
+        aria-label="Back to top"
+      >
+        <ChevronUp className="h-5 w-5" />
+      </button>
 
-      <footer className="bg-white py-6 text-center text-slate-500 border-t border-slate-200">
-        <p>© {new Date().getFullYear()} {data?.fullName || 'Your Name'} | Professional Portfolio</p>
+      {/* ===== FOOTER ===== */}
+      <footer className="bg-[var(--footer-bg)] py-5 text-center text-[var(--c-subtle)]">
+        <p>
+          © {new Date().getFullYear()} {fullName} | Classic Portfolio
+        </p>
       </footer>
 
+      {/* Global style tokens + effects */}
       <style jsx global>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 0%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 0%; }
+        /* Professional font stack (no layout/logic change) */
+        :root {
+          --mx: 50vw;
+          --my: 50vh;
+          --font-sans: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+            Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
         }
+        body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+        /* Light Grey Palette (Classic) — calmer whites + soft shadows */
+        :root[data-classic-theme='classic'] {
+          --c-accent: #F2994A;
+          --c-accent-soft: #FAD6B8;
+
+          --c-text: #2B2F33;          /* primary text */
+          --c-subtle: #4B5563;        /* subheads */
+          --c-muted: #6B7280CC;       /* muted text */
+
+          --bg1: #F7F8FA;             /* light grey gradient band 1 */
+          --bg2: #F2F4F7;             /* band 2 */
+          --bg3: #ECEFF3;             /* band 3 */
+
+          /* “Glassy” chips/cards/badges tuned for light UI */
+          --chip-bg: rgba(242, 153, 74, 0.10);
+          --chip-ring: rgba(242, 153, 74, 0.30);
+
+          --card-bg: rgba(255, 255, 255, 0.70);
+          --card-ring: rgba(17, 24, 39, 0.10);
+
+          --badge-bg: rgba(242, 153, 74, 0.12);
+          --badge-ring: rgba(242, 153, 74, 0.30);
+
+          --footer-bg: #E9ECEF;
+        }
+
+        /* Optional alternate (Noir) — still light, just cooler greys */
+        :root[data-classic-theme='noir'] {
+          --c-accent: #F2994A;
+          --c-accent-soft: #F7D3B0;
+
+          --c-text: #1F2937;
+          --c-subtle: #374151;
+          --c-muted: #6B7280CC;
+
+          --bg1: #F8FAFC;
+          --bg2: #F3F4F6;
+          --bg3: #EDEFF3;
+
+          --chip-bg: rgba(31, 41, 55, 0.06);
+          --chip-ring: rgba(31, 41, 55, 0.12);
+
+          --card-bg: rgba(255, 255, 255, 0.78);
+          --card-ring: rgba(17, 24, 39, 0.10);
+
+          --badge-bg: rgba(31, 41, 55, 0.06);
+          --badge-ring: rgba(31, 41, 55, 0.12);
+
+          --footer-bg: #EAECEF;
+        }
+
+        /* Light surface + ensure text color overrides the hard 'text-white' utility */
+        .classic-surface {
+          background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3));
+          color: var(--c-text) !important;
+        }
+
+        .classic-aurora {
+          background:
+            radial-gradient(60% 50% at 50% 0%, rgba(242, 153, 74, 0.12) 0%, transparent 60%),
+            radial-gradient(40% 40% at 80% 10%, rgba(31, 41, 55, 0.06) 0%, transparent 70%),
+            radial-gradient(40% 40% at 20% 20%, rgba(242, 153, 74, 0.08) 0%, transparent 70%),
+            linear-gradient(to bottom, var(--bg1), var(--bg2));
+          filter: saturate(110%);
+        }
+        .classic-aurora.alt {
+          background:
+            radial-gradient(45% 50% at 20% 10%, rgba(242, 153, 74, 0.08) 0%, transparent 70%),
+            radial-gradient(40% 40% at 80% 10%, rgba(31, 41, 55, 0.05) 0%, transparent 70%),
+            linear-gradient(to bottom, transparent, var(--bg3));
+          mix-blend-mode: screen;
+        }
+
+        .noise {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.025'/%3E%3C/svg%3E");
+          background-size: 220px 220px; opacity: .55; mix-blend-mode: multiply;
+        }
+
+        /* Portrait frame (kept copper, softened for light) */
+        .portrait-frame {
+          background:
+            conic-gradient(from 210deg, rgba(255,255,255,.35), rgba(255,255,255,0) 30% 70%, rgba(255,255,255,.35)),
+            linear-gradient(180deg, #FFE7D1, #FAD0AA 35%, #F2994A 70%, #E2812A 100%);
+          border-radius: 30px;
+          padding: 2px;
+        }
+        .portrait-glow {
+          background: radial-gradient(60% 60% at 50% 50%, rgba(242, 153, 74, 0.20) 0%, transparent 60%);
+        }
+
+        /* Reveal (per-element) — gated so content is visible by default */
+        .reveal { opacity: 1; transform: none; }
+        :root.io-ready .reveal { opacity: 0; transform: translateY(12px); }
+        :root.io-ready .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
+
+        /* NAV underline animation */
+        .navlink { position: relative; }
+        .navlink::after {
+          content: ''; position: absolute; left: 0; right: 0; bottom: 4px; height: 2px;
+          background: linear-gradient(90deg, var(--c-accent), transparent);
+          transform: scaleX(0); transform-origin: left;
+          transition: transform .35s ease, opacity .35s ease; opacity: .7;
+        }
+        .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
+
+        /* Section-level box reveal — gated */
+        section[data-entrance] { opacity: 1; transform: none; filter: none; }
+        :root.io-ready section[data-entrance] {
+          opacity: 0; transform: translateY(18px) scale(.985); filter: blur(6px);
+          will-change: opacity, transform, filter, box-shadow;
+        }
+        :root.io-ready section[data-entrance].in {
+          opacity: 1; transform: none; filter: none;
+          box-shadow: 0 10px 28px rgba(15, 23, 42, .10);
+          transition: opacity .65s cubic-bezier(.22,.75,.2,1), transform .65s cubic-bezier(.22,.75,.2,1), filter .65s ease, box-shadow .65s ease;
+        }
+        section[data-entrance]::before { display:none; }
+        :root.io-ready section[data-entrance]::before {
+          display:block;
+          content: ''; position: absolute; inset: 0; pointer-events: none;
+          background:
+            radial-gradient(120% 120% at -20% 0%, rgba(255,255,255,.35), transparent 60%),
+            linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.18));
+          clip-path: inset(0 100% 0 0); opacity: 0;
+          transition: clip-path .9s cubic-bezier(.22,.75,.2,1), opacity .9s ease;
+        }
+        :root.io-ready section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .12; }
+
         @media (prefers-reduced-motion: reduce) {
-          .animate-[gradientShift_14s_ease_in_out_infinite] { animation: none !important; }
+          .reveal, :root.io-ready .reveal { opacity: 1 !important; transform: none !important; }
+          section[data-entrance], :root.io-ready section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; box-shadow: none !important; }
+          section[data-entrance]::before { clip-path: none !important; opacity: .06 !important; transition: none !important; }
+          .navlink::after { transition: none !important; }
+        }
+
+        /* Spotlight cursor for light UI */
+        #__spotlight {
+          background: radial-gradient(320px 320px at var(--mx) var(--my), rgba(15, 23, 42, .06), transparent 60%);
+        }
+
+        /* Print-friendly */
+        @media print {
+          #__spotlight, aside, .noise, nav { display: none !important; }
+          button, a[href^="#"] { display: none !important; }
+          body { background: #fff !important; color: #111 !important; }
         }
       `}</style>
     </div>
   );
 }
 
-function SectionTitle({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
+function Section({
+  id,
+  title,
+  icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <h2
-      className={
-        'relative mb-10 text-3xl font-bold text-[#0A1E4F] ' +
-        (center ? 'text-center mx-auto w-fit' : 'inline-block')
-      }
+    <section
+      id={id}
+      className="relative rounded-xl border border-black/10 bg-white/60 backdrop-blur p-6 shadow-sm hover:shadow-md transition"
+      data-entrance
     >
+      <header className="mb-4 flex items-center gap-3" data-reveal>
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+          {icon}
+        </span>
+        <h2 className="text-2xl font-semibold text-[var(--c-text)]">{title}</h2>
+      </header>
       {children}
-      <span
-        className={(center ? 'left-1/2 -translate-x-1/2 ' : 'left-0 ') +
-          'absolute -bottom-2 h-1 w-28 bg-gradient-to-r from-[#00CFFF] to-[#FF7AF5]'}
-        aria-hidden
-      />
-    </h2>
+    </section>
   );
-}
-
-function useScrollSpy(onChange: (id: SectionId) => void) {
-  const lastId = useRef<SectionId>('home');
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target?.id) {
-          const id = visible.target.id as SectionId;
-          if (id !== lastId.current) {
-            lastId.current = id;
-            onChange(id);
-          }
-        }
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
-    );
-
-    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as Element[];
-    els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [onChange]);
-}
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const listener = (e: MediaQueryListEvent) => setReduced(e.matches);
-    setReduced(mql.matches);
-    mql.addEventListener?.('change', listener);
-    return () => mql.removeEventListener?.('change', listener);
-  }, []);
-  return reduced;
 }

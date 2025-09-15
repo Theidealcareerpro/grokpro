@@ -1,26 +1,42 @@
-// publish;
+// publish
 import * as React from 'react';
 import {
-  UserRound,
-  Wand2,
-  FolderGit2,
   BookOpen,
-  Image as ImageIcon,
+  Link as LinkIcon,
   Mail,
   Phone,
+  Lightbulb,
+  Database,
+  PieChart,
+  Rocket,
+  Laptop,
+  Users,
+  TrendingUp,
+  Briefcase,
+  BarChart3,
   Linkedin,
   Download,
   Award,
-  Link as LinkIcon,
+  Check,
+  Image as ImageIcon,
+  Copy,
+  ChevronUp,
+  UserRound,
+  Wand2,
+  FolderGit2,
+  Sparkles,
+  SunMedium,
+  MoonStar,
   Circle,
   Menu,
-  Sparkles,
+  Code,
+  X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
 const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
 
-// Safe getter for string fields without using any
+// Safe getter for string fields
 function getStr(obj: unknown, keys: string[]): string {
   if (typeof obj !== 'object' || obj === null) return '';
   const rec = obj as Record<string, unknown>;
@@ -44,12 +60,10 @@ export default function Classic({ data }: { data: PortfolioData }) {
 
   // Normalize SKILLS
   const skills: string[] = Array.isArray(data?.skills)
-    ? data!.skills
-        .map((s) => (typeof s === 'string' ? s : String(s ?? '')))
-        .filter((s) => s.trim() !== '')
+    ? data!.skills.map((s) => (typeof s === 'string' ? s : String(s ?? ''))).filter((s) => s.trim() !== '')
     : [];
 
-  // Normalize PROJECTS (accept name|title, description|summary, link|url)
+  // Normalize PROJECTS
   const projects: ProjectNorm[] = Array.isArray(data?.projects)
     ? data!.projects
         .map((p) => {
@@ -61,14 +75,14 @@ export default function Classic({ data }: { data: PortfolioData }) {
         .filter((x) => (x.name || x.desc || x.link).trim() !== '')
     : [];
 
-  // Normalize CERTIFICATIONS (string or {name|title})
+  // Normalize CERTIFICATIONS
   const certifications: CertNorm[] = Array.isArray(data?.certifications)
     ? data!.certifications
         .map((c) => (typeof c === 'string' ? c : getStr(c, ['name', 'title'])))
         .filter((s) => s.trim() !== '')
     : [];
 
-  // Normalize MEDIA (accept title|name, type, link|url)
+  // Normalize MEDIA
   const media: MediaNorm[] = Array.isArray(data?.media)
     ? data!.media
         .map((m) => {
@@ -80,11 +94,9 @@ export default function Classic({ data }: { data: PortfolioData }) {
         .filter((x) => (x.title || x.link).trim() !== '')
     : [];
 
-  const socials = Array.isArray(data?.socials)
-    ? data!.socials.filter((s) => s && s.label && s.url)
-    : [];
+  const socials = Array.isArray(data?.socials) ? data!.socials.filter((s) => s && s.label && s.url) : [];
 
-  // Smart badge inference for project links (domain / extension)
+  // Badge inference for project links
   const inferBadge = (link: string): string | null => {
     if (!link) return null;
     try {
@@ -118,13 +130,20 @@ export default function Classic({ data }: { data: PortfolioData }) {
   return (
     <div className="classic-surface text-white min-h-screen antialiased">
       {/* Skip link */}
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur"
+      >
         Skip to content
       </a>
 
       {/* Spotlight + progress */}
       <div aria-hidden className="fixed inset-0 pointer-events-none z-[1]" id="__spotlight" />
-      <div aria-hidden id="__progress" className="fixed inset-x-0 top-0 z-[60] h-1 bg-gradient-to-r from-[var(--c-accent)] via-[var(--c-accent-soft)] to-[var(--c-accent)] w-0 transition-[width]" />
+      <div
+        aria-hidden
+        id="__progress"
+        className="fixed inset-x-0 top-0 z-[60] h-1 bg-gradient-to-r from-[var(--c-accent)] via-[var(--c-accent-soft)] to-[var(--c-accent)] w-0 transition-[width]"
+      />
 
       {/* NAVBAR */}
       <nav id="__nav" className="sticky top-0 z-50 backdrop-blur bg-black/20 border-b border-transparent">
@@ -143,14 +162,11 @@ export default function Classic({ data }: { data: PortfolioData }) {
               <span className="hidden md:inline text-xs text-[var(--c-muted)]">{role}</span>
             </a>
 
-            {/* Desktop links */}
+            {/* Desktop links — ALWAYS render all sections */}
             <div className="hidden md:flex items-center gap-1">
-              {data?.about && <NavLink id="about" label="About" />}
-              {skills.length > 0 && <NavLink id="skills" label="Skills" />}
-              {projects.length > 0 && <NavLink id="projects" label="Projects" />}
-              {certifications.length > 0 && <NavLink id="certifications" label="Certifications" />}
-              {media.length > 0 && <NavLink id="media" label="Media" />}
-              <NavLink id="contact" label="Contact" />
+              {SECTION_IDS.map((id) => (
+                <NavLink key={id} id={id} label={id.charAt(0).toUpperCase() + id.slice(1)} />
+              ))}
 
               {data?.cvFileDataUrl && (
                 <a
@@ -166,8 +182,12 @@ export default function Classic({ data }: { data: PortfolioData }) {
 
             {/* Theme & Mobile toggle */}
             <div className="flex items-center gap-2">
-              <button id="__theme" className="hidden md:inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/20 hover:bg-white/15 backdrop-blur">
-                <Sparkles size={14} /><span>Theme</span>
+              <button
+                id="__theme"
+                className="hidden md:inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/20 hover:bg-white/15 backdrop-blur"
+              >
+                <Sparkles size={14} />
+                <span>Theme</span>
               </button>
               <button
                 id="__hamburger"
@@ -179,15 +199,12 @@ export default function Classic({ data }: { data: PortfolioData }) {
             </div>
           </div>
 
-          {/* Mobile drawer */}
+          {/* Mobile drawer — ALWAYS render all sections */}
           <div id="__drawer" className="hidden md:hidden border-t border-white/10 py-2">
             <div className="flex flex-col">
-              {data?.about && <NavLink id="about" label="About" mobile />}
-              {skills.length > 0 && <NavLink id="skills" label="Skills" mobile />}
-              {projects.length > 0 && <NavLink id="projects" label="Projects" mobile />}
-              {certifications.length > 0 && <NavLink id="certifications" label="Certifications" mobile />}
-              {media.length > 0 && <NavLink id="media" label="Media" mobile />}
-              <NavLink id="contact" label="Contact" mobile />
+              {SECTION_IDS.map((id) => (
+                <NavLink key={id} id={id} label={id.charAt(0).toUpperCase() + id.slice(1)} mobile />
+              ))}
               {data?.cvFileDataUrl && (
                 <a
                   href={data.cvFileDataUrl}
@@ -202,13 +219,21 @@ export default function Classic({ data }: { data: PortfolioData }) {
         </div>
       </nav>
 
-      {/* HERO (text-first) */}
+      {/* HERO */}
       <header className="relative overflow-hidden py-16 text-center z-10">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>{fullName}</h1>
-          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>{role}</p>
-          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>{tagline}</p>
-          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>{location}</p>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>
+            {fullName}
+          </h1>
+          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>
+            {role}
+          </p>
+          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>
+            {tagline}
+          </p>
+          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>
+            {location}
+          </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
@@ -236,7 +261,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         </div>
       </header>
 
-      {/* SHOWCASE PORTRAIT (after hero, before About) — static copper frame (no rotation) */}
+      {/* Portrait (kept as-is; shows only if you provided a photo) */}
       {photo && (
         <section aria-label="Profile image" className="relative z-10 max-w-4xl mx-auto px-6 -mt-4 mb-6">
           <figure className="group mx-auto w-fit">
@@ -283,135 +308,148 @@ export default function Classic({ data }: { data: PortfolioData }) {
 
       {/* MAIN */}
       <main id="main" className="relative z-10 max-w-4xl mx-auto px-6 py-10 space-y-10">
-        {/* ABOUT */}
-        {data?.about && (
-          <Section id="about" icon={<UserRound size={20} />} title="About Me">
-            <div data-seq-item>
-              <p className="text-[var(--c-text)] leading-relaxed text-justify">{data.about}</p>
-            </div>
-          </Section>
-        )}
+        {/* ABOUT (always visible) */}
+        <Section id="about" icon={<UserRound size={20} />} title="About Me">
+          <div data-seq-item>
+            <p className="text-[var(--c-text)] leading-relaxed text-justify">
+              {data?.about?.trim() ||
+                'Tell your story here — background, passions, and what you’re excited to build next.'}
+            </p>
+          </div>
+        </Section>
 
-        {/* SKILLS */}
-        {skills.length > 0 && (
-          <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
-            <div className="mx-auto max-w-3xl flex flex-col gap-3">
-              {skills.map((s, i) => (
-                <div
-                  key={i}
+        {/* SKILLS (always visible) */}
+        <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
+          <div className="mx-auto max-w-3xl flex flex-col gap-3">
+            {(skills.length ? skills : ['Add your core skills, tools, and stacks']).map((s, i) => (
+              <div
+                key={`${String(s)}-${i}`}
+                data-seq-item
+                style={{ ['--i' as never]: String(i) }}
+                className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
+              >
+                <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* PROJECTS (always visible) */}
+        <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
+          <div className="mx-auto max-w-3xl flex flex-col gap-4">
+            {(projects.length
+              ? projects
+              : [{ name: 'Your Project', desc: 'Problem → approach → impact.', link: '' } as ProjectNorm]
+            ).map((p, i) => {
+              const label = p.link ? inferBadge(p.link) : null;
+              return (
+                <article
+                  key={`${p.name || p.link || 'project'}-${i}`}
                   data-seq-item
                   style={{ ['--i' as never]: String(i) }}
-                  className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
+                  className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
                 >
-                  <span className="text-sm text-[var(--c-text)] text-justify">{s}</span>
-                  <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* PROJECTS */}
-        {projects.length > 0 && (
-          <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
-            <div className="mx-auto max-w-3xl flex flex-col gap-4">
-              {projects.map((p, i) => {
-                const label = p.link ? inferBadge(p.link) : null;
-                return (
-                  <article
-                    key={`${p.name || p.link}-${i}`}
-                    data-seq-item
-                    style={{ ['--i' as never]: String(i) }}
-                    className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
-                  >
-                    <header className="flex items-center gap-2">
-                      <h3 className="text-xl font-medium">{p.name.trim() || `Project ${i + 1}`}</h3>
-                      {label && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs ring-1 ring-[var(--badge-ring)]">
-                          {label}
-                        </span>
-                      )}
-                    </header>
-                    {p.desc.trim() && <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.desc}</p>}
-                    {p.link.trim() && (
-                      <a href={p.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3">
-                        <LinkIcon size={16} /> View
-                      </a>
+                  <header className="flex items-center gap-2">
+                    <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                    {label && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs ring-1 ring-[var(--badge-ring)]">
+                        {label}
+                      </span>
                     )}
-                  </article>
-                );
-              })}
-            </div>
-          </Section>
-        )}
+                  </header>
+                  {p.desc?.trim() && (
+                    <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.desc}</p>
+                  )}
+                  {p.link?.trim() && (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
+                    >
+                      <LinkIcon size={16} /> View
+                    </a>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </Section>
 
-        {/* CERTIFICATIONS */}
-        {certifications.length > 0 && (
-          <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
-            <div className="mx-auto max-w-3xl flex flex-col gap-3">
-              {certifications.map((cert, index) => (
+        {/* CERTIFICATIONS (always visible) */}
+        <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
+          <div className="mx-auto max-w-3xl flex flex-col gap-3">
+            {(certifications.length ? certifications : ['Add a certification or recognition']).map((cert, index) => (
+              <div
+                key={`${String(cert)}-${index}`}
+                data-seq-item
+                style={{ ['--i' as never]: String(index) }}
+                className="flex items-center gap-3 rounded-lg border border-white/10 bg-[var(--card-bg)] p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+                  <Award className="h-6 w-6 text-[var(--c-accent)]" />
+                </span>
+                <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* MEDIA (always visible) */}
+        <Section id="media" icon={<ImageIcon size={20} />} title="Media">
+          <div className="mx-auto max-w-3xl flex flex-col gap-4">
+            {(media.length ? media : [{ title: 'Portfolio Deck', type: 'Slides', link: '' }]).map((m, i) => {
+              const labelNice = (m.type || 'Media').charAt(0).toUpperCase() + (m.type || 'Media').slice(1);
+              return (
                 <div
-                  key={`${cert}-${index}`}
+                  key={`${m.title || m.link || 'media'}-${i}`}
                   data-seq-item
-                  style={{ ['--i' as never]: String(index) }}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-[var(--card-bg)] p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
+                  style={{ ['--i' as never]: String(i) }}
+                  className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
-                    <Award className="h-6 w-6 text-[var(--c-accent)]" />
-                  </span>
-                  <p className="text-[var(--c-text)] text-justify">{cert}</p>
+                  <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                  <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
+                  {m.link?.trim() && (
+                    <a
+                      href={m.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2"
+                    >
+                      <LinkIcon size={16} /> View
+                    </a>
+                  )}
                 </div>
-              ))}
-            </div>
-          </Section>
-        )}
+              );
+            })}
+          </div>
+        </Section>
 
-        {/* MEDIA */}
-        {media.length > 0 && (
-          <Section id="media" icon={<ImageIcon size={20} />} title="Media">
-            <div className="mx-auto max-w-3xl flex flex-col gap-4">
-              {media.map((m, i) => {
-                const label = (m.type || 'Media');
-                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
-                return (
-                  <div
-                    key={`${m.title || m.link}-${i}`}
-                    data-seq-item
-                    style={{ ['--i' as never]: String(i) }}
-                    className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
-                  >
-                    <h3 className="text-xl font-medium">{m.title.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
-                    {m.link.trim() && (
-                      <a href={m.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2">
-                        <LinkIcon size={16} /> View
-                      </a>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Section>
-        )}
-
-        {/* CONTACT */}
+        {/* CONTACT (always visible, with placeholders) */}
         <Section id="contact" icon={<Mail size={20} />} title="Contact">
           <div className="text-[var(--c-text)] space-y-2">
-            {data?.email && (
+            {data?.email ? (
               <div className="flex items-center gap-2" data-seq-item>
                 <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Mail size={16} /> {data.email}
                 </a>
               </div>
+            ) : (
+              <p className="text-[var(--c-muted)]" data-seq-item>Add your email address.</p>
             )}
-            {data?.phone && (
+
+            {data?.phone ? (
               <div className="flex items-center gap-2" data-seq-item>
                 <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Phone size={16} /> {data.phone}
                 </a>
               </div>
+            ) : (
+              <p className="text-[var(--c-muted)]" data-seq-item>Add your phone number.</p>
             )}
-            {data?.linkedin && (
+
+            {data?.linkedin ? (
               <a
                 href={data.linkedin}
                 target="_blank"
@@ -421,8 +459,11 @@ export default function Classic({ data }: { data: PortfolioData }) {
               >
                 <Linkedin size={16} /> LinkedIn
               </a>
+            ) : (
+              <p className="text-[var(--c-muted)]" data-seq-item>Add your LinkedIn URL.</p>
             )}
-            {socials.length > 0 && (
+
+            {socials.length > 0 ? (
               <div className="pt-2" data-seq-item>
                 <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
@@ -433,7 +474,10 @@ export default function Classic({ data }: { data: PortfolioData }) {
                   ))}
                 </div>
               </div>
+            ) : (
+              <p className="text-[var(--c-muted)]" data-seq-item>Add your other social profiles.</p>
             )}
+
             {data?.cvFileDataUrl && (
               <a
                 href={data.cvFileDataUrl}
@@ -469,7 +513,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         }
         body { font-family: var(--font-sans); }
 
-        /* Professional Orange Mix */
+        /* Professional Orange Mix (unchanged palette you supplied) */
         :root[data-classic-theme='classic'] {
           --c-accent:#FF8A3D;
           --c-accent-soft:#FFC38A;
@@ -500,7 +544,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
 
         .classic-surface { background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3)); }
 
-        /* Portrait frame (static copper gradient, no rotation) */
+        /* Portrait frame */
         .portrait-frame {
           background:
             conic-gradient(from 210deg, rgba(255,255,255,.20), rgba(255,255,255,0) 30% 70%, rgba(255,255,255,.20)),
@@ -510,9 +554,9 @@ export default function Classic({ data }: { data: PortfolioData }) {
         }
         .portrait-glow { background: radial-gradient(60% 60% at 50% 50%, rgba(255,138,61,0.28) 0%, transparent 60%); }
 
-        /* Reveal (per-element) — visible by default, gated once JS runs */
+        /* Reveal (visible by default; gated once JS marks io-ready) */
         .reveal { opacity: 1; transform: none; }
-        :root.io-ready .reveal { opacity: 0; transform: translateY(12px); }
+        :root.io-ready .reveal { opacity: 1; transform: none; }
         :root.io-ready .reveal.reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
         [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
 
@@ -527,26 +571,22 @@ export default function Classic({ data }: { data: PortfolioData }) {
         .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
         #__nav.with-shadow { border-bottom-color: rgba(255,255,255,0.10); box-shadow: 0 8px 30px rgba(0,0,0,0.20); }
 
-        /* Section-level box reveal — also gated */
+        /* Section-level box reveal — gated (but visible by default) */
         .section[data-entrance] { opacity: 1; transform: none; filter: none; }
-        :root.io-ready .section[data-entrance] {
-          opacity: 0;
-          transform: translateY(18px) scale(0.98);
-          filter: blur(6px);
-          will-change: opacity, transform, filter, box-shadow;
+
         }
         :root.io-ready .section[data-entrance].in {
           opacity: 1;
           transform: none;
           filter: none;
           box-shadow: 0 12px 40px rgba(0,0,0,.22);
-          transition:
-            opacity .6s ease,
-            transform .6s ease,
-            filter .6s ease,
-            box-shadow .6s ease;
+          transition: opacity .6s ease, transform .6s ease, filter .6s ease, box-shadow .6s ease;
         }
-
+        :root.io-ready .section[data-entrance] {
+          opacity: 1;
+          transform: none;
+          filter: none;
+        }
         .section { position: relative; overflow: clip; }
         :root.io-ready .section[data-entrance]::before {
           content: ''; position: absolute; inset: 0;
@@ -584,7 +624,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
           __html: `
           (function () {
             var doc = document.documentElement;
-            // Mark IO ready so animations are gated (content visible by default until this runs)
+            // Gate animations (content visible by default until this runs)
             doc.classList.add('io-ready');
 
             var bar = document.getElementById('__progress');
@@ -756,7 +796,7 @@ function NavLink({ id, label, mobile }: { id: string; label: string; mobile?: bo
   return (
     <a
       href={`#${id}`}
-      className={`navlink px-3 py-2 text-sm font-medium transition text-[var(--c-muted)] hover:text-[var(--c-accent)]`}
+      className="navlink px-3 py-2 text-sm font-medium transition text-[var(--c-muted)] hover:text-[var(--c-accent)]"
       onClick={(e) => {
         e.preventDefault();
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
