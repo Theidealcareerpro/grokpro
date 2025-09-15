@@ -1,12 +1,19 @@
-'use client';
-
-import { useEffect, useMemo, useRef, useState } from 'react';
-import Image from 'next/image';
+// publish;
+import * as React from 'react';
 import {
   BookOpen,
   Link as LinkIcon,
   Mail,
   Phone,
+  Lightbulb,
+  Database,
+  PieChart,
+  Rocket,
+  Laptop,
+  Users,
+  TrendingUp,
+  Briefcase,
+  BarChart3,
   Linkedin,
   Download,
   Award,
@@ -22,267 +29,76 @@ import {
   MoonStar,
   Circle,
   Menu,
+  Code,
   X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
-const SECTION_IDS = ['profile', 'about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
-type SectionId = (typeof SECTION_IDS)[number];
+const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
 
-/** ---- Safe getters (no `any`) ---- */
-function getStr(obj: unknown, keys: readonly string[]): string {
-  if (typeof obj !== 'object' || obj === null) return '';
-  const rec = obj as Record<string, unknown>;
-  for (const k of keys) {
-    const v = rec[k];
-    if (typeof v === 'string') return v;
-  }
-  return '';
-}
-
-/** Normalized shapes (no `any`) */
-type ProjectNorm = { name: string; description: string; link: string };
-type MediaNorm   = { title: string; type: string; link: string };
-type SocialNorm  = { label: string; url: string };
-
-export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
-  // ===== Data guards =====
+export default function Classic({ data }: { data: PortfolioData }) {
   const fullName = data?.fullName || 'Your Name';
   const role = data?.role || 'Classic Professional';
   const tagline = data?.tagline || 'Classic Tagline';
   const location = data?.location || 'Location';
-  const photo = data?.photoDataUrl ?? '';
+  const photo = data?.photoDataUrl;
 
-  // ===== Normalized data (strict, no `any`) =====
-  const skills = useMemo<string[]>(() => {
-    const raw = (data as PortfolioData | undefined)?.skills;
-    if (!Array.isArray(raw)) return ['Add your core skills, tools, and stacks'];
-    const out = raw
-      .map((s) => (typeof s === 'string' ? s : String(s ?? '')))
-      .filter((s) => s.trim() !== '');
-    return out.length ? out : ['Add your core skills, tools, and stacks'];
-  }, [data]);
+  const skills = Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : [];
+  const projects = Array.isArray(data?.projects)
+    ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+    : [];
+  const certifications = Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : [];
+  const media = Array.isArray(data?.media)
+    ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+    : [];
+  const socials = Array.isArray(data?.socials)
+    ? data!.socials.filter((s) => s && s.label && s.url)
+    : [];
 
-  const projects = useMemo<ProjectNorm[]>(() => {
-    const raw = (data as PortfolioData | undefined)?.projects as unknown;
-    if (!Array.isArray(raw)) {
-      return [{ name: 'Your Project', description: 'Brief problem → solution → impact.', link: '' }];
-    }
-    const out = raw
-      .map<ProjectNorm>((p: unknown) => {
-        const name = getStr(p, ['name', 'title']);
-        const description = getStr(p, ['description', 'summary']);
-        const link = getStr(p, ['link', 'url']);
-        return { name, description, link };
-      })
-      .filter((p) => (p.name || p.description || p.link).trim() !== '');
-    return out.length ? out : [{ name: 'Your Project', description: 'Brief problem → solution → impact.', link: '' }];
-  }, [data]);
-
-  const certifications = useMemo<string[]>(() => {
-    const raw = (data as PortfolioData | undefined)?.certifications as unknown;
-    if (!Array.isArray(raw)) return ['Add a certification or recognition'];
-    const out = raw
-      .map((c: unknown) => (typeof c === 'string' ? c : getStr(c, ['name', 'title'])))
-      .filter((s) => s.trim() !== '');
-    return out.length ? out : ['Add a certification or recognition'];
-  }, [data]);
-
-  const media = useMemo<MediaNorm[]>(() => {
-    const raw = (data as PortfolioData | undefined)?.media as unknown;
-    if (!Array.isArray(raw)) return [{ title: 'Portfolio Deck', type: 'Slides', link: '' }];
-    const out = raw
-      .map<MediaNorm>((m: unknown) => {
-        const title = getStr(m, ['title', 'name']);
-        const type = getStr(m, ['type']) || 'Media';
-        const link = getStr(m, ['link', 'url']);
-        return { title, type, link };
-      })
-      .filter((m) => (m.title || m.link).trim() !== '');
-    return out.length ? out : [{ title: 'Portfolio Deck', type: 'Slides', link: '' }];
-  }, [data]);
-
-  const socials = useMemo<SocialNorm[]>(() => {
-    const raw = (data as PortfolioData | undefined)?.socials as unknown;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((s: unknown) => {
-        if (typeof s !== 'object' || s === null) return null;
-        const rec = s as Record<string, unknown>;
-        const label = typeof rec.label === 'string' ? rec.label : '';
-        const url = typeof rec.url === 'string' ? rec.url : '';
-        return label && url ? ({ label, url } as SocialNorm) : null;
-      })
-      .filter((x): x is SocialNorm => !!x);
-  }, [data]);
-
-  // ===== Theme (Light / Noir) =====
-  type Theme = 'classic' | 'noir';
-  const [theme, setTheme] = useState<Theme>('classic');
-  useEffect(() => {
-    const t = (localStorage.getItem('__classic_theme') as Theme) || 'classic';
-    setTheme(t);
-    document.documentElement.setAttribute('data-classic-theme', t);
-  }, []);
-  const toggleTheme = () => {
-    const order: Theme[] = ['classic', 'noir'];
-    const next = order[(order.indexOf(theme) + 1) % order.length];
-    setTheme(next);
-    document.documentElement.setAttribute('data-classic-theme', next);
-    localStorage.setItem('__classic_theme', next);
-  };
-
-  // ===== UX niceties =====
-  const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
-  const [scrollPct, setScrollPct] = useState(0);
-  const [navShadow, setNavShadow] = useState(false);
-  const [active, setActive] = useState<SectionId>('about');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Scroll progress + nav shadow
-  useEffect(() => {
-    const onScroll = () => {
-      const el = document.documentElement;
-      const h = el.scrollHeight - el.clientHeight;
-      setScrollPct(h > 0 ? (el.scrollTop / h) * 100 : 0);
-      setNavShadow(window.scrollY > 8);
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Soft reveal (never hides content)
-  useEffect(() => {
-    const root = containerRef.current;
-    if (!root || !('IntersectionObserver' in window)) return;
-
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry, idx) => {
-          if (entry.isIntersecting) {
-            const el = entry.target as HTMLElement;
-            el.classList.add('reveal-in');
-            el.style.setProperty('--stagger', String(idx % 8));
-            obs.unobserve(el);
-          }
-        });
-      },
-      { rootMargin: '0px 0px -12% 0px', threshold: 0.12 }
-    );
-    nodes.forEach((n) => obs.observe(n));
-
-    const sections = Array.from(root.querySelectorAll<HTMLElement>('section[data-entrance]'));
-    const secObs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in');
-            secObs.unobserve(entry.target);
-          }
-        });
-      },
-      { rootMargin: '0px 0px -12% 0px', threshold: 0.12 }
-    );
-    sections.forEach((s) => secObs.observe(s));
-
-    return () => {
-      obs.disconnect();
-      secObs.disconnect();
-    };
-  }, []);
-
-  // Active section spy (only observe sections that exist)
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        const id = (visible?.target as HTMLElement | null)?.id as SectionId | undefined;
-        if (id) setActive(id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.5, 0.8, 1] }
-    );
-    SECTION_IDS.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) io.observe(el);
-    });
-    return () => io.disconnect();
-  }, []);
-
-  // Clipboard helper
-  const copy = async (label: 'email' | 'phone', value: string) => {
+  // Smart badge inference for project links (domain / extension)
+  const inferBadge = (link: string): string | null => {
+    if (!link) return null;
     try {
-      await navigator.clipboard.writeText(value);
-      setCopied(label);
-      setTimeout(() => setCopied(null), 1200);
+      const u = new URL(link);
+      const host = u.hostname.replace('www.', '');
+      const ext = (u.pathname.split('.').pop() || '').toLowerCase();
+
+      if (host.includes('github.com')) return 'GitHub';
+      if (host.includes('gitlab.com')) return 'GitLab';
+      if (host.includes('bitbucket.org')) return 'Bitbucket';
+      if (host.includes('notion.site') || host.includes('notion.so')) return 'Notion';
+      if (host.includes('figma.com')) return 'Figma';
+      if (host.includes('vercel.app')) return 'Vercel';
+      if (host.includes('powerbi.com') || ext === 'pbix') return 'Power BI';
+      if (ext === 'pdf') return 'PDF';
+      if (['xlsx', 'xls', 'csv'].includes(ext)) return 'Excel';
+      if (['pptx', 'ppt'].includes(ext)) return 'Slides';
+      if (['ipynb', 'py'].includes(ext)) return 'Python';
+      if (['html', 'htm'].includes(ext)) return 'Web';
+      const core = host.split('.').slice(-2, -1)[0];
+      return core ? core.toUpperCase() : null;
     } catch {
-      /* no-op */
+      const ext = (link.split('.').pop() || '').toLowerCase();
+      if (ext === 'pdf') return 'PDF';
+      if (['xlsx', 'xls', 'csv'].includes(ext)) return 'Excel';
+      if (['pbix'].includes(ext)) return 'Power BI';
+      return null;
     }
-  };
-
-  // ===== Nav helpers (Profile shows only if photo provided; others always) =====
-  const navItems: { id: SectionId; label: string; show: boolean }[] = [
-    { id: 'profile', label: 'Profile', show: !!photo },
-    { id: 'about', label: 'About', show: true },
-    { id: 'skills', label: 'Skills', show: true },
-    { id: 'projects', label: 'Projects', show: true },
-    { id: 'certifications', label: 'Certifications', show: true },
-    { id: 'media', label: 'Media', show: true },
-    { id: 'contact', label: 'Contact', show: true },
-  ];
-
-  const NavLink = ({ id, label }: { id: SectionId; label: string }) => {
-    const isActive = active === id;
-    return (
-      <a
-        href={`#${id}`}
-        onClick={(e) => {
-          e.preventDefault();
-          setMenuOpen(false);
-          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }}
-        className={`navlink px-3 py-2 text-sm font-medium transition ${
-          isActive ? 'text-[var(--c-accent)]' : 'text-[var(--c-muted)] hover:text-[var(--c-accent)]'
-        }`}
-        aria-current={isActive ? 'true' : undefined}
-      >
-        {label}
-      </a>
-    );
   };
 
   return (
-    <div ref={containerRef} className="surface text-[var(--c-text)] min-h-screen antialiased font-sans">
+    <div className="classic-surface text-white min-h-screen antialiased">
       {/* Skip link */}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-black/5 px-3 py-2 ring-1 ring-black/10 backdrop-blur"
-      >
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] rounded-md bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur">
         Skip to content
       </a>
 
-      {/* Spotlight */}
+      {/* Spotlight + progress */}
       <div aria-hidden className="fixed inset-0 pointer-events-none z-[1]" id="__spotlight" />
+      <div aria-hidden id="__progress" className="fixed inset-x-0 top-0 z-[60] h-1 bg-gradient-to-r from-[var(--c-accent)] via-[var(--c-accent-soft)] to-[var(--c-accent)] w-0 transition-[width]" />
 
-      {/* Top scroll progress */}
-      <div
-        aria-hidden
-        className="fixed inset-x-0 top-0 z-[60] h-1 bg-gradient-to-r from-[var(--c-accent)] via-[var(--c-accent-soft)] to-[var(--c-accent)] transition-[width]"
-        style={{ width: `${scrollPct}%` }}
-      />
-
-      {/* ===== NAVBAR ===== */}
-      <nav
-        className={`sticky top-0 z-50 backdrop-blur ${
-          navShadow
-            ? 'bg-[var(--glass)] border-b border-black/[.08] shadow-[0_10px_35px_rgba(0,0,0,.06)]'
-            : 'bg-[var(--glass-soft)] border-b border-transparent'
-        }`}
-      >
+      {/* NAVBAR */}
+      <nav id="__nav" className="sticky top-0 z-50 backdrop-blur bg-black/20 border-b border-transparent">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex h-14 items-center justify-between">
             {/* Brand */}
@@ -294,96 +110,103 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               }}
               className="flex items-baseline gap-3"
             >
-              <span className="text-lg font-semibold tracking-wide">{fullName}</span>
+              <span className="text-lg font-semibold tracking-wide text-[var(--c-text)]">{fullName}</span>
               <span className="hidden md:inline text-xs text-[var(--c-muted)]">{role}</span>
             </a>
 
             {/* Desktop links */}
             <div className="hidden md:flex items-center gap-1">
-              {navItems.filter((n) => n.show).map((n) => (
-                <NavLink key={n.id} id={n.id} label={n.label} />
-              ))}
+              {data?.about && <NavLink id="about" label="About" />}
+              {skills.length > 0 && <NavLink id="skills" label="Skills" />}
+              {projects.length > 0 && <NavLink id="projects" label="Projects" />}
+              {certifications.length > 0 && <NavLink id="certifications" label="Certifications" />}
+              {media.length > 0 && <NavLink id="media" label="Media" />}
+              <NavLink id="contact" label="Contact" />
+
               {data?.cvFileDataUrl && (
                 <a
                   data-magnet
                   href={data.cvFileDataUrl}
                   download={data.cvFileName ?? 'cv.pdf'}
-                  className="ml-2 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-1.5 text-white font-semibold shadow-sm hover:brightness-110"
+                  className="ml-2 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-1.5 text-gray-900 font-semibold shadow-md hover:brightness-110"
                 >
                   <Download className="h-4 w-4" /> CV
                 </a>
               )}
             </div>
 
-            {/* Mobile menu toggle */}
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md bg-black/5 ring-1 ring-black/10"
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            {/* Theme & Mobile toggle */}
+            <div className="flex items-center gap-2">
+              <button id="__theme" className="hidden md:inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/20 hover:bg-white/15 backdrop-blur">
+                <Sparkles size={14} /><span>Theme</span>
+              </button>
+              <button
+                id="__hamburger"
+                className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/10 ring-1 ring-white/20"
+                aria-label="Toggle menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           {/* Mobile drawer */}
-          {menuOpen && (
-            <div className="md:hidden border-t border-black/10 py-2 bg-[var(--glass)] backdrop-blur">
-              <div className="flex flex-col">
-                {navItems
-                  .filter((n) => n.show)
-                  .map((n) => (
-                    <NavLink key={n.id} id={n.id} label={n.label} />
-                  ))}
-                {data?.cvFileDataUrl && (
-                  <a
-                    href={data.cvFileDataUrl}
-                    download={data.cvFileName ?? 'cv.pdf'}
-                    className="mt-1 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-2 text-white font-semibold shadow-sm"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <Download className="h-4 w-4" /> CV
-                  </a>
-                )}
-              </div>
+          <div id="__drawer" className="hidden md:hidden border-t border-white/10 py-2">
+            <div className="flex flex-col">
+              {data?.about && <NavLink id="about" label="About" mobile />}
+              {skills.length > 0 && <NavLink id="skills" label="Skills" mobile />}
+              {projects.length > 0 && <NavLink id="projects" label="Projects" mobile />}
+              {certifications.length > 0 && <NavLink id="certifications" label="Certifications" mobile />}
+              {media.length > 0 && <NavLink id="media" label="Media" mobile />}
+              <NavLink id="contact" label="Contact" mobile />
+              {data?.cvFileDataUrl && (
+                <a
+                  href={data.cvFileDataUrl}
+                  download={data.cvFileName ?? 'cv.pdf'}
+                  className="mt-1 inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-4 py-2 text-gray-900 font-semibold shadow-md"
+                >
+                  <Download className="h-4 w-4" /> CV
+                </a>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </nav>
 
-      {/* Theme toggle */}
-      <div className="fixed right-4 top-3 z-[70] hidden md:flex items-center gap-2">
-        <button
-          onClick={toggleTheme}
-          className="inline-flex items-center gap-2 rounded-full bg-black/5 px-3 py-1.5 text-xs ring-1 ring-black/10 hover:bg-black/[.07] backdrop-blur"
-          aria-label="Toggle theme"
-        >
-          {theme === 'classic' ? <Sparkles size={14} /> : theme === 'noir' ? <MoonStar size={14} /> : <SunMedium size={14} />}
-          {theme.charAt(0).toUpperCase() + theme.slice(1)}
-        </button>
-      </div>
-
-      {/* Background accents */}
-      <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden">
-        <div data-parallax="0.25" className="absolute -inset-[25%] opacity-70 aurora" />
-        <div data-parallax="0.10" className="absolute -inset-[45%] opacity-35 aurora alt" />
-        <div className="absolute inset-0 noise" />
-      </div>
-
-      {/* ===== HERO ===== */}
-      <header className="relative overflow-hidden py-14 text-center z-10">
+      {/* HERO */}
+      <header className="relative overflow-hidden py-16 text-center z-10">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <h1 className="text-4xl md:text-6xl font-semibold tracking-tight reveal" data-reveal>
-            {fullName}
-          </h1>
-          <p className="text-xl md:text-2xl mt-2 text-[var(--c-subtle)] reveal" data-reveal>
-            {role}
-          </p>
-          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>
-            {tagline}
-          </p>
-          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>
-            {location}
-          </p>
+          {/* Avatar: show ONLY if photo exists */}
+          {photo && (
+            <figure
+              className="group relative w-fit mx-auto mb-7 [transform-style:preserve-3d] will-change-transform"
+              onMouseMove={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                const r = el.getBoundingClientRect();
+                const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -8;
+                const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 8;
+                el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
+              }}
+              data-reveal
+            >
+              <span aria-hidden className="absolute -inset-8 -z-10 rounded-[36px] blur-3xl opacity-70 classic-glow" />
+              <span aria-hidden className="avatar-ring absolute inset-[-12px] rounded-[28px]" />
+              <div className="relative h-48 w-48 md:h-56 md:w-56 rounded-[28px] p-[2px] classic-frame shadow-2xl">
+                <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/5 backdrop-blur-sm ring-1 ring-white/10">
+                  <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
+                  <span aria-hidden className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.16),transparent)] transition-transform duration-[1200ms] ease-out" />
+                </div>
+              </div>
+            </figure>
+          )}
+
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>{fullName}</h1>
+          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>{role}</p>
+          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>{tagline}</p>
+          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>{location}</p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3 reveal" data-reveal>
             {data?.cvFileDataUrl && (
@@ -391,7 +214,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 data-magnet
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-5 py-2 font-semibold text-white shadow-sm transition will-change-transform"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--c-accent)] px-5 py-2 font-semibold text-gray-900 shadow-md transition will-change-transform"
               >
                 <Download className="h-4 w-4" /> Download CV
               </a>
@@ -402,7 +225,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--c-accent)] px-5 py-2 font-semibold text-[var(--c-accent)] shadow-sm transition will-change-transform hover:bg-[var(--c-accent)] hover:text-white"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--c-accent)] px-5 py-2 font-semibold text-[var(--c-accent)] shadow-md transition will-change-transform hover:bg-[var(--c-accent)] hover:text-gray-900"
               >
                 <Linkedin className="h-4 w-4" /> LinkedIn
               </a>
@@ -411,176 +234,152 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         </div>
       </header>
 
-      {/* ===== MAIN ===== */}
+      {/* RIGHT DOT NAV */}
+      <aside aria-label="Sections" className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col gap-3">
+        {SECTION_IDS.map((id) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className="grid place-items-center h-6 w-6 rounded-full ring-1 ring-white/30 transition hover:ring-[var(--c-accent)] bg-white/10"
+            data-dot={id}
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            <Circle className="h-3 w-3" />
+          </a>
+        ))}
+      </aside>
+
+      {/* MAIN */}
       <main id="main" className="relative z-10 max-w-4xl mx-auto px-6 py-10 space-y-10">
-        {/* PROFILE (only if photo provided) */}
-        {photo && (
-          <Section id="profile" icon={<ImageIcon size={20} />} title="Profile">
-            <figure
-              className="group mx-auto w-fit [transform-style:preserve-3d] reveal"
-              data-reveal
-              onMouseMove={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                const r = el.getBoundingClientRect();
-                const rx = ((e.clientY - (r.top + r.height / 2)) / r.height) * -4;
-                const ry = ((e.clientX - (r.left + r.width / 2)) / r.width) * 4;
-                el.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'perspective(900px) rotateX(0) rotateY(0)';
-              }}
-            >
-              <span aria-hidden className="portrait-glow absolute -inset-10 -z-10 blur-3xl opacity-45" />
-              <div className="portrait-frame relative h-56 w-56 md:h-64 md:w-64 rounded-[28px] p-[1.5px] shadow-[0_18px_55px_rgba(0,0,0,.08)] mx-auto">
-                <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/85 backdrop-blur-xl ring-1 ring-black/10">
-                  <span
-                    aria-hidden
-                    className="absolute inset-0 opacity-[0.06] pointer-events-none"
-                    style={{
-                      backgroundImage:
-                        'linear-gradient(to right, rgba(0,0,0,.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,.05) 1px, transparent 1px)',
-                      backgroundSize: '24px 24px',
-                    }}
-                  />
-                  <Image src={photo} alt={fullName} fill sizes="256px" priority className="object-cover" />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.35),transparent)] transition-transform duration-[1200ms] ease-out"
-                  />
-                </div>
-              </div>
-            </figure>
+        {/* ABOUT */}
+        {data?.about && (
+          <Section id="about" icon={<UserRound size={20} />} title="About Me">
+            <div data-seq-item>
+              <p className="text-[var(--c-text)] leading-relaxed text-justify">{data.about}</p>
+            </div>
           </Section>
         )}
 
-        {/* ABOUT (always visible) */}
-        <Section id="about" icon={<UserRound size={20} />} title="About Me">
-          <p className="leading-relaxed text-justify reveal" data-reveal>
-            {data?.about?.trim() || 'Tell your story here — background, passions, and what you’re excited to build next.'}
-          </p>
-        </Section>
-
-        {/* SKILLS (always visible) */}
-        <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
-          <div className="mx-auto max-w-3xl flex flex-col gap-3">
-            {skills.map((s, i) => (
-              <div
-                key={`${s}-${i}`}
-                className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)] reveal"
-                data-reveal
-              >
-                <span className="text-sm text-justify">{s}</span>
-                <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* PROJECTS (always visible) */}
-        <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
-          <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {projects.map((p, i) => (
-              <article
-                key={`${p.name || p.link || 'project'}-${i}`}
-                className="rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-4 shadow-[0_10px_40px_rgba(0,0,0,.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(0,0,0,.08)] reveal"
-                data-reveal
-              >
-                <h3 className="text-xl font-medium">{p.name.trim() || `Project ${i + 1}`}</h3>
-                {p.description.trim() && (
-                  <p className="text-[var(--c-muted)] mt-2 text-justify leading-relaxed">{p.description}</p>
-                )}
-                {p.link.trim() && (
-                  <a
-                    href={p.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
-                  >
-                    <LinkIcon size={16} /> View
-                  </a>
-                )}
-              </article>
-            ))}
-          </div>
-        </Section>
-
-        {/* CERTIFICATIONS (always visible) */}
-        <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
-          <div className="mx-auto max-w-3xl flex flex-col gap-3">
-            {certifications.map((cert, index) => (
-              <div
-                key={`${cert}-${index}`}
-                className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-3 ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md reveal"
-                data-reveal
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
-                  <Award className="h-6 w-6 text-[var(--c-accent)]" />
-                </span>
-                <p className="text-justify">{cert}</p>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        {/* MEDIA (always visible) */}
-        <Section id="media" icon={<ImageIcon size={20} />} title="Media">
-          <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {media.map((m, i) => {
-              const label = m.type || 'Media';
-              const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
-              return (
+        {/* SKILLS */}
+        {skills.length > 0 && (
+          <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {skills.map((s, i) => (
                 <div
-                  key={`${m.title || m.link || 'media'}-${i}`}
-                  className="rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-4 transition hover:shadow-[0_16px_50px_rgba(0,0,0,.08)] reveal"
-                  data-reveal
+                  key={i}
+                  data-seq-item
+                  style={{ ['--i' as never]: String(i) }}
+                  className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
                 >
-                  <h3 className="text-xl font-medium">{m.title.trim() || `Media ${i + 1}`}</h3>
-                  <p className="text-[var(--c-muted)] mt-1 text-justify">{labelNice}</p>
-                  {m.link.trim() && (
-                    <a
-                      href={m.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2"
-                    >
-                      <LinkIcon size={16} /> View
-                    </a>
-                  )}
+                  <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                  <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
                 </div>
-              );
-            })}
-          </div>
-        </Section>
+              ))}
+            </div>
+          </Section>
+        )}
 
-        {/* CONTACT (always visible) */}
+        {/* PROJECTS */}
+        {projects.length > 0 && (
+          <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {projects.map((p, i) => {
+                const label = p.link ? inferBadge(p.link) : null;
+                return (
+                  <article
+                    key={i}
+                    data-seq-item
+                    style={{ ['--i' as never]: String(i) }}
+                    className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
+                  >
+                    <header className="flex items-center gap-2">
+                      <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                      {label && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs ring-1 ring-[var(--badge-ring)]">
+                          {label}
+                        </span>
+                      )}
+                    </header>
+                    {p.description?.trim() && <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>}
+                    {p.link && (
+                      <a href={p.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3">
+                        <LinkIcon size={16} /> View
+                      </a>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
+        {/* CERTIFICATIONS */}
+        {certifications.length > 0 && (
+          <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
+            <div className="mx-auto max-w-3xl flex flex-col gap-3">
+              {certifications.map((cert, index) => (
+                <div
+                  key={index}
+                  data-seq-item
+                  style={{ ['--i' as never]: String(index) }}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-[var(--card-bg)] p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
+                    <Award className="h-6 w-6 text-[var(--c-accent)]" />
+                  </span>
+                  <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* MEDIA */}
+        {media.length > 0 && (
+          <Section id="media" icon={<ImageIcon size={20} />} title="Media">
+            <div className="mx-auto max-w-3xl flex flex-col gap-4">
+              {media.map((m, i) => {
+                const labelRaw = m.type ? String(m.type) : 'Media';
+                const label = labelRaw.charAt(0).toUpperCase() + labelRaw.slice(1);
+                return (
+                  <div
+                    key={i}
+                    data-seq-item
+                    style={{ ['--i' as never]: String(i) }}
+                    className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
+                  >
+                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{label}</p>
+                    {m.link && (
+                      <a href={m.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2">
+                        <LinkIcon size={16} /> View
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
+        {/* CONTACT */}
         <Section id="contact" icon={<Mail size={20} />} title="Contact">
-          <div className="space-y-2">
+          <div className="text-[var(--c-text)] space-y-2">
             {data?.email && (
-              <div className="flex items-center gap-2 reveal" data-reveal>
+              <div className="flex items-center gap-2" data-seq-item>
                 <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Mail size={16} /> {data.email}
                 </a>
-                <button
-                  onClick={() => copy('email', data.email!)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
-                  aria-label="Copy email"
-                >
-                  {copied === 'email' ? <Check size={14} /> : <Copy size={14} />} {copied === 'email' ? 'Copied' : 'Copy'}
-                </button>
               </div>
             )}
             {data?.phone && (
-              <div className="flex items-center gap-2 reveal" data-reveal>
+              <div className="flex items-center gap-2" data-seq-item>
                 <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Phone size={16} /> {data.phone}
                 </a>
-                <button
-                  onClick={() => copy('phone', data.phone!)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
-                  aria-label="Copy phone"
-                >
-                  {copied === 'phone' ? <Check size={14} /> : <Copy size={14} />} {copied === 'phone' ? 'Copied' : 'Copy'}
-                </button>
               </div>
             )}
             {data?.linkedin && (
@@ -588,32 +387,30 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 href={data.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[var(--c-accent)] hover:underline reveal"
-                data-reveal
+                className="flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-seq-item
               >
                 <Linkedin size={16} /> LinkedIn
               </a>
             )}
-
             {socials.length > 0 && (
-              <div className="pt-2 reveal" data-reveal>
+              <div className="pt-2" data-seq-item>
                 <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
-                    <a key={`${s.label}-${i}`} href={s.url} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
+                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
                       {s.label}
                     </a>
                   ))}
                 </div>
               </div>
             )}
-
             {data?.cvFileDataUrl && (
               <a
                 href={data.cvFileDataUrl}
                 download={data.cvFileName ?? 'cv.pdf'}
-                className="mt-3 inline-flex items-center gap-2 text-[var(--c-accent)] hover:underline reveal"
-                data-reveal
+                className="mt-3 inline-flex items-center gap-2 text-[var(--c-accent)] hover:underline"
+                data-seq-item
               >
                 <Download size={16} /> Download CV
               </a>
@@ -622,163 +419,375 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         </Section>
       </main>
 
-      {/* Dot nav (only for visible sections) */}
-      <aside
-        aria-label="Sections"
-        className="fixed right-4 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col gap-3"
-      >
-        {navItems
-          .filter((n) => n.show)
-          .map(({ id }) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              aria-label={id}
-              className={`grid place-items-center h-6 w-6 rounded-full ring-1 transition ${
-                active === id
-                  ? 'bg-[var(--c-accent)] text-white ring-[var(--c-accent)]'
-                  : 'bg-[var(--glass-soft)] ring-black/10 hover:ring-[var(--c-accent)]'
-              }`}
-              title={id.charAt(0).toUpperCase() + id.slice(1)}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            >
-              <Circle className="h-3 w-3" />
-            </a>
-          ))}
-      </aside>
-
-      {/* Back to top FAB */}
+      {/* Back to top */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--glass)] ring-1 ring-black/10 backdrop-blur hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-accent)]"
+        className="fixed bottom-5 right-5 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 backdrop-blur hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-accent)]"
         aria-label="Back to top"
       >
-        <ChevronUp className="h-5 w-5" />
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>
       </button>
 
-      {/* Footer */}
-      <footer className="bg-[var(--glass)] backdrop-blur py-5 text-center text-[var(--c-muted)] ring-1 ring-black/5">
+      <footer className="bg-[var(--footer-bg)] py-5 text-center text-[var(--c-subtle)]">
         <p>© {new Date().getFullYear()} {fullName} | Classic Portfolio</p>
       </footer>
 
-      {/* Global style tokens + effects */}
-      <style jsx global>{`
-        :root {
-          --mx: 50vw;
-          --my: 50vh;
-          --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-          --glass: rgba(255, 255, 255, 0.78);
-          --glass-soft: rgba(255, 255, 255, 0.6);
-          --glass-card: rgba(255, 255, 255, 0.82);
-        }
-        body { font-family: var(--font-sans); }
+      {/* Styles + tokens + animations */}
+      <style>{`
+        :root { --mx: 50vw; --my: 50vh; }
 
+        /* Executive palettes — BRIGHT GOLD/YELLOW */
         :root[data-classic-theme='classic'] {
-          --c-accent:#DF6A1C;
-          --c-accent-soft:#FFD8B0;
-          --c-text:#1f2937;
-          --c-subtle:#374151;
-          --c-muted:#6b7280;
-          --bg1:#f7f7f5; --bg2:#fbfaf8; --bg3:#ffffff;
-          --chip-bg: rgba(223,106,28,0.10);
-          --chip-ring: rgba(223,106,28,0.24);
-          --badge-bg: rgba(223,106,28,0.12);
-          --badge-ring: rgba(223,106,28,0.24);
+          --c-accent:#FFC107;           /* vivid amber */
+          --c-accent-soft:#FFE082;      /* pale gold sweep */
+          --c-text:#FFF9EC;             /* warm near-white */
+          --c-subtle:#FFE8A3;           /* soft gold for subheads */
+          --c-muted:#FFD98ACC;          /* muted gold for body */
+          --bg1:#0B0700; --bg2:#141007; --bg3:#1C1509;  /* deep espresso-brown gradient */
+          --chip-bg: rgba(255,193,7,0.16);
+          --chip-ring: rgba(255,193,7,0.38);
+          --card-bg: rgba(255,215,0,0.12);
+          --card-ring: rgba(255,215,0,0.35);
+          --badge-bg: rgba(255,200,0,0.16);
+          --badge-ring: rgba(255,200,0,0.38);
+          --footer-bg:#0A0600;
         }
         :root[data-classic-theme='noir'] {
-          --c-accent:#F29B38; --c-accent-soft:#FFD7A6;
-          --c-text:#0f172a; --c-subtle:#1f2937; --c-muted:#475569;
-          --bg1:#f5f7fb; --bg2:#ffffff; --bg3:#ffffff;
-          --chip-bg: rgba(242,155,56,0.10);
-          --chip-ring: rgba(242,155,56,0.22);
-          --badge-bg: rgba(242,155,56,0.12);
-          --badge-ring: rgba(242,155,56,0.22);
+          --c-accent:#FFD54F;           /* bright golden */
+          --c-accent-soft:#FFECB3;      /* pale gold */
+          --c-text:#FFF9ED;
+          --c-subtle:#FFE7B3;
+          --c-muted:#EFDCA6CC;
+          --bg1:#0A0A06; --bg2:#12110A; --bg3:#19170E;  /* dark olive/sepia */
+          --chip-bg: rgba(255,213,79,0.12);
+          --chip-ring: rgba(255,213,79,0.34);
+          --card-bg: rgba(255,213,79,0.10);
+          --card-ring: rgba(255,213,79,0.30);
+          --badge-bg: rgba(255,213,79,0.14);
+          --badge-ring: rgba(255,213,79,0.34);
+          --footer-bg:#0D0C08;
         }
 
-        .surface { background: linear-gradient(140deg, var(--bg1), var(--bg2) 40%, var(--bg3)); }
-        .aurora {
+        .classic-surface { background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3)); }
+
+        /* GOLD aurora layers */
+        .classic-aurora {
           background:
-            radial-gradient(60% 50% at 50% 0%, rgba(223,106,28,0.09) 0%, transparent 60%),
-            radial-gradient(40% 40% at 80% 10%, rgba(242,155,56,0.10) 0%, transparent 70%),
-            radial-gradient(40% 40% at 20% 20%, rgba(255,216,176,0.16) 0%, transparent 70%),
+            radial-gradient(60% 50% at 50% 0%, rgba(255,215,0,0.22) 0%, transparent 60%),
+            radial-gradient(40% 40% at 80% 10%, rgba(255,193,7,0.20) 0%, transparent 70%),
+            radial-gradient(40% 40% at 20% 20%, rgba(255,140,0,0.18) 0%, transparent 70%),
             linear-gradient(to bottom, var(--bg1), var(--bg2));
-          filter: saturate(108%);
+          filter: saturate(120%);
         }
-        .aurora.alt {
+        .classic-aurora.alt {
           background:
-            radial-gradient(45% 50% at 20% 10%, rgba(255,216,176,0.10) 0%, transparent 70%),
-            radial-gradient(40% 40% at 80% 10%, rgba(223,106,28,0.08) 0%, transparent 70%),
+            radial-gradient(45% 50% at 20% 10%, rgba(255,236,179,0.18) 0%, transparent 70%),
+            radial-gradient(40% 40% at 80% 10%, rgba(255,215,0,0.18) 0%, transparent 70%),
             linear-gradient(to bottom, transparent, var(--bg3));
           mix-blend-mode: screen;
         }
         .noise {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
-          background-size: 220px 220px; opacity: .7; mix-blend-mode: overlay;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+          background-size: 220px 220px; opacity: .6; mix-blend-mode: overlay;
         }
 
-        .portrait-frame {
+        .classic-glow { background: radial-gradient(60% 60% at 50% 50%, rgba(255,215,0,0.36) 0%, transparent 60%); }
+
+        /* GOLD metal frame around avatar */
+        .classic-frame {
           background:
-            conic-gradient(from 200deg, rgba(255,255,255,.55), rgba(255,255,255,0) 28% 72%, rgba(255,255,255,.55)),
-            linear-gradient(180deg, #ffe7d1, #ffc792 35%, #ffb271 68%, #ff9a4c 100%);
-          border-radius: 28px;
-          padding: 1.5px;
+            conic-gradient(from 210deg, rgba(255,255,255,.55), rgba(255,255,255,0) 30% 70%, rgba(255,255,255,.55)),
+            linear-gradient(180deg, #FFF6DF, #FFE082 30%, #FFC107 60%, #FFB300 100%);
+          border-radius: 28px; padding: 2px;
         }
-        .portrait-glow { background: radial-gradient(60% 60% at 50% 50%, rgba(223,106,28,0.22) 0%, transparent 60%); }
 
-        /* Soft reveal (never hides content) */
-        .reveal { opacity: 1; transform: translateY(0); }
-        .reveal-in {
-          transition: transform .55s cubic-bezier(.22,.75,.2,1), box-shadow .55s ease, filter .45s ease;
-          transform: translateY(0);
-          filter: none;
-        }
-        [data-reveal]:not(.reveal-in) { transform: translateY(8px) scale(.995); filter: saturate(.98); }
-        [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
-
-        /* Box-level reveal (visible by default) */
-        section[data-entrance] {
-          position: relative; overflow: clip;
-          transform: translateY(6px) scale(.992);
-          box-shadow: 0 10px 32px rgba(0,0,0,.04);
-          transition: transform .6s cubic-bezier(.22,.75,.2,1), box-shadow .6s ease, filter .6s ease;
-        }
-        section[data-entrance].in { transform: none; box-shadow: 0 18px 55px rgba(0,0,0,.08); }
-
-        /* Nav underline */
+        /* Nav underline + shadow state */
         .navlink { position: relative; }
         .navlink::after {
           content: ''; position: absolute; left: 0; right: 0; bottom: 4px; height: 2px;
           background: linear-gradient(90deg, var(--c-accent), transparent);
           transform: scaleX(0); transform-origin: left;
-          transition: transform .35s ease, opacity .35s ease; opacity: .6;
+          transition: transform .35s ease, opacity .35s ease;
+          opacity: .8;
         }
         .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
+        #__nav.with-shadow { border-bottom-color: rgba(255,255,255,0.10); box-shadow: 0 8px 30px rgba(0,0,0,0.20); }
 
-        /* Spotlight cursor (light) */
-        #__spotlight {
-          background: radial-gradient(360px 360px at var(--mx) var(--my), rgba(223,106,28,.08), transparent 60%);
+        /* IO-based reveals (kept) */
+        .reveal { opacity: 0; transform: translateY(12px); }
+        .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
+        [data-reveal] { animation-delay: calc(var(--stagger) * 18ms); }
+
+        @keyframes spin360 { to { transform: rotate(360deg); } }
+        /* GOLD ring sweep */
+        .avatar-ring::before {
+          content: ''; position: absolute; inset: 0; border-radius: inherit;
+          background: conic-gradient(
+            from 0deg,
+            rgba(255,193,7,0.00) 0deg,
+            rgba(255,236,179,0.55) 72deg,
+            rgba(255,215,0,0.85) 160deg,
+            rgba(255,179,0,0.60) 240deg,
+            rgba(255,193,7,0.00) 360deg
+          );
+          animation: spin360 16s linear infinite; opacity: 0.95;
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0); mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #000 0);
         }
 
+        /* Spotlight cursor */
+        #__spotlight { background: radial-gradient(350px 350px at var(--mx) var(--my), rgba(255,215,0,.14), transparent 60%); }
+
+        /* NEW: Section-level box reveal (entire card) */
+        .section[data-entrance] {
+          opacity: 0;
+          transform: translateY(18px) scale(0.98);
+          filter: blur(6px);
+          will-change: opacity, transform, filter, box-shadow;
+        }
+        .section[data-entrance].in {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          box-shadow: 0 12px 40px rgba(0,0,0,.22);
+          transition:
+            opacity .6s ease,
+            transform .6s ease,
+            filter .6s ease,
+            box-shadow .6s ease;
+        }
+
+        /* Section entrance orchestration (header first, then children) */
+        .section { position: relative; overflow: clip; }
+        .section[data-entrance]::before {
+          content: ''; position: absolute; inset: 0;
+          background:
+            radial-gradient(120% 120% at -20% 0%, rgba(255,255,255,.10), transparent 60%),
+            linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+          clip-path: inset(0 100% 0 0);
+          opacity: .0;
+          transition: clip-path .9s cubic-bezier(.22,.75,.2,1), opacity .9s ease;
+          pointer-events: none;
+        }
+        .section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .08; }
+
+        .section-head {
+          opacity: 0; transform: translateY(14px) scale(.98); filter: blur(6px);
+          transition: opacity .55s ease, transform .55s ease, filter .55s ease;
+        }
+        [data-entrance].in .section-head { opacity: 1; transform: none; filter: none; }
+
+        .section-body > [data-seq-item] {
+          opacity: 0; transform: translateY(16px); filter: blur(4px);
+          transition: opacity .55s cubic-bezier(.22,.75,.2,1), transform .55s cubic-bezier(.22,.75,.2,1), filter .55s ease;
+          transition-delay: calc(var(--i, 0) * 70ms);
+        }
+        [data-entrance].in .section-body > [data-seq-item] { opacity: 1; transform: none; filter: none; }
+
         @media (prefers-reduced-motion: reduce) {
-          [data-reveal]:not(.reveal-in) { transform: none !important; filter: none !important; }
-          section[data-entrance] { transform: none !important; box-shadow: 0 10px 24px rgba(0,0,0,.06) !important; }
+          .avatar-ring::before { animation: none !important; }
+          .reveal { opacity: 1 !important; transform: none !important; }
+          .section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; box-shadow: none !important; }
+          .section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; }
+          .section-head, .section-body > [data-seq-item] { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
           .navlink::after { transition: none !important; }
         }
 
+        /* Print-friendly */
         @media print {
-          #__spotlight, aside, .noise, nav { display: none !important; }
-          button, a[href^="#"] { display: none !important; }
-          body { background: #fff !important; color: #111 !important; }
+          #__spotlight, aside, .noise, nav { display:none !important; }
+          button, a[href^="#"] { display:none !important; }
+          body { background:#fff !important; color:#111 !important; }
         }
       `}</style>
+
+      {/* Tiny runtime */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+          (function () {
+            var doc = document.documentElement;
+            var bar = document.getElementById('__progress');
+            var themeBtn = document.getElementById('__theme');
+            var nav = document.getElementById('__nav');
+            var hamburger = document.getElementById('__hamburger');
+            var drawer = document.getElementById('__drawer');
+            var isOpen = false;
+
+            // Inline SVGs
+            var MENU_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
+            var X_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+            // Theme init & toggle
+            try {
+              var t = localStorage.getItem('__classic_theme') || 'noir';
+              doc.setAttribute('data-classic-theme', t);
+              if (themeBtn) {
+                var setLabel = function(name){
+                  try { themeBtn.querySelector('span').textContent = name[0].toUpperCase()+name.slice(1); } catch(_){}
+                };
+                setLabel(t);
+                themeBtn.addEventListener('click', function () {
+                  var order = ['classic','noir'];
+                  var cur = doc.getAttribute('data-classic-theme') || 'classic';
+                  var next = order[(order.indexOf(cur) + 1) % order.length];
+                  doc.setAttribute('data-classic-theme', next);
+                  localStorage.setItem('__classic_theme', next);
+                  setLabel(next);
+                });
+              }
+            } catch (_){}
+
+            // Scroll progress + nav shadow
+            function onScroll() {
+              var h = doc.scrollHeight - doc.clientHeight;
+              var pct = h > 0 ? (doc.scrollTop / h) * 100 : 0;
+              if (bar) bar.style.width = pct + '%';
+              if (nav) {
+                if (window.scrollY > 8) nav.classList.add('with-shadow');
+                else nav.classList.remove('with-shadow');
+              }
+            }
+            onScroll();
+            window.addEventListener('scroll', onScroll, { passive: true });
+
+            // Mobile drawer toggle
+            if (hamburger && drawer) {
+              hamburger.addEventListener('click', function(){
+                isOpen = !isOpen;
+                drawer.classList.toggle('hidden', !isOpen);
+                hamburger.innerHTML = isOpen ? X_SVG : MENU_SVG;
+              });
+              drawer.querySelectorAll('a[href^="#"]').forEach(function(a){
+                a.addEventListener('click', function(){
+                  isOpen = false;
+                  drawer.classList.add('hidden');
+                  hamburger.innerHTML = MENU_SVG;
+                });
+              });
+            }
+
+            // Spotlight / parallax / magnetic
+            var prefersReduced = false;
+            try { prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(_){}
+            window.addEventListener('mousemove', function (e) {
+              var x = e.clientX, y = e.clientY;
+              doc.style.setProperty('--mx', x + 'px');
+              doc.style.setProperty('--my', y + 'px');
+
+              if (prefersReduced) return;
+
+              document.querySelectorAll('[data-parallax]').forEach(function (l) {
+                var depth = parseFloat(l.getAttribute('data-parallax') || '0');
+                var dx = (x / window.innerWidth - 0.5) * depth * 12;
+                var dy = (y / window.innerHeight - 0.5) * depth * 12;
+                l.style.transform = 'translate3d(' + dx + 'px,' + dy + 'px,0)';
+              });
+
+              document.querySelectorAll('[data-magnet]').forEach(function (m) {
+                var r = m.getBoundingClientRect();
+                var cx = r.left + r.width / 2;
+                var cy = r.top + r.height / 2;
+                var dist = Math.hypot(x - cx, y - cy);
+                var pull = Math.max(0, 1 - dist / 260);
+                var tx = (x - cx) * 0.08 * pull;
+                var ty = (y - cy) * 0.08 * pull;
+                m.style.transform = 'translate3d(' + tx + 'px,' + ty + 'px,0)';
+              });
+            }, { passive: true });
+
+            // Reveal (existing)
+            try {
+              var reduce = prefersReduced;
+              if (!reduce && 'IntersectionObserver' in window) {
+                var obs = new IntersectionObserver(function (entries) {
+                  entries.forEach(function (e, idx) {
+                    if (e.isIntersecting) {
+                      e.target.classList.add('reveal-in');
+                      e.target.style.setProperty('--stagger', String(idx % 8));
+                      obs.unobserve(e.target);
+                    }
+                  });
+                }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+                document.querySelectorAll('[data-reveal]').forEach(function (n) { obs.observe(n); });
+              } else {
+                document.querySelectorAll('.reveal, [data-reveal]').forEach(function (n) { n.classList.add('reveal-in'); });
+              }
+
+              // Active dot + navbar underline sync
+              var spy = new IntersectionObserver(function (entries) {
+                var visible = entries.filter(function(e){return e.isIntersecting;}).sort(function(a,b){return b.intersectionRatio - a.intersectionRatio;})[0];
+                if (visible && visible.target && visible.target.id) {
+                  var id = visible.target.id;
+                  document.querySelectorAll('[data-dot]').forEach(function(d){
+                    var on = d.getAttribute('data-dot') === id;
+                    d.classList.toggle('bg-[var(--c-accent)]', on);
+                    d.classList.toggle('text-black', on);
+                  });
+                  document.querySelectorAll('.navlink').forEach(function(l){
+                    var href = l.getAttribute('href') || '';
+                    var match = href.replace('#','') === id;
+                    l.setAttribute('aria-current', match ? 'true' : 'false');
+                  });
+                }
+              }, { rootMargin: '-40% 0px -50% 0px', threshold: [0, .2, .5, .8, 1] });
+              ${SECTION_IDS.map((id) => `var el_${id} = document.getElementById('${id}'); if (el_${id}) spy.observe(el_${id});`).join('\n')}
+            } catch(_){}
+
+            // Section entrance orchestrator (header first, then items) + full-card reveal
+            (function(){
+              if (!('IntersectionObserver' in window)) return;
+              var seq = new IntersectionObserver(function(entries){
+                entries.forEach(function(e){
+                  if (e.isIntersecting) {
+                    e.target.classList.add('in');
+                    seq.unobserve(e.target);
+                  }
+                });
+              }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+
+              document.querySelectorAll('[data-entrance]').forEach(function(section){
+                var items = section.querySelectorAll('.section-body > [data-seq-item]');
+                items.forEach(function(node, idx){
+                  if (node && node.style) node.style.setProperty('--i', String(idx));
+                });
+                seq.observe(section);
+              });
+            })();
+
+            // Keyboard jumps 1..N
+            window.addEventListener('keydown', function(e){
+              if (e.ctrlKey || e.metaKey || e.altKey) return;
+              var n = Number(e.key) - 1;
+              var ids = ${JSON.stringify(SECTION_IDS)};
+              if (n >= 0 && n < ids.length) {
+                var el = document.getElementById(ids[n]);
+                if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+              }
+            });
+          })();
+        `,
+        }}
+      />
     </div>
   );
 }
 
-/* ---- Reusable Section wrapper ---- */
+function NavLink({ id, label, mobile }: { id: string; label: string; mobile?: boolean }) {
+  return (
+    <a
+      href={`#${id}`}
+      className={`navlink px-3 py-2 text-sm font-medium transition text-[var(--c-muted)] hover:text-[var(--c-accent)]`}
+      onClick={(e) => {
+        e.preventDefault();
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }}
+      aria-current="false"
+    >
+      {label}
+    </a>
+  );
+}
+
 function Section({
   id,
   title,
@@ -791,18 +800,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      id={id}
-      className="relative rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-6 transition"
-      data-entrance
-    >
-      <header className="mb-4 flex items-center gap-3" data-reveal>
+    <section id={id} className="section rounded-xl border border-white/10 bg-white/5 p-6 shadow-sm hover:shadow-md transition" data-entrance>
+      <header className="section-head mb-4 flex items-center gap-3">
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
           {icon}
         </span>
         <h2 className="text-2xl font-semibold">{title}</h2>
       </header>
-      {children}
+      <div className="section-body">{children}</div>
     </section>
   );
 }
