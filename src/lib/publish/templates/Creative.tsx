@@ -20,6 +20,21 @@ import type { PortfolioData } from '@/lib/portfolio-types';
 
 const SECTION_IDS = ['about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
 
+// Safe getter for string fields without using any
+function getStr(obj: unknown, keys: string[]): string {
+  if (typeof obj !== 'object' || obj === null) return '';
+  const rec = obj as Record<string, unknown>;
+  for (const k of keys) {
+    const v = rec[k];
+    if (typeof v === 'string') return v;
+  }
+  return '';
+}
+
+type ProjectNorm = { name: string; desc: string; link: string };
+type MediaNorm = { title: string; type: string; link: string };
+type CertNorm = string;
+
 export default function Classic({ data }: { data: PortfolioData }) {
   const fullName = data?.fullName || 'Your Name';
   const role = data?.role || 'Classic Professional';
@@ -27,14 +42,44 @@ export default function Classic({ data }: { data: PortfolioData }) {
   const location = data?.location || 'Location';
   const photo = data?.photoDataUrl;
 
-  const skills = Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : [];
-  const projects = Array.isArray(data?.projects)
-    ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
+  // Normalize SKILLS
+  const skills: string[] = Array.isArray(data?.skills)
+    ? data!.skills
+        .map((s) => (typeof s === 'string' ? s : String(s ?? '')))
+        .filter((s) => s.trim() !== '')
     : [];
-  const certifications = Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : [];
-  const media = Array.isArray(data?.media)
-    ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
+
+  // Normalize PROJECTS (accept name|title, description|summary, link|url)
+  const projects: ProjectNorm[] = Array.isArray(data?.projects)
+    ? data!.projects
+        .map((p) => {
+          const name = getStr(p, ['name', 'title']);
+          const desc = getStr(p, ['description', 'summary']);
+          const link = getStr(p, ['link', 'url']);
+          return { name, desc, link };
+        })
+        .filter((x) => (x.name || x.desc || x.link).trim() !== '')
     : [];
+
+  // Normalize CERTIFICATIONS (string or {name|title})
+  const certifications: CertNorm[] = Array.isArray(data?.certifications)
+    ? data!.certifications
+        .map((c) => (typeof c === 'string' ? c : getStr(c, ['name', 'title'])))
+        .filter((s) => s.trim() !== '')
+    : [];
+
+  // Normalize MEDIA (accept title|name, type, link|url)
+  const media: MediaNorm[] = Array.isArray(data?.media)
+    ? data!.media
+        .map((m) => {
+          const title = getStr(m, ['title', 'name']);
+          const type = getStr(m, ['type']) || 'Media';
+          const link = getStr(m, ['link', 'url']);
+          return { title, type, link };
+        })
+        .filter((x) => (x.title || x.link).trim() !== '')
+    : [];
+
   const socials = Array.isArray(data?.socials)
     ? data!.socials.filter((s) => s && s.label && s.url)
     : [];
@@ -198,7 +243,6 @@ export default function Classic({ data }: { data: PortfolioData }) {
             <span aria-hidden className="portrait-glow absolute -inset-10 -z-10 blur-3xl opacity-60" />
             <div className="portrait-frame relative h-56 w-56 md:h-64 md:w-64 rounded-[30px] p-[2px] shadow-2xl">
               <div className="relative h-full w-full overflow-hidden rounded-[28px] bg-white/[0.08] backdrop-blur-md ring-1 ring-white/10">
-                {/* subtle gridlines */}
                 <span
                   aria-hidden
                   className="absolute inset-0 opacity-[0.12]"
@@ -209,7 +253,6 @@ export default function Classic({ data }: { data: PortfolioData }) {
                   }}
                 />
                 <img src={photo} alt={fullName} className="absolute inset-0 h-full w-full object-cover" />
-                {/* sheen sweep on hover */}
                 <span
                   aria-hidden
                   className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.22),transparent)] transition-transform duration-[1200ms] ease-out"
@@ -260,7 +303,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
                   style={{ ['--i' as never]: String(i) }}
                   className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
                 >
-                  <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                  <span className="text-sm text-[var(--c-text)] text-justify">{s}</span>
                   <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
                 </div>
               ))}
@@ -276,21 +319,21 @@ export default function Classic({ data }: { data: PortfolioData }) {
                 const label = p.link ? inferBadge(p.link) : null;
                 return (
                   <article
-                    key={i}
+                    key={`${p.name || p.link}-${i}`}
                     data-seq-item
                     style={{ ['--i' as never]: String(i) }}
                     className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
                   >
                     <header className="flex items-center gap-2">
-                      <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                      <h3 className="text-xl font-medium">{p.name.trim() || `Project ${i + 1}`}</h3>
                       {label && (
                         <span className="ml-2 inline-flex items-center rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs ring-1 ring-[var(--badge-ring)]">
                           {label}
                         </span>
                       )}
                     </header>
-                    {p.description?.trim() && <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>}
-                    {p.link && (
+                    {p.desc.trim() && <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.desc}</p>}
+                    {p.link.trim() && (
                       <a href={p.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3">
                         <LinkIcon size={16} /> View
                       </a>
@@ -308,7 +351,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
             <div className="mx-auto max-w-3xl flex flex-col gap-3">
               {certifications.map((cert, index) => (
                 <div
-                  key={index}
+                  key={`${cert}-${index}`}
                   data-seq-item
                   style={{ ['--i' as never]: String(index) }}
                   className="flex items-center gap-3 rounded-lg border border-white/10 bg-[var(--card-bg)] p-3 ring-1 ring-white/5 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--card-ring)]"
@@ -316,7 +359,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
                   <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
                     <Award className="h-6 w-6 text-[var(--c-accent)]" />
                   </span>
-                  <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
+                  <p className="text-[var(--c-text)] text-justify">{cert}</p>
                 </div>
               ))}
             </div>
@@ -328,18 +371,18 @@ export default function Classic({ data }: { data: PortfolioData }) {
           <Section id="media" icon={<ImageIcon size={20} />} title="Media">
             <div className="mx-auto max-w-3xl flex flex-col gap-4">
               {media.map((m, i) => {
-                const labelRaw = m.type ? String(m.type) : 'Media';
-                const label = labelRaw.charAt(0).toUpperCase() + labelRaw.slice(1);
+                const label = (m.type || 'Media');
+                const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
                 return (
                   <div
-                    key={i}
+                    key={`${m.title || m.link}-${i}`}
                     data-seq-item
                     style={{ ['--i' as never]: String(i) }}
                     className="rounded-lg border border-white/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
                   >
-                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{label}</p>
-                    {m.link && (
+                    <h3 className="text-xl font-medium">{m.title.trim() || `Media ${i + 1}`}</h3>
+                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
+                    {m.link.trim() && (
                       <a href={m.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-2">
                         <LinkIcon size={16} /> View
                       </a>
@@ -384,7 +427,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
                 <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
-                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
+                    <a key={`${s.label}-${i}`} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
                       {s.label}
                     </a>
                   ))}
@@ -420,17 +463,20 @@ export default function Classic({ data }: { data: PortfolioData }) {
 
       {/* Styles + tokens + animations */}
       <style>{`
-        :root { --mx: 50vw; --my: 50vh; --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+        :root {
+          --mx: 50vw; --my: 50vh;
+          --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
         body { font-family: var(--font-sans); }
 
         /* Professional Orange Mix */
         :root[data-classic-theme='classic'] {
-          --c-accent:#FF8A3D;            /* copper orange */
-          --c-accent-soft:#FFC38A;       /* soft sweep for progress */
-          --c-text:#fff9f6;              /* warm near-white */
-          --c-subtle:#ffe0cc;            /* subhead */
-          --c-muted:#ffd2b8cc;           /* muted */
-          --bg1:#0f0b07; --bg2:#1a140d; --bg3:#22160a; /* ember dusk */
+          --c-accent:#FF8A3D;
+          --c-accent-soft:#FFC38A;
+          --c-text:#fff9f6;
+          --c-subtle:#ffe0cc;
+          --c-muted:#ffd2b8cc;
+          --bg1:#0f0b07; --bg2:#1a140d; --bg3:#22160a;
           --chip-bg: rgba(255,138,61,0.14);
           --chip-ring: rgba(255,178,102,0.38);
           --card-bg: rgba(255,255,255,0.055);
@@ -442,7 +488,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         :root[data-classic-theme='noir'] {
           --c-accent:#FFB04A; --c-accent-soft:#FFD199;
           --c-text:#eef6f9; --c-subtle:#dfeaf0; --c-muted:#cfdbe2cc;
-          --bg1:#0a0c10; --bg2:#0f1216; --bg3:#12161c; /* charcoal slate */
+          --bg1:#0a0c10; --bg2:#0f1216; --bg3:#12161c;
           --chip-bg: rgba(255,176,74,0.12);
           --chip-ring: rgba(255,176,74,0.38);
           --card-bg: rgba(255,255,255,0.045);
@@ -453,25 +499,6 @@ export default function Classic({ data }: { data: PortfolioData }) {
         }
 
         .classic-surface { background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3)); }
-        .classic-aurora {
-          background:
-            radial-gradient(60% 50% at 50% 0%, rgba(255,138,61,0.20) 0%, transparent 60%),
-            radial-gradient(40% 40% at 80% 10%, rgba(255,176,74,0.18) 0%, transparent 70%),
-            radial-gradient(40% 40% at 20% 20%, rgba(255,195,138,0.18) 0%, transparent 70%),
-            linear-gradient(to bottom, var(--bg1), var(--bg2));
-          filter: saturate(115%);
-        }
-        .classic-aurora.alt {
-          background:
-            radial-gradient(45% 50% at 20% 10%, rgba(255,195,138,0.16) 0%, transparent 70%),
-            radial-gradient(40% 40% at 80% 10%, rgba(255,138,61,0.16) 0%, transparent 70%),
-            linear-gradient(to bottom, transparent, var(--bg3));
-          mix-blend-mode: screen;
-        }
-        .noise {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-          background-size: 220px 220px; opacity: .6; mix-blend-mode: overlay;
-        }
 
         /* Portrait frame (static copper gradient, no rotation) */
         .portrait-frame {
@@ -483,7 +510,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
         }
         .portrait-glow { background: radial-gradient(60% 60% at 50% 50%, rgba(255,138,61,0.28) 0%, transparent 60%); }
 
-        /* Reveal (per-element) — gated so content is visible by default */
+        /* Reveal (per-element) — visible by default, gated once JS runs */
         .reveal { opacity: 1; transform: none; }
         :root.io-ready .reveal { opacity: 0; transform: translateY(12px); }
         :root.io-ready .reveal.reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
@@ -533,28 +560,10 @@ export default function Classic({ data }: { data: PortfolioData }) {
         }
         :root.io-ready .section[data-entrance].in::before { clip-path: inset(0 0 0 0); opacity: .06; }
 
-        .section-head {
-          opacity: 1; transform: none; filter: none;
-        }
-        :root.io-ready [data-entrance] .section-head {
-          opacity: 0; transform: translateY(14px) scale(.98); filter: blur(6px);
-          transition: opacity .55s ease, transform .55s ease, filter .55s ease;
-        }
-        :root.io-ready [data-entrance].in .section-head { opacity: 1; transform: none; filter: none; }
-
-        .section-body > [data-seq-item] { opacity: 1; transform: none; filter: none; }
-        :root.io-ready .section-body > [data-seq-item] {
-          opacity: 0; transform: translateY(16px); filter: blur(4px);
-          transition: opacity .55s cubic-bezier(.22,.75,.2,1), transform .55s cubic-bezier(.22,.75,.2,1), filter .55s ease;
-          transition-delay: calc(var(--i, 0) * 70ms);
-        }
-        :root.io-ready [data-entrance].in .section-body > [data-seq-item] { opacity: 1; transform: none; filter: none; }
-
         @media (prefers-reduced-motion: reduce) {
           .reveal, :root.io-ready .reveal { opacity: 1 !important; transform: none !important; }
           .section[data-entrance], :root.io-ready .section[data-entrance] { opacity: 1 !important; transform: none !important; filter: none !important; box-shadow: none !important; }
           .section[data-entrance]::before { clip-path: none !important; opacity: .02 !important; }
-          .section-head, .section-body > [data-seq-item] { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
           .navlink::after { transition: none !important; }
         }
 
@@ -575,7 +584,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
           __html: `
           (function () {
             var doc = document.documentElement;
-            // Mark IO ready so animations are gated (content is visible by default until this line runs)
+            // Mark IO ready so animations are gated (content visible by default until this runs)
             doc.classList.add('io-ready');
 
             var bar = document.getElementById('__progress');
@@ -585,7 +594,6 @@ export default function Classic({ data }: { data: PortfolioData }) {
             var drawer = document.getElementById('__drawer');
             var isOpen = false;
 
-            // Inline SVGs
             var MENU_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
             var X_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
@@ -638,7 +646,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
               });
             }
 
-            // Spotlight / parallax / magnetic (kept)
+            // Spotlight / parallax / magnetic
             var prefersReduced = false;
             try { prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(_){}
             window.addEventListener('mousemove', function (e) {
@@ -705,7 +713,7 @@ export default function Classic({ data }: { data: PortfolioData }) {
               ${SECTION_IDS.map((id) => `var el_${id} = document.getElementById('${id}'); if (el_${id}) spy.observe(el_${id});`).join('\n')}
             } catch(_){}
 
-            // Section entrance orchestrator (header first, then items)
+            // Section entrance orchestrator
             (function(){
               if (!('IntersectionObserver' in window)) return;
               var seq = new IntersectionObserver(function(entries){
