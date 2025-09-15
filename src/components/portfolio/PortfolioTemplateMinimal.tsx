@@ -7,15 +7,6 @@ import {
   Link as LinkIcon,
   Mail,
   Phone,
-  Lightbulb,
-  Database,
-  PieChart,
-  Rocket,
-  Laptop,
-  Users,
-  TrendingUp,
-  Briefcase,
-  BarChart3,
   Linkedin,
   Download,
   Award,
@@ -31,13 +22,26 @@ import {
   MoonStar,
   Circle,
   Menu,
-  Code,
   X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
 
 const SECTION_IDS = ['profile', 'about', 'skills', 'projects', 'certifications', 'media', 'contact'] as const;
 type SectionId = (typeof SECTION_IDS)[number];
+
+/* ---------- helpers & normalized shapes (no `any`) ---------- */
+function getStr(obj: unknown, keys: readonly string[]): string {
+  if (typeof obj !== 'object' || obj === null) return '';
+  const rec = obj as Record<string, unknown>;
+  for (const k of keys) {
+    const v = rec[k];
+    if (typeof v === 'string') return v;
+  }
+  return '';
+}
+type ProjectItem = { name: string; description: string; link: string };
+type MediaItem = { title: string; type: string; link: string };
+type SocialItem = { label: string; url: string };
 
 export default function PortfolioTemplateClassic({ data }: { data: PortfolioData }) {
   // ===== Data guards =====
@@ -47,29 +51,68 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
   const location = data?.location || 'Location';
   const photo = data?.photoDataUrl ?? '';
 
-  const skills = useMemo(() => (Array.isArray(data?.skills) ? data!.skills.filter(Boolean) : []), [data]);
-  const projects = useMemo(
-    () =>
-      Array.isArray(data?.projects)
-        ? data!.projects.filter((p) => p && ((p.name && p.name.trim()) || (p.description && p.description.trim())))
-        : [],
-    [data]
-  );
-  const certifications = useMemo(
-    () => (Array.isArray(data?.certifications) ? data!.certifications.filter(Boolean) : []),
-    [data]
-  );
-  const media = useMemo(
-    () =>
-      Array.isArray(data?.media)
-        ? data!.media.filter((m) => m && ((m.title && m.title.trim()) || (m.link && m.link.trim())))
-        : [],
-    [data]
-  );
-  const socials = useMemo(
-    () => (Array.isArray(data?.socials) ? data!.socials.filter((s) => s && s.label && s.url) : []),
-    [data]
-  );
+  // ===== Normalized data (prevents implicit `any`) =====
+  const skills = useMemo<string[]>(() => {
+    const raw = data?.skills;
+    if (!Array.isArray(raw)) return ['Add your core skills, tools, and stacks'];
+    const out = raw
+      .map((s) => (typeof s === 'string' ? s : String(s ?? '')))
+      .filter((s) => s.trim() !== '');
+    return out.length ? out : ['Add your core skills, tools, and stacks'];
+  }, [data]);
+
+  const projects = useMemo<ProjectItem[]>(() => {
+    const raw = data?.projects as unknown;
+    if (!Array.isArray(raw)) {
+      return [{ name: 'Your Project', description: 'Brief problem → solution → impact.', link: '' }];
+    }
+    const out = raw
+      .map<ProjectItem>((p: unknown) => {
+        const name = getStr(p, ['name', 'title']);
+        const description = getStr(p, ['description', 'summary']);
+        const link = getStr(p, ['link', 'url']);
+        return { name, description, link };
+      })
+      .filter((p) => (p.name || p.description || p.link).trim() !== '');
+    return out.length ? out : [{ name: 'Your Project', description: 'Brief problem → solution → impact.', link: '' }];
+  }, [data]);
+
+  const certifications = useMemo<string[]>(() => {
+    const raw = data?.certifications as unknown;
+    if (!Array.isArray(raw)) return ['Add a certification or recognition'];
+    const out = raw
+      .map((c: unknown) => (typeof c === 'string' ? c : getStr(c, ['name', 'title'])))
+      .filter((s) => s.trim() !== '');
+    return out.length ? out : ['Add a certification or recognition'];
+  }, [data]);
+
+  const media = useMemo<MediaItem[]>(() => {
+    const raw = data?.media as unknown;
+    if (!Array.isArray(raw)) return [{ title: 'Portfolio Deck', type: 'Slides', link: '' }];
+    const out = raw
+      .map<MediaItem>((m: unknown) => {
+        const title = getStr(m, ['title', 'name']);
+        const type = getStr(m, ['type']) || 'Media';
+        const link = getStr(m, ['link', 'url']);
+        return { title, type, link };
+      })
+      .filter((m) => (m.title || m.link).trim() !== '');
+    return out.length ? out : [{ title: 'Portfolio Deck', type: 'Slides', link: '' }];
+  }, [data]);
+
+  const socials = useMemo<SocialItem[]>(() => {
+    const raw = data?.socials as unknown;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((s: unknown) => {
+        if (typeof s !== 'object' || s === null) return null;
+        const rec = s as Record<string, unknown>;
+        const label = typeof rec.label === 'string' ? rec.label : '';
+        const url = typeof rec.url === 'string' ? rec.url : '';
+        return label && url ? ({ label, url } as SocialItem) : null;
+      })
+      .filter((x): x is SocialItem => !!x);
+  }, [data]);
 
   // ===== Theme (Light / Noir) =====
   type Theme = 'classic' | 'noir';
@@ -175,7 +218,9 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       await navigator.clipboard.writeText(value);
       setCopied(label);
       setTimeout(() => setCopied(null), 1200);
-    } catch {}
+    } catch {
+      /* no-op */
+    }
   };
 
   // ===== Nav helpers (ALWAYS render sections; show placeholders if empty) =====
@@ -387,7 +432,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               <span aria-hidden className="portrait-glow absolute -inset-10 -z-10 blur-3xl opacity-45" />
               <div className="portrait-frame relative h-56 w-56 md:h-64 md:w-64 rounded-[28px] p-[1.5px] shadow-[0_18px_55px_rgba(0,0,0,.08)] mx-auto">
                 <div className="relative h-full w-full overflow-hidden rounded-[26px] bg-white/85 backdrop-blur-xl ring-1 ring-black/10">
-                  {/* subtle gridlines */}
                   <span
                     aria-hidden
                     className="absolute inset-0 opacity-[0.06] pointer-events-none"
@@ -398,7 +442,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                     }}
                   />
                   <Image src={photo} alt={fullName} fill sizes="256px" priority className="object-cover" />
-                  {/* gentle sheen */}
                   <span
                     aria-hidden
                     className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-[linear-gradient(100deg,transparent,rgba(255,255,255,0.35),transparent)] transition-transform duration-[1200ms] ease-out"
@@ -419,64 +462,60 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         {/* SKILLS */}
         <Section id="skills" icon={<Wand2 size={20} />} title="Skills">
           <div className="mx-auto max-w-3xl flex flex-col gap-3">
-            {(skills.length ? skills : ['Add your core skills, tools, and stacks'])
-              .slice(0, Math.max(1, skills.length))
-              .map((s, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)] reveal"
-                  data-reveal
-                >
-                  <span className="text-sm text-justify">{String(s)}</span>
-                  <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
-                </div>
-              ))}
+            {skills.map((s, i) => (
+              <div
+                key={`${s}-${i}`}
+                className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)] reveal"
+                data-reveal
+              >
+                <span className="text-sm text-justify">{s}</span>
+                <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
+              </div>
+            ))}
           </div>
         </Section>
 
         {/* PROJECTS */}
         <Section id="projects" icon={<FolderGit2 size={20} />} title="Projects">
           <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {(projects.length ? projects : [{ name: 'Your Project', description: 'Brief problem → solution → impact.' } as any]).map(
-              (p, i) => (
-                <article
-                  key={i}
-                  className="rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-4 shadow-[0_10px_40px_rgba(0,0,0,.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(0,0,0,.08)] reveal"
-                  data-reveal
-                >
-                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
-                  {p.description?.trim() && (
-                    <p className="text-[var(--c-muted)] mt-2 text-justify leading-relaxed">{p.description}</p>
-                  )}
-                  {p.link && (
-                    <a
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
-                    >
-                      <LinkIcon size={16} /> View
-                    </a>
-                  )}
-                </article>
-              )
-            )}
+            {projects.map((p, i) => (
+              <article
+                key={`${p.name || p.link || 'project'}-${i}`}
+                className="rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-4 shadow-[0_10px_40px_rgba(0,0,0,.05)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_50px_rgba(0,0,0,.08)] reveal"
+                data-reveal
+              >
+                <h3 className="text-xl font-medium">{p.name.trim() || `Project ${i + 1}`}</h3>
+                {p.description.trim() && (
+                  <p className="text-[var(--c-muted)] mt-2 text-justify leading-relaxed">{p.description}</p>
+                )}
+                {p.link.trim() && (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[var(--c-accent)] hover:underline mt-3"
+                  >
+                    <LinkIcon size={16} /> View
+                  </a>
+                )}
+              </article>
+            ))}
           </div>
         </Section>
 
         {/* CERTIFICATIONS */}
         <Section id="certifications" icon={<BookOpen size={20} />} title="Certifications">
           <div className="mx-auto max-w-3xl flex flex-col gap-3">
-            {(certifications.length ? certifications : ['Add a certification or recognition']).map((cert, index) => (
+            {certifications.map((cert, index) => (
               <div
-                key={index}
+                key={`${cert}-${index}`}
                 className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-3 ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md reveal"
                 data-reveal
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
                   <Award className="h-6 w-6 text-[var(--c-accent)]" />
                 </span>
-                <p className="text-justify">{String(cert)}</p>
+                <p className="text-justify">{cert}</p>
               </div>
             ))}
           </div>
@@ -485,18 +524,17 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         {/* MEDIA */}
         <Section id="media" icon={<ImageIcon size={20} />} title="Media">
           <div className="mx-auto max-w-3xl flex flex-col gap-4">
-            {(media.length ? media : [{ title: 'Portfolio Deck', type: 'Slides' } as any]).map((m, i) => {
-              const label = m.type ? String(m.type) : 'Media';
-              const labelNice = label.charAt(0).toUpperCase() + label.slice(1);
+            {media.map((m, i) => {
+              const labelNice = (m.type || 'Media').replace(/^./, (c) => c.toUpperCase());
               return (
                 <div
-                  key={i}
+                  key={`${m.title || m.link || 'media'}-${i}`}
                   className="rounded-2xl border border-black/10 bg-[var(--glass-card)] backdrop-blur-xl p-4 transition hover:shadow-[0_16px_50px_rgba(0,0,0,.08)] reveal"
                   data-reveal
                 >
-                  <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                  <h3 className="text-xl font-medium">{m.title.trim() || `Media ${i + 1}`}</h3>
                   <p className="text-[var(--c-muted)] mt-1 text-justify">{labelNice}</p>
-                  {m.link && (
+                  {m.link.trim() && (
                     <a
                       href={m.link}
                       target="_blank"
@@ -521,7 +559,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   <Mail size={16} /> {data.email}
                 </a>
                 <button
-                  onClick={() => copy('email', data.email!)}
+                  onClick={() => copy('email', data.email as string)}
                   className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
                   aria-label="Copy email"
                 >
@@ -535,7 +573,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   <Phone size={16} /> {data.phone}
                 </a>
                 <button
-                  onClick={() => copy('phone', data.phone!)}
+                  onClick={() => copy('phone', data.phone as string)}
                   className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ring-1 ring-black/10 hover:bg-black/5"
                   aria-label="Copy phone"
                 >
@@ -560,7 +598,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                 <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
-                    <a key={i} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
+                    <a key={`${s.label}-${i}`} href={s.url} target="_blank" rel="noopener noreferrer" className="text-[var(--c-accent)] hover:underline">
                       {s.label}
                     </a>
                   ))}
@@ -641,12 +679,12 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
         /* Light (white & orange — calm) */
         :root[data-classic-theme='classic'] {
-          --c-accent:#DF6A1C;            /* professional orange */
-          --c-accent-soft:#FFD8B0;       /* soft sweep for bars */
-          --c-text:#1f2937;              /* slate-800 */
-          --c-subtle:#374151;            /* slate-700 */
-          --c-muted:#6b7280;             /* slate-500/600 */
-          --bg1:#f7f7f5; --bg2:#fbfaf8; --bg3:#ffffff;  /* calmer white blend */
+          --c-accent:#DF6A1C;
+          --c-accent-soft:#FFD8B0;
+          --c-text:#1f2937;
+          --c-subtle:#374151;
+          --c-muted:#6b7280;
+          --bg1:#f7f7f5; --bg2:#fbfaf8; --bg3:#ffffff;
           --chip-bg: rgba(223,106,28,0.10);
           --chip-ring: rgba(223,106,28,0.24);
           --badge-bg: rgba(223,106,28,0.12);
@@ -708,7 +746,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           transform: translateY(0);
           filter: none;
         }
-        /* Start slightly lowered (still visible) */
         [data-reveal]:not(.reveal-in) {
           transform: translateY(8px) scale(.995);
           filter: saturate(.98);
