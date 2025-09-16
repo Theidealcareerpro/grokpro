@@ -1,42 +1,68 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 interface AnimatedCounterProps {
   value: number;
   label: string;
-  durationMs?: number; // optional override
+  durationMs?: number;
+  compact?: boolean;       // 1.2K style
+  prefix?: string;         // e.g., "$"
+  suffix?: string;         // e.g., " coffees"
 }
 
-export default function AnimatedCounter({ value, label, durationMs = 1200 }: AnimatedCounterProps) {
+export default function AnimatedCounter({
+  value,
+  label,
+  durationMs = 1200,
+  compact = false,
+  prefix = '',
+  suffix = '',
+}: AnimatedCounterProps) {
+  const reduceMotion = useReducedMotion();
   const [count, setCount] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const prevRef = useRef<number>(0);
 
   useEffect(() => {
-    // Guard: zero/negative -> just show 0 and bail
     const end = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-    if (end === 0) {
-      setCount(0);
+    const start = prevRef.current;
+
+    if (reduceMotion || end === start || durationMs <= 0) {
+      setCount(end);
+      prevRef.current = end;
       return;
     }
 
-    let rafId = 0;
     const startTs = performance.now();
 
-    const animate = (now: number) => {
-      const elapsed = now - startTs;
-      const t = Math.min(1, elapsed / durationMs);
-      // ease-out (optional): t' = 1 - (1 - t)^3
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startTs) / durationMs);
       const eased = 1 - Math.pow(1 - t, 3);
-      setCount(Math.floor(eased * end));
-      if (t < 1) rafId = requestAnimationFrame(animate);
+      const current = Math.round(start + (end - start) * eased);
+      setCount(current);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      else prevRef.current = end;
     };
 
-    setCount(0);
-    rafId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafId);
-  }, [value, durationMs]);
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [value, durationMs, reduceMotion]);
+
+  const formatted = compact
+    ? new Intl.NumberFormat(undefined, { notation: 'compact' }).format(count)
+    : count.toLocaleString();
 
   return (
     <div>
-      <p className="text-3xl font-bold text-teal-600">{count.toLocaleString()}</p>
+      <p className="text-3xl font-bold text-teal-600" aria-live="polite">
+        {prefix}
+        {formatted}
+        {suffix}
+      </p>
       <p className="text-sm text-gray-600 dark:text-gray-300">{label}</p>
     </div>
   );
