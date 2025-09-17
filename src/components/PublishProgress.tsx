@@ -1,3 +1,5 @@
+// same component you have, with strong types and optional etaSec
+// (pasting full file for clarity)
 'use client';
 
 import * as React from 'react';
@@ -6,7 +8,7 @@ import { Check, Loader2, X, Copy, Link as LinkIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
-type Step = {
+export type Step = {
   key: string;
   label: string;
   status: 'idle' | 'active' | 'done' | 'error';
@@ -21,12 +23,13 @@ function formatElapsed(ms: number) {
 
 export default function PublishProgress({
   open,
-  logoSrc = '/logo.svg',               // <-- replace with your logo path
+  logoSrc = '/favicon.ico',
   steps,
-  activePercent,                        // 0–100 for the active step smooth bar
-  startedAt,                            // Date.now() from the moment publish started
+  activePercent,
+  startedAt,
   resultUrl,
   error,
+  etaSec,
   onClose,
   onCopyLink,
 }: {
@@ -37,6 +40,7 @@ export default function PublishProgress({
   startedAt: number | null;
   resultUrl?: string | null;
   error?: string | null;
+  etaSec?: number;
   onClose: () => void;
   onCopyLink: (url: string) => void;
 }) {
@@ -57,9 +61,8 @@ export default function PublishProgress({
   const doneCount = steps.filter(s => s.status === 'done').length;
   const activeStepIndex = steps.findIndex(s => s.status === 'active');
 
-  // Overall progress (done steps + a fraction of current active step)
   const overall =
-    doneCount / total * 100 +
+    (doneCount / total) * 100 +
     (activeStepIndex >= 0 ? (activePercent / 100) * (1 / total) * 100 : 0);
 
   return (
@@ -81,12 +84,9 @@ export default function PublishProgress({
             aria-modal="true"
             aria-label="Publishing portfolio"
           >
-            {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-5 py-3">
               <div className="flex items-center gap-3">
-                {/* Logo */}
                 <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-black/30">
-                  {/* If your logo has light pixels, you can add className="invert" */}
                   <Image src={logoSrc} alt="Brand" width={24} height={24} />
                 </div>
                 <div>
@@ -96,12 +96,9 @@ export default function PublishProgress({
                   </div>
                 </div>
               </div>
-              <div className="text-sm tabular-nums text-zinc-400">
-                {formatElapsed(elapsed)}
-              </div>
+              <div className="text-sm tabular-nums text-zinc-400">{formatElapsed(elapsed)}</div>
             </div>
 
-            {/* Progress bar (overall) */}
             <div className="px-5 pt-4">
               <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
                 <motion.div
@@ -118,13 +115,9 @@ export default function PublishProgress({
               </div>
             </div>
 
-            {/* Steps */}
             <ul className="mt-4 grid gap-2 px-5 pb-4">
-              {steps.map((s, i) => (
-                <li
-                  key={s.key}
-                  className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2"
-                >
+              {steps.map((s) => (
+                <li key={s.key} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
                   <div className="flex items-center gap-2">
                     <div className="grid h-6 w-6 place-items-center rounded-md bg-zinc-800">
                       {s.status === 'done' ? (
@@ -140,7 +133,6 @@ export default function PublishProgress({
                     <div className="text-sm text-zinc-200">{s.label}</div>
                   </div>
 
-                  {/* Per-step micro bar for active step */}
                   {s.status === 'active' ? (
                     <div className="ml-4 hidden h-1 w-28 overflow-hidden rounded-full bg-zinc-800 sm:block">
                       <motion.div
@@ -152,20 +144,24 @@ export default function PublishProgress({
                       />
                     </div>
                   ) : s.status === 'done' ? (
-                    <div className="ml-4 hidden text-xs text-zinc-500 sm:block">
-                      Completed
-                    </div>
+                    <div className="ml-4 hidden text-xs text-zinc-500 sm:block">Completed</div>
                   ) : null}
                 </li>
               ))}
             </ul>
 
-            {/* Result / Actions */}
+            {!resultUrl && !error && typeof etaSec === 'number' && (
+              <div className="mx-5 mb-2 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+                <div className="text-sm text-zinc-400">Waiting for GitHub Pages to activate…</div>
+                <div className="grid h-10 w-16 place-items-center rounded-md bg-zinc-800 text-xl font-extrabold tabular-nums">
+                  {etaSec}s
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-5 py-3">
               {error ? (
-                <div className="text-sm text-red-400">
-                  {error}
-                </div>
+                <div className="text-sm text-red-400">{error}</div>
               ) : resultUrl ? (
                 <div className="flex items-center gap-2 text-sm text-zinc-300">
                   <LinkIcon className="h-4 w-4" />
@@ -179,9 +175,7 @@ export default function PublishProgress({
                   </a>
                 </div>
               ) : (
-                <div className="text-sm text-zinc-500">
-                  This can take a few seconds while Pages initializes.
-                </div>
+                <div className="text-sm text-zinc-500">This can take a short while.</div>
               )}
 
               <div className="flex gap-2">
@@ -196,40 +190,21 @@ export default function PublishProgress({
                       <Copy className="mr-2 h-4 w-4" />
                       Copy link
                     </Button>
-                    <Button
-                      size="sm"
-                      asChild
-                      className="bg-zinc-100 text-zinc-900 hover:bg-white"
-                    >
+                    <Button size="sm" asChild className="bg-zinc-100 text-zinc-900 hover:bg-white">
                       <a href={resultUrl} target="_blank" rel="noreferrer">
                         Open
                       </a>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={onClose}
-                      className="text-zinc-300 hover:bg-zinc-800"
-                    >
+                    <Button variant="ghost" size="sm" onClick={onClose} className="text-zinc-300 hover:bg-zinc-800">
                       Close
                     </Button>
                   </>
                 ) : error ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClose}
-                    className="text-zinc-300 hover:bg-zinc-800"
-                  >
+                  <Button variant="ghost" size="sm" onClick={onClose} className="text-zinc-300 hover:bg-zinc-800">
                     Close
                   </Button>
                 ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled
-                    className="text-zinc-400"
-                  >
+                  <Button variant="ghost" size="sm" disabled className="text-zinc-400">
                     Working…
                   </Button>
                 )}
