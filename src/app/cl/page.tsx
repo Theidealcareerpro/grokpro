@@ -5,9 +5,10 @@ import { Document, Page, Text, StyleSheet } from '@react-pdf/renderer';
 import dynamic from 'next/dynamic';
 import CLForm from '@/components/CLForm';
 import CLPreview from '@/components/CLPreview';
+import SectionIntro from '@/components/SectionIntro';
 import Section from '@/components/Section';
-import AnimatedCounter from '@/components/AnimatedCounter';
 import Skeleton from '@/components/Skeleton';
+import Counters  from '@/components/AnimatedCounters';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/button';
 import { CLData, STORAGE_KEY_CL, EMPTY_CL, sanitizeCLData } from '@/lib/types';
@@ -90,7 +91,6 @@ export default function CLPage() {
         console.error('Invalid saved CL data');
       }
     }
-    // small delay for skeleton UX
     const t = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(t);
   }, []);
@@ -104,13 +104,12 @@ export default function CLPage() {
   return (
     <div className="min-h-screen flex flex-col p-4 bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
       <header className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-teal-700">Cover Letter Builder</h1>
+        <h1 className="text-2xl font-bold text-white">Cover Letter Builder</h1>
 
-        {/* Header sample download — not nested inside a button */}
         <PDFDownloadLink
           document={<CLPDFDocument clData={SAMPLE_CL} />}
           fileName="sample-cover-letter.pdf"
-          className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm"
+          className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm"
         >
           {({ loading }) => (loading ? 'Generating Sample Cover Letter...' : 'Download Sample Cover Letter')}
         </PDFDownloadLink>
@@ -139,24 +138,17 @@ export default function CLPage() {
           )}
 
           <div className="mt-4 flex items-center gap-2">
-            {/* When incomplete, show a disabled button. When complete, render the link as the button. */}
             {currentStep < 2 ? (
               <Button
                 type="button"
                 disabled
-                className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
+                className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
               >
                 <ArrowDownTrayIcon className="h-5 w-5" />
                 Complete Form to Download
               </Button>
             ) : (
-              <Button
-                type="button"
-                className="px-0 py-0 h-9 overflow-hidden"
-                variant="default"
-                asChild
-                aria-label="Download Cover Letter PDF"
-              >
+              <Button type="button" className="px-0 py-0 h-9 overflow-hidden" variant="default" asChild aria-label="Download Cover Letter PDF">
                 <PDFDownloadLink
                   document={<CLPDFDocument clData={clData} />}
                   fileName={`${clData.hiringManagerName}_CoverLetter.pdf`}
@@ -233,14 +225,13 @@ export default function CLPage() {
         </motion.div>
       </main>
 
-      <footer className="mt-20 max-w-6xl mx-auto px-6 text-center">
-        <Section title="Stats">
-          <div className="grid sm:grid-cols-3 gap-8">
-            <AnimatedCounter value={5000} label="CVs Generated" />
-            <AnimatedCounter value={3000} label="Cover Letters Built" />
-            <AnimatedCounter value={2000} label="Portfolios Published" />
+      <footer className="mt-20">
+        <SectionIntro className="py-16" from="up" hue={192}>
+          <div className="container-app">
+            <h2 className="sr-only">Live platform stats</h2>
+            <Counters />
           </div>
-        </Section>
+        </SectionIntro>
       </footer>
     </div>
   );

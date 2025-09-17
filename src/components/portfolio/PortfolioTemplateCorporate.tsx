@@ -7,15 +7,6 @@ import {
   Link as LinkIcon,
   Mail,
   Phone,
-  Lightbulb,
-  Database,
-  PieChart,
-  Rocket,
-  Laptop,
-  Users,
-  TrendingUp,
-  Briefcase,
-  BarChart3,
   Linkedin,
   Download,
   Award,
@@ -31,7 +22,6 @@ import {
   MoonStar,
   Circle,
   Menu,
-  Code,
   X,
 } from 'lucide-react';
 import type { PortfolioData } from '@/lib/portfolio-types';
@@ -115,7 +105,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (!prefersReduced) {
-      // 1) Existing per-node reveal (for inner bits using [data-reveal])
+      // 1) per-node reveal
       const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'));
       const obs = new IntersectionObserver(
         (entries) => {
@@ -132,15 +122,14 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       );
       nodes.forEach((n) => obs.observe(n));
 
-      // 2) Stronger section-level box reveal (fade + lift + slight scale + blur)
+      // 2) section-level entrance
       const sections = Array.from(root.querySelectorAll<HTMLElement>('section[data-entrance]'));
       const secObs = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
-              const el = entry.target as HTMLElement;
-              el.classList.add('in');
-              secObs.unobserve(el);
+              (entry.target as HTMLElement).classList.add('in');
+              secObs.unobserve(entry.target);
             }
           });
         },
@@ -174,7 +163,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
     return () => io.disconnect();
   }, []);
 
-  // Spotlight cursor + parallax + magnets
+  // Spotlight + parallax + magnets
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const root = containerRef.current;
@@ -188,16 +177,14 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
       if (prefersReduced) return;
 
-      const layers = root.querySelectorAll<HTMLElement>('[data-parallax]');
-      layers.forEach((l) => {
+      root.querySelectorAll<HTMLElement>('[data-parallax]').forEach((l) => {
         const depth = parseFloat(l.dataset.parallax || '0');
         const dx = (x / window.innerWidth - 0.5) * depth * 12;
         const dy = (y / window.innerHeight - 0.5) * depth * 12;
         l.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       });
 
-      const mags = root.querySelectorAll<HTMLElement>('[data-magnet]');
-      mags.forEach((m) => {
+      root.querySelectorAll<HTMLElement>('[data-magnet]').forEach((m) => {
         const r = m.getBoundingClientRect();
         const cx = r.left + r.width / 2;
         const cy = r.top + r.height / 2;
@@ -211,21 +198,6 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
     window.addEventListener('mousemove', onMove);
     return () => window.removeEventListener('mousemove', onMove);
-  }, []);
-
-  // Keyboard jumps (1..6)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      const idx = Number(e.key) - 1;
-      if (idx >= 0 && idx < SECTION_IDS.length) {
-        const id = SECTION_IDS[idx];
-        const el = document.getElementById(id);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   const copy = async (label: 'email' | 'phone', value: string) => {
@@ -266,7 +238,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
   };
 
   return (
-    <div ref={containerRef} className="classic-surface text-white min-h-screen antialiased font-sans">
+    <div ref={containerRef} className="classic-surface min-h-screen antialiased font-sans">
       {/* Skip link */}
       <a
         href="#main"
@@ -377,19 +349,19 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         <div className="absolute inset-0 noise" />
       </div>
 
-      {/* ===== HERO (text-only) ===== */}
+      {/* ===== HERO ===== */}
       <header className="relative overflow-hidden py-16 text-center z-10">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <h1 className="text-4xl md:text-6xl font-semibold tracking-tight drop-shadow reveal" data-reveal>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight drop-shadow reveal" data-reveal>
             {fullName}
           </h1>
-          <p className="text-xl md:text-2xl text-[var(--c-subtle)] mt-2 reveal" data-reveal>
+          <p className="text-xl md:text-2xl mt-2 reveal font-semibold text-[var(--c-text)]" data-reveal>
             {role}
           </p>
-          <p className="mt-3 text-sm md:text-base text-[var(--c-muted)] text-justify max-w-2xl mx-auto reveal" data-reveal>
+          <p className="mt-3 text-sm md:text-base text-justify max-w-2xl mx-auto reveal font-medium text-[var(--c-text)]" data-reveal>
             {tagline}
           </p>
-          <p className="text-sm md:text-base text-[var(--c-muted)] mt-1 reveal" data-reveal>
+          <p className="text-sm md:text-base mt-1 reveal font-medium text-[var(--c-text)]" data-reveal>
             {location}
           </p>
 
@@ -419,7 +391,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         </div>
       </header>
 
-      {/* ===== SHOWCASE PORTRAIT (after hero, before About) — NO rotation ===== */}
+      {/* ===== PORTRAIT ===== */}
       {photo && (
         <section className="relative z-10 max-w-4xl mx-auto px-6 -mt-4 mb-6" aria-label="Profile image">
           <figure
@@ -488,7 +460,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         {/* ABOUT */}
         {data?.about && (
           <Section id="about" icon={<UserRound size={20} />} title="About Me">
-            <p className="text-[var(--c-text)] leading-relaxed text-justify" data-reveal>
+            <p className="text-[var(--c-text)] leading-relaxed text-justify font-medium" data-reveal>
               {data.about}
             </p>
           </Section>
@@ -504,7 +476,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   className="flex items-center justify-between rounded-lg bg-[var(--chip-bg)] p-3 ring-1 ring-black/10 transition hover:-translate-y-0.5 hover:shadow-md hover:ring-[var(--chip-ring)]"
                   data-reveal
                 >
-                  <span className="text-sm text-[var(--c-text)] text-justify">{String(s)}</span>
+                  <span className="text-sm text-[var(--c-text)] text-justify font-medium">{String(s)}</span>
                   <span className="h-2 w-2 rounded-full bg-[var(--c-accent)]/90" />
                 </div>
               ))}
@@ -522,9 +494,9 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   className="rounded-lg border border-black/10 bg-[var(--card-bg)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--card-ring)]"
                   data-reveal
                 >
-                  <h3 className="text-xl font-medium">{p.name?.trim() || `Project ${i + 1}`}</h3>
+                  <h3 className="text-xl font-bold text-[var(--c-text)]">{p.name?.trim() || `Project ${i + 1}`}</h3>
                   {p.description?.trim() && (
-                    <p className="text-[var(--c-subtle)] mt-2 text-justify leading-relaxed">{p.description}</p>
+                    <p className="mt-2 text-justify leading-relaxed font-medium text-[var(--c-text)]">{p.description}</p>
                   )}
                   {p.link && (
                     <a
@@ -555,7 +527,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                   <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
                     <Award className="h-6 w-6 text-[var(--c-accent)]" />
                   </span>
-                  <p className="text-[var(--c-text)] text-justify">{String(cert)}</p>
+                  <p className="text-[var(--c-text)] text-justify font-medium">{String(cert)}</p>
                 </div>
               ))}
             </div>
@@ -575,8 +547,8 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                     className="rounded-lg border border-black/10 bg-[var(--card-bg)] p-4 transition hover:border-[var(--card-ring)]"
                     data-reveal
                   >
-                    <h3 className="text-xl font-medium">{m.title?.trim() || `Media ${i + 1}`}</h3>
-                    <p className="text-[var(--c-subtle)] mt-1 text-justify">{labelNice}</p>
+                    <h3 className="text-xl font-bold text-[var(--c-text)]">{m.title?.trim() || `Media ${i + 1}`}</h3>
+                    <p className="mt-1 text-justify font-medium text-[var(--c-text)]">{labelNice}</p>
                     {m.link && (
                       <a
                         href={m.link}
@@ -596,9 +568,9 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
         {/* CONTACT */}
         <Section id="contact" icon={<Mail size={20} />} title="Contact">
-          <div className="text-[var(--c-text)] space-y-2">
+          <div className="space-y-2 text-[var(--c-text)]">
             {data?.email && (
-              <div className="flex items-center gap-2" data-reveal>
+              <div className="flex items-center gap-2 font-medium" data-reveal>
                 <a href={`mailto:${data.email}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Mail size={16} /> {data.email}
                 </a>
@@ -612,7 +584,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
               </div>
             )}
             {data?.phone && (
-              <div className="flex items-center gap-2" data-reveal>
+              <div className="flex items-center gap-2 font-medium" data-reveal>
                 <a href={`tel:${data.phone}`} className="flex items-center gap-2 hover:text-[var(--c-accent)]">
                   <Phone size={16} /> {data.phone}
                 </a>
@@ -639,7 +611,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
 
             {socials.length > 0 && (
               <div className="pt-2" data-reveal>
-                <h3 className="text-base font-medium text-[var(--c-subtle)]">Social Links</h3>
+                <h3 className="text-base font-semibold text-[var(--c-text)]">Social Links</h3>
                 <div className="mt-1 grid grid-cols-1 gap-1">
                   {socials.map((s, i) => (
                     <a
@@ -647,7 +619,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
                       href={s.url!}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[var(--c-accent)] hover:underline"
+                      className="font-medium text-[var(--c-text)] hover:text-[var(--c-accent)]"
                     >
                       {s.label}
                     </a>
@@ -680,15 +652,14 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
       </button>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-[var(--footer-bg)] py-5 text-center text-[var(--c-subtle)]">
-        <p>
+      <footer className="bg-[var(--footer-bg)] py-5 text-center">
+        <p className="font-medium text-[var(--c-text)]">
           © {new Date().getFullYear()} {fullName} | Classic Portfolio
         </p>
       </footer>
 
-      {/* Global style tokens + effects */}
+      {/* Tokens + effects */}
       <style jsx global>{`
-        /* Professional font stack (no layout/logic change) */
         :root {
           --mx: 50vw;
           --my: 50vh;
@@ -697,47 +668,23 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         }
         body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
-        /* Light Grey Palette (Classic) — calmer whites + soft shadows */
-        :root[data-classic-theme='classic'] {
+        /* High-contrast palette for BOTH themes */
+        :root[data-classic-theme='classic'],
+        :root[data-classic-theme='noir'] {
           --c-accent: #F2994A;
           --c-accent-soft: #FAD6B8;
 
-          --c-text: #2B2F33;          /* primary text */
-          --c-subtle: #4B5563;        /* subheads */
-          --c-muted: #6B7280CC;       /* muted text */
+          /* Darker, crisper body text */
+          --c-text: #111827;    /* gray-900 */
+          --c-subtle: #111827;  /* match body for clarity */
+          --c-muted: #1F2937;   /* gray-800 */
 
-          --bg1: #F7F8FA;             /* light grey gradient band 1 */
-          --bg2: #F2F4F7;             /* band 2 */
-          --bg3: #ECEFF3;             /* band 3 */
+          --bg1: #F7F8FA;
+          --bg2: #F2F4F7;
+          --bg3: #ECEFF3;
 
-          /* “Glassy” chips/cards/badges tuned for light UI */
           --chip-bg: rgba(242, 153, 74, 0.10);
           --chip-ring: rgba(242, 153, 74, 0.30);
-
-          --card-bg: rgba(255, 255, 255, 0.70);
-          --card-ring: rgba(17, 24, 39, 0.10);
-
-          --badge-bg: rgba(242, 153, 74, 0.12);
-          --badge-ring: rgba(242, 153, 74, 0.30);
-
-          --footer-bg: #E9ECEF;
-        }
-
-        /* Optional alternate (Noir) — still light, just cooler greys */
-        :root[data-classic-theme='noir'] {
-          --c-accent: #F2994A;
-          --c-accent-soft: #F7D3B0;
-
-          --c-text: #1F2937;
-          --c-subtle: #374151;
-          --c-muted: #6B7280CC;
-
-          --bg1: #F8FAFC;
-          --bg2: #F3F4F6;
-          --bg3: #EDEFF3;
-
-          --chip-bg: rgba(31, 41, 55, 0.06);
-          --chip-ring: rgba(31, 41, 55, 0.12);
 
           --card-bg: rgba(255, 255, 255, 0.78);
           --card-ring: rgba(17, 24, 39, 0.10);
@@ -745,10 +692,10 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           --badge-bg: rgba(31, 41, 55, 0.06);
           --badge-ring: rgba(31, 41, 55, 0.12);
 
-          --footer-bg: #EAECEF;
+          --footer-bg: #E9ECEF;
         }
 
-        /* Light surface + ensure text color overrides the hard 'text-white' utility */
+        /* Surface uses strong text */
         .classic-surface {
           background: linear-gradient(120deg, var(--bg1), var(--bg2), var(--bg3));
           color: var(--c-text) !important;
@@ -775,19 +722,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           background-size: 220px 220px; opacity: .55; mix-blend-mode: multiply;
         }
 
-        /* Portrait frame (kept copper, softened for light) */
-        .portrait-frame {
-          background:
-            conic-gradient(from 210deg, rgba(255,255,255,.35), rgba(255,255,255,0) 30% 70%, rgba(255,255,255,.35)),
-            linear-gradient(180deg, #FFE7D1, #FAD0AA 35%, #F2994A 70%, #E2812A 100%);
-          border-radius: 30px;
-          padding: 2px;
-        }
-        .portrait-glow {
-          background: radial-gradient(60% 60% at 50% 50%, rgba(242, 153, 74, 0.20) 0%, transparent 60%);
-        }
-
-        /* Reveal (per-element) — gated so content is visible by default */
+        /* Reveal (per-element) */
         .reveal { opacity: 1; transform: none; }
         :root.io-ready .reveal { opacity: 0; transform: translateY(12px); }
         :root.io-ready .reveal-in { opacity: 1; transform: translateY(0); transition: opacity .6s ease, transform .6s ease; }
@@ -803,7 +738,7 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
         }
         .navlink:hover::after, .navlink[aria-current="true"]::after { transform: scaleX(1); opacity: 1; }
 
-        /* Section-level box reveal — gated */
+        /* Section-level box reveal */
         section[data-entrance] { opacity: 1; transform: none; filter: none; }
         :root.io-ready section[data-entrance] {
           opacity: 0; transform: translateY(18px) scale(.985); filter: blur(6px);
@@ -833,17 +768,24 @@ export default function PortfolioTemplateClassic({ data }: { data: PortfolioData
           .navlink::after { transition: none !important; }
         }
 
-        /* Spotlight cursor for light UI */
+        /* Spotlight cursor */
         #__spotlight {
           background: radial-gradient(320px 320px at var(--mx) var(--my), rgba(15, 23, 42, .06), transparent 60%);
         }
 
-        /* Print-friendly */
-        @media print {
-          #__spotlight, aside, .noise, nav { display: none !important; }
-          button, a[href^="#"] { display: none !important; }
-          body { background: #fff !important; color: #111 !important; }
-        }
+        /* === Readability hardening (theme-agnostic) === */
+        /* Anything using lighter tokens becomes solid body text */
+        .classic-surface .text-[var(--c-muted)],
+        .classic-surface .text-[var(--c-subtle)] { color: var(--c-text) !important; }
+
+        /* Slightly bolder base copy */
+        .classic-surface p,
+        .classic-surface li { font-weight: 500; }
+
+        /* Headings always strong and dark */
+        .classic-surface h1,
+        .classic-surface h2,
+        .classic-surface h3 { color: var(--c-text); font-weight: 700; }
       `}</style>
     </div>
   );
@@ -870,7 +812,7 @@ function Section({
         <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--badge-bg)] ring-1 ring-[var(--badge-ring)]">
           {icon}
         </span>
-        <h2 className="text-2xl font-semibold text-[var(--c-text)]">{title}</h2>
+        <h2 className="text-2xl font-bold text-[var(--c-text)]">{title}</h2>
       </header>
       {children}
     </section>

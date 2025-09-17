@@ -9,13 +9,22 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata = {
   title: 'The Ideal Professional Gen',
   description: 'Free portfolios, CVs, and Cover Letters for Professionals',
+  // (Optional) helps browser UI match dark theme:
+  themeColor: '#0b1220',
+  // (Optional) hints to UA/forms:
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider
+          attribute="class"
+          forcedTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

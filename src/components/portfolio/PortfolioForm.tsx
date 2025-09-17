@@ -328,7 +328,7 @@ export default function PortfolioForm({
                           type="file"
                           accept="image/*"
                           onChange={(e) => handleFileUpload('photo', e)}
-                          className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="mt-1 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           aria-label="Upload Headshot"
                         />
                         {errors.photo && <p className="text-red-500 text-sm">{errors.photo}</p>}
@@ -340,12 +340,13 @@ export default function PortfolioForm({
                           type="file"
                           accept="application/pdf"
                           onChange={(e) => handleFileUpload('cv', e)}
-                          className="mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="mt-1 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           aria-label="Upload CV"
                         />
                         {errors.cv && <p className="text-red-500 text-sm">{errors.cv}</p>}
                       </div>
 
+                      {/* ======= UPDATED TEMPLATE BLOCK ONLY ======= */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Template</label>
                         <Select
@@ -359,19 +360,93 @@ export default function PortfolioForm({
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full py-2 px-4 border border-gray-300 rounded-md dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <SelectTrigger
+                            className="
+                              w-full py-2 px-4 rounded-md text-sm
+                              border border-gray-300
+                              bg-[hsl(var(--card))] text-[hsl(var(--foreground))]
+                              focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]
+                            "
+                          >
                             <SelectValue placeholder="Select Template" />
                           </SelectTrigger>
-                          <SelectContent className="w-full dark:bg-zinc-800 border-gray-300 rounded-md shadow-lg z-10">
-                            <SelectItem value="modern" className="py-2 px-4 hover:bg-gray-100">Modern</SelectItem>
-                            <SelectItem value="classic" className="py-2 px-4 hover:bg-gray-100">Classic</SelectItem>
-                            <SelectItem value="minimal" className="py-2 px-4 hover:bg-gray-100">Minimal</SelectItem>
-                            <SelectItem value="tech" className="py-2 px-4 hover:bg-gray-100">Tech</SelectItem>
-                            <SelectItem value="creative" className="py-2 px-4 hover:bg-gray-100">Creative</SelectItem>
-                            <SelectItem value="corporate" className="py-2 px-4 hover:bg-gray-100">Corporate</SelectItem>
+
+                          {/* Solid, non-transparent dropdown to prevent overlay/casting */}
+                          <SelectContent
+                            sideOffset={6}
+                            position="popper"
+                            className="menu-surface menu-elevated w-full rounded-md p-1 shadow-lg z-50"
+                          >
+                            <SelectItem
+                              value="modern"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Modern
+                            </SelectItem>
+                            <SelectItem
+                              value="classic"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Classic
+                            </SelectItem>
+                            <SelectItem
+                              value="minimal"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Minimal
+                            </SelectItem>
+                            <SelectItem
+                              value="tech"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Tech
+                            </SelectItem>
+                            <SelectItem
+                              value="creative"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Creative
+                            </SelectItem>
+                            <SelectItem
+                              value="corporate"
+                              className="
+                                menu-item
+                                data-[highlighted]:bg-[hsl(var(--muted))]
+                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
+                                data-[state=checked]:text-[hsl(var(--foreground))]
+                              "
+                            >
+                              Corporate
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      {/* ======= /UPDATED TEMPLATE BLOCK ONLY ======= */}
                     </>
                   )}
 

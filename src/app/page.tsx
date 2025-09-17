@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useInView, useReducedMotion } from "framer-motion";
 
-/* ----------------------------------------
-   Small, safe UX hooks
------------------------------------------ */
+import { motion, useReducedMotion } from "framer-motion";
+
+/* ------------------- small UX hooks ------------------- */
 
 function usePageVisible(): boolean {
   const [visible, setVisible] = React.useState(true);
@@ -35,9 +34,7 @@ function useInViewport<T extends Element>(margin = "-15% 0px"): [React.RefObject
   return [ref, inView];
 }
 
-/* ----------------------------------------
-   Shared bits (kept from your style)
------------------------------------------ */
+/* ------------------- shared bits (tokenized) ------------------- */
 
 function SectionTitle({
   eyebrow,
@@ -51,11 +48,11 @@ function SectionTitle({
   return (
     <header className="mx-auto max-w-3xl text-center">
       {eyebrow ? <p className="section-title">{eyebrow}</p> : null}
-      <h2 className="mt-1 text-balance text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">
+      <h2 className="mt-1 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
         {title}
       </h2>
       {subtitle ? (
-        <p className="mt-3 text-pretty text-neutral-700 dark:text-neutral-300">
+        <p className="mt-3 text-pretty text-muted-foreground">
           {subtitle}
         </p>
       ) : null}
@@ -78,7 +75,7 @@ function PrimaryButton({
     <Link
       href={href}
       aria-label={ariaLabel}
-      className={`btn btn-primary !text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 ${className}`}
+      className={`btn btn-primary !text-[hsl(var(--primary-foreground))] ${className}`}
     >
       {children}
     </Link>
@@ -100,46 +97,14 @@ function SecondaryButton({
     <Link
       href={href}
       aria-label={ariaLabel}
-      className={`btn btn-secondary !text-neutral-900 dark:!text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 ${className}`}
+      className={`btn btn-ghost ${className}`}
     >
       {children}
     </Link>
   );
 }
 
-/* ----------------------------------------
-   “Mind-blowing” but safe intro effects
-   - AuroraGlow: background light sweep
-   - SectionIntro: staggered reveal & parallax
-   - RevealItem: child stagger
------------------------------------------ */
-
-function AuroraGlow({
-  active,
-  hue = 200, // 200–260: teal/indigo zone
-  className = "",
-}: {
-  active: boolean;
-  hue?: number;
-  className?: string;
-}) {
-  // Pure CSS + motion opacity/scale. Works in light/dark.
-  return (
-    <motion.div
-      aria-hidden
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={active ? { opacity: 0.8, scale: 1 } : { opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-      className={`pointer-events-none absolute inset-0 -z-10 blur-3xl ${className}`}
-      style={{
-        background: `radial-gradient(800px 360px at 50% 0%, hsl(${hue} 90% 55% / 0.28), transparent 60%),
-                     conic-gradient(from 180deg at 50% -20%, hsl(${hue + 30} 92% 62% / 0.18), transparent 25% 75%, hsl(${hue - 20} 82% 60% / 0.18))`,
-        maskImage:
-          "linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0.2) 70%, transparent)",
-      }}
-    />
-  );
-}
+/* ------------------- section intros (token-safe) ------------------- */
 
 const parentVariants = {
   hidden: (dir: "up" | "down" | "left" | "right" | "scale") => {
@@ -160,10 +125,28 @@ const parentVariants = {
   show: { opacity: 1, x: 0, y: 0, scale: 1 },
 } as const;
 
-const childVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0 },
-} as const;
+const childVariants = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } } as const;
+
+function AuroraGlow({
+  active,
+  hue = 208,
+  className = "",
+}: { active: boolean; hue?: number; className?: string }) {
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={active ? { opacity: 0.8, scale: 1 } : { opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      className={`pointer-events-none absolute inset-0 -z-10 blur-3xl ${className}`}
+      style={{
+        background: `radial-gradient(800px 360px at 50% 0%, hsl(${hue} 90% 55% / 0.25), transparent 60%),
+                     conic-gradient(from 180deg at 50% -20%, hsl(${hue + 30} 92% 62% / 0.16), transparent 25% 75%, hsl(${hue - 20} 82% 60% / 0.16))`,
+        maskImage: "linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0.2) 70%, transparent)",
+      }}
+    />
+  );
+}
 
 function SectionIntro({
   children,
@@ -175,8 +158,8 @@ function SectionIntro({
   children: React.ReactNode;
   className?: string;
   from?: "up" | "down" | "left" | "right" | "scale";
-  parallax?: number; // px of subtle translate on entry
-  hue?: number; // pass to AuroraGlow for per-section color
+  parallax?: number;
+  hue?: number;
 }) {
   const prefersReduced = useReducedMotion();
   const [ref, inView] = useInViewport<HTMLDivElement>();
@@ -197,16 +180,7 @@ function SectionIntro({
           when: "beforeChildren",
           staggerChildren: prefersReduced ? 0 : 0.06,
         }}
-        style={
-          prefersReduced
-            ? undefined
-            : {
-                transformStyle: "preserve-3d",
-                willChange: "transform, opacity",
-              }
-        }
       >
-        {/* Slight parallax container */}
         <motion.div
           initial={{ y: from === "up" ? parallax : from === "down" ? -parallax : 0 }}
           animate={{ y: 0 }}
@@ -219,81 +193,95 @@ function SectionIntro({
   );
 }
 
-function RevealItem({
-  children,
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-}) {
+function RevealItem({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const prefersReduced = useReducedMotion();
   return (
     <motion.div
       variants={childVariants}
-      transition={{
-        duration: prefersReduced ? 0 : 0.5,
-        ease: [0.22, 1, 0.36, 1],
-        delay,
-      }}
+      transition={{ duration: prefersReduced ? 0 : 0.5, ease: [0.22, 1, 0.36, 1], delay }}
     >
       {children}
     </motion.div>
   );
 }
 
-/* ----------------------------------------
-   Counters (pause offscreen/hidden tab)
------------------------------------------ */
+/* ------------------- counters (global-behavior inline) ------------------- */
 
-function useTicker(
-  start: number,
-  stepRange: [number, number] = [2, 7],
-  everyMs = 1500,
-  enabled = true
-) {
-  const [val, setVal] = React.useState(start);
-  const prefersReduced = useReducedMotion();
-  const visible = usePageVisible();
-  React.useEffect(() => {
-    if (!enabled || !visible || prefersReduced || everyMs <= 0) return;
-    let cancelled = false;
-    const id = window.setInterval(() => {
-      const inc =
-        Math.floor(Math.random() * (stepRange[1] - stepRange[0] + 1)) +
-        stepRange[0];
-      if (!cancelled) setVal((v) => v + inc);
-    }, everyMs);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [enabled, visible, prefersReduced, everyMs, stepRange]);
-  return val;
-}
+const STORAGE_KEY = 'tipg_counters';
 
 function Counters() {
-  const [ref, inView] = useInViewport<HTMLDivElement>("-10% 0px");
-  const c1 = useTicker(12840, [3, 8], 1200, inView);
-  const c2 = useTicker(9420, [2, 6], 1700, inView);
-  const c3 = useTicker(5120, [1, 5], 2200, inView);
+  const prefersReduced = useReducedMotion();
+  const pageVisible = usePageVisible();
+  const [ref, inView] = useInViewport<HTMLDivElement>('-10% 0px'); // keeps ticking only when the section is on-screen
+
+  // seeds (same as landing)
+  const seeds = React.useMemo(() => ({ cv: 12840, cl: 9420, pf: 5120 }), []);
+  const restored = React.useRef(false);
+
+  const [cv, setCv] = React.useState(seeds.cv);
+  const [cl, setCl] = React.useState(seeds.cl);
+  const [pf, setPf] = React.useState(seeds.pf);
+
+  // restore once per session
+  React.useEffect(() => {
+    if (restored.current) return;
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const obj = JSON.parse(raw) as { cv?: number; cl?: number; portfolio?: number };
+        if (typeof obj.cv === 'number') setCv(obj.cv);
+        if (typeof obj.cl === 'number') setCl(obj.cl);
+        if (typeof obj.portfolio === 'number') setPf(obj.portfolio);
+      }
+    } catch {/* ignore */}
+    restored.current = true;
+  }, []);
+
+  // persist on tab hide + unmount
+  const persist = React.useCallback(() => {
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ cv, cl, portfolio: pf })
+      );
+    } catch {/* ignore */}
+  }, [cv, cl, pf]);
+
+  React.useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') persist();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      persist();
+    };
+  }, [persist]);
+
+  // tick when: section in view + tab visible + not reduced motion
+  React.useEffect(() => {
+    if (prefersReduced || !pageVisible || !inView) return;
+    const i1 = window.setInterval(() => setCv((v) => v + (Math.floor(Math.random() * (8 - 3 + 1)) + 3)), 1200);
+    const i2 = window.setInterval(() => setCl((v) => v + (Math.floor(Math.random() * (6 - 2 + 1)) + 2)), 1700);
+    const i3 = window.setInterval(() => setPf((v) => v + (Math.floor(Math.random() * (5 - 1 + 1)) + 1)), 2200);
+    return () => { clearInterval(i1); clearInterval(i2); clearInterval(i3); };
+  }, [prefersReduced, pageVisible, inView]);
 
   const items = [
-    { label: "CVs generated", val: c1 },
-    { label: "Cover letters crafted", val: c2 },
-    { label: "Interviews landed", val: c3 },
+    { label: 'CVs generated', val: cv },
+    { label: 'Cover letters crafted', val: cl },
+    { label: 'Published Portfolios', val: pf },
   ];
 
   return (
     <div ref={ref} className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-3">
       {items.map((it, i) => (
         <RevealItem key={it.label} delay={i * 0.05}>
-          <article className="card p-6 text-center shadow-sm">
-            <div className="text-3xl font-extrabold text-neutral-900 dark:text-neutral-100">
+          <article className="card p-6 text-center">
+            <div className="text-3xl font-extrabold text-foreground">
               {it.val.toLocaleString()}
             </div>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-              {it.label}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{it.label}</p>
           </article>
         </RevealItem>
       ))}
@@ -301,16 +289,9 @@ function Counters() {
   );
 }
 
-/* ----------------------------------------
-   Testimonials (auto-rotate + pause)
------------------------------------------ */
+/* ------------------- testimonials (auto-rotate) ------------------- */
 
-type Testimonial = {
-  quote: string;
-  name: string;
-  role: string;
-  initial: string;
-};
+type Testimonial = { quote: string; name: string; role: string; initial: string };
 
 const TESTIMONIALS: Testimonial[] = [
   {
@@ -380,8 +361,8 @@ function Testimonials() {
       >
         <div className="flex items-start gap-4">
           <div
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-white"
-            style={{ background: "var(--brand-safe)" }}
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-[hsl(var(--accent-foreground))]"
+            style={{ background: "hsl(var(--accent))" }}
             aria-hidden
           >
             <span className="text-lg font-bold">{current.initial}</span>
@@ -393,16 +374,13 @@ function Testimonials() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mt-2 text-balance text-lg text-neutral-800 dark:text-neutral-100"
+          className="mt-2 text-balance text-lg text-foreground"
         >
           “{current.quote}”
         </motion.blockquote>
 
-        <div className="mt-3 pl-0 text-sm text-neutral-600 dark:text-neutral-400">
-          <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-            {current.name}
-          </span>{" "}
-          • {current.role}
+        <div className="mt-3 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{current.name}</span> • {current.role}
         </div>
 
         <div className="mt-6 flex items-center justify-between">
@@ -415,7 +393,7 @@ function Testimonials() {
                 aria-label={`Show testimonial ${i + 1}`}
                 onClick={() => setIndex(i)}
                 className={`h-1.5 w-6 rounded-full transition ${
-                  i === index ? "bg-indigo-600" : "bg-neutral-300 dark:bg-neutral-700"
+                  i === index ? "bg-[hsl(var(--secondary))]" : "bg-[hsl(var(--border))]"
                 }`}
               />
             ))}
@@ -434,23 +412,21 @@ function Testimonials() {
   );
 }
 
-/* ----------------------------------------
-   Page with intro FX per section
------------------------------------------ */
+/* ------------------- page ------------------- */
 
 export default function HomePage() {
   return (
-    <main id="main">
-      {/* HERO with glow + stagger */}
+    <main id="main" className="bg-background text-foreground">
+      {/* HERO */}
       <SectionIntro className="relative isolate" from="scale" parallax={18} hue={208}>
         <div className="container-app pb-16 pt-10 lg:pb-20 lg:pt-16 text-center">
           <RevealItem>
-            <h1 className="mx-auto max-w-3xl text-balance text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-5xl">
+            <h1 className="mx-auto max-w-3xl text-balance text-4xl font-extrabold tracking-tight sm:text-5xl">
               Ship a standout Portfolio in minutes.
             </h1>
           </RevealItem>
           <RevealItem delay={0.05}>
-            <p className="mx-auto mt-3 max-w-3xl text-pretty text-lg text-neutral-700 dark:text-neutral-300">
+            <p className="mx-auto mt-3 max-w-3xl text-pretty text-lg text-muted-foreground">
               Live preview, beautiful templates, dark mode, and one-click deploy to GitHub Pages.
               CV & Cover Letter tools included — PDF export only, never stored.
             </p>
@@ -467,17 +443,15 @@ export default function HomePage() {
         </div>
       </SectionIntro>
 
-      {/* COUNTERS with slide-up intro */}
+      {/* COUNTERS */}
       <SectionIntro className="py-12" from="up" hue={192}>
         <div className="container-app">
-          <RevealItem>
-            <h2 className="sr-only">Live platform stats</h2>
-          </RevealItem>
+          <h2 className="sr-only">Live platform stats</h2>
           <Counters />
         </div>
       </SectionIntro>
 
-      {/* FEATURES with cascade + left sweep */}
+      {/* FEATURES */}
       <SectionIntro className="py-16" from="left" parallax={12} hue={210}>
         <div className="container-app">
           <SectionTitle
@@ -495,11 +469,9 @@ export default function HomePage() {
               { title: "Zero setup", desc: "Open in your browser and start creating. That’s it." },
             ].map((f, i) => (
               <RevealItem key={f.title} delay={i * 0.04}>
-                <div className="card p-6 transition hover:shadow-md">
-                  <div className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-                    {f.title}
-                  </div>
-                  <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">{f.desc}</p>
+                <div className="card p-6 transition hover:shadow-card">
+                  <div className="text-base font-semibold text-foreground">{f.title}</div>
+                  <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
                 </div>
               </RevealItem>
             ))}
@@ -507,9 +479,9 @@ export default function HomePage() {
         </div>
       </SectionIntro>
 
-      {/* HOW IT WORKS with numbered swoop */}
+      {/* HOW IT WORKS */}
       <SectionIntro
-        className="border-y border-neutral-200 bg-neutral-50 py-16 dark:border-neutral-800 dark:bg-neutral-950/40"
+        className="border-y border-border bg-[hsl(var(--muted))/0.4] py-16"
         from="right"
         parallax={16}
         hue={226}
@@ -524,11 +496,11 @@ export default function HomePage() {
             ].map((s, i) => (
               <RevealItem key={s.k} delay={i * 0.06}>
                 <li className="card p-6 text-center">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-sm font-bold text-[hsl(var(--secondary-foreground))]">
                     {s.k}
                   </div>
-                  <div className="mt-3 text-base font-semibold text-neutral-900 dark:text-neutral-100">{s.t}</div>
-                  <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">{s.d}</p>
+                  <div className="mt-3 text-base font-semibold text-foreground">{s.t}</div>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
                 </li>
               </RevealItem>
             ))}
@@ -541,7 +513,7 @@ export default function HomePage() {
         </div>
       </SectionIntro>
 
-      {/* TESTIMONIALS with fade-in card & rotating quotes */}
+      {/* TESTIMONIALS */}
       <SectionIntro className="py-16" from="scale" parallax={10} hue={204}>
         <div className="container-app">
           <SectionTitle eyebrow="Loved by professionals" title="What people are saying" />
@@ -551,7 +523,7 @@ export default function HomePage() {
         </div>
       </SectionIntro>
 
-      {/* PRICING with sequential pop */}
+      {/* PRICING */}
       <SectionIntro className="py-16" from="up" parallax={14} hue={216}>
         <div className="container-app">
           <SectionTitle
@@ -560,36 +532,20 @@ export default function HomePage() {
           />
           <div className="mx-auto mt-10 grid max-w-5xl gap-4 sm:grid-cols-3">
             {[
-              {
-                name: "Free",
-                price: "$0",
-                desc: "All builders. PDF export. 21-day hosting.",
-                cta: { href: "/portfolio", label: "Create Portfolio" },
-                primary: true,
-              },
-              {
-                name: "Supporter",
-                price: "$5",
-                desc: "Thank-you tier. 45-day hosting. Early features.",
-                cta: { href: "/donate", label: "Support us" },
-              },
-              {
-                name: "Business",
-                price: "$15",
-                desc: "90-day hosting + premium templates.",
-                cta: { href: "/donate", label: "Upgrade" },
-              },
+              { name: "Free", price: "$0", desc: "All builders. PDF export. 21-day hosting.", cta: { href: "/portfolio", label: "Create Portfolio" }, primary: true },
+              { name: "Supporter", price: "$5", desc: "Thank-you tier. 45-day hosting. Early features.", cta: { href: "/donate", label: "Support us" } },
+              { name: "Business", price: "$15", desc: "90-day hosting + premium templates.", cta: { href: "/donate", label: "Upgrade" } },
             ].map((p, i) => (
               <RevealItem key={p.name} delay={i * 0.06}>
                 <article className="card relative p-6">
                   {p.name === "Supporter" ? (
-                    <span className="absolute right-4 top-4 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    <span className="absolute right-4 top-4 rounded-full bg-[hsl(var(--accent))] px-2 py-0.5 text-xs font-semibold text-[hsl(var(--accent-foreground))]">
                       Popular
                     </span>
                   ) : null}
-                  <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{p.name}</h3>
-                  <div className="mt-1 text-3xl font-extrabold text-neutral-900 dark:text-neutral-100">{p.price}</div>
-                  <p className="mt-2 text-sm text-neutral-700 dark:text-neutral-300">{p.desc}</p>
+                  <h3 className="text-base font-semibold text-foreground">{p.name}</h3>
+                  <div className="mt-1 text-3xl font-extrabold text-foreground">{p.price}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{p.desc}</p>
                   <div className="mt-4">
                     {p.primary ? (
                       <PrimaryButton href={p.cta.href}>{p.cta.label}</PrimaryButton>
@@ -604,23 +560,22 @@ export default function HomePage() {
         </div>
       </SectionIntro>
 
-      {/* CTA with dramatic glow sweep */}
+      {/* CTA */}
       <SectionIntro className="pb-20 pt-4" from="scale" parallax={8} hue={200}>
         <div className="container-app">
           <div className="relative card overflow-hidden p-8 text-center">
-            {/* subtle sweep bar */}
             <motion.div
               aria-hidden
               initial={{ x: "-20%" }}
-              whileInView={{ x: "120%" }}
+              whileInView={{ x: "300%" }}
               viewport={{ once: true, amount: 0.7 }}
               transition={{ duration: 2.2, ease: "easeInOut" }}
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-6 bg-gradient-to-r from-white/10 to-white/0"
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-6 bg-[linear-gradient(to_right,white_0%,transparent_40%)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.2)_0%,transparent_40%)]"
             />
-            <h3 className="text-balance text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100">
+            <h3 className="text-balance text-2xl font-extrabold tracking-tight">
               Ready to publish?
             </h3>
-            <p className="mx-auto mt-2 max-w-2xl text-pretty text-neutral-700 dark:text-neutral-300">
+            <p className="mx-auto mt-2 max-w-2xl text-pretty text-muted-foreground">
               Start with a portfolio — it’s the heart of the platform.
             </p>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">

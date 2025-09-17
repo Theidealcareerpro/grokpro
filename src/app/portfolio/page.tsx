@@ -1,19 +1,176 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import SectionIntro from '@/components/SectionIntro';
+import Counters from '@/components/AnimatedCounters';
 import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import type { PortfolioData } from '@/lib/portfolio-types';
 import Image from 'next/image';
 
-export default function PortfolioBuilder() {
+/* ------------------------------------------------------------------ */
+/* Publishing Overlay (brand, steps, timer, progress)                  */
+/* ------------------------------------------------------------------ */
+
+type Step = { key: string; label: string; status: 'idle' | 'active' | 'done' | 'error' };
+
+function PublishingOverlay({
+  open,
+  error,
+  url,
+  onClose,
+  brand = 'TheIdealProGen',
+  logoSrc, // optional, e.g. '/logo.svg'
+  steps,
+  elapsedMs,
+  progressPct,
+}: {
+  open: boolean;
+  error: string | null;
+  url: string | null;
+  onClose: () => void;
+  brand?: string;
+  logoSrc?: string;
+  steps: Step[];
+  elapsedMs: number;
+  progressPct: number;
+}) {
+  if (!open) return null;
+
+  const mm = Math.floor(elapsedMs / 60000)
+    .toString()
+    .padStart(2, '0');
+  const ss = Math.floor((elapsedMs % 60000) / 1000)
+    .toString()
+    .padStart(2, '0');
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Publishing portfolio"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        className="w-[min(720px,94vw)] rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] shadow-2xl"
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))/0.6] px-5 py-3">
+          {logoSrc ? (
+            <Image src={logoSrc} alt={`${brand} logo`} width={28} height={28} className="rounded-sm" />
+          ) : (
+            <div className="grid h-7 w-7 place-items-center rounded bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] text-xs font-bold">
+              {brand.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className="text-sm">
+            <div className="font-semibold">Publishing your portfolio…</div>
+            <div className="text-[hsl(var(--muted-foreground))]">This takes ~10–20 seconds.</div>
+          </div>
+          <div className="ml-auto rounded-full bg-[hsl(var(--muted))] px-2 py-0.5 text-xs tabular-nums">
+            {mm}:{ss}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-5">
+          {/* Progress bar */}
+          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[hsl(var(--muted))]">
+            <motion.div
+              className="h-full bg-[hsl(var(--primary))]"
+              style={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, Math.max(0, progressPct))}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+
+          {/* Steps */}
+          <ol className="space-y-2">
+            {steps.map((s) => (
+              <li
+                key={s.key}
+                className="flex items-center justify-between rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={[
+                      'inline-flex h-2.5 w-2.5 rounded-full',
+                      s.status === 'done' && 'bg-[hsl(var(--success))]',
+                      s.status === 'active' && 'bg-[hsl(var(--warning))] animate-pulse',
+                      s.status === 'error' && 'bg-[hsl(var(--destructive))]',
+                      s.status === 'idle' && 'bg-[hsl(var(--muted-foreground))]/40',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-hidden
+                  />
+                  <span className="text-sm">{s.label}</span>
+                </div>
+                <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                  {s.status === 'done' ? '✓ Done' : s.status === 'active' ? 'Working…' : s.status === 'error' ? 'Failed' : ''}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {/* Result */}
+          <div className="mt-5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3">
+            {error ? (
+              <div className="text-[hsl(var(--destructive))]">
+                <div className="text-sm font-semibold">Publish failed</div>
+                <div className="mt-1 text-xs opacity-90">{error}</div>
+              </div>
+            ) : url ? (
+              <div>
+                <div className="text-sm font-semibold text-[hsl(var(--success))]">Published successfully</div>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-2 text-[hsl(var(--secondary))] underline"
+                >
+                  View live site
+                </a>
+                <div className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                  Pages can take a few seconds to propagate.
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-[hsl(var(--muted-foreground))]">Preparing your link…</div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose} disabled={!error && !url}>
+              {error ? 'Close' : url ? 'Done' : 'Cancel'}
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
+
+export default function PortfolioPage() {
+  // force dark mode (page-level, in case global layout isn’t enforcing it)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!root.classList.contains('dark')) root.classList.add('dark');
+  }, []);
+
   const [portfolioData, setPortfolioData] = useState<PortfolioData>({
     fullName: '',
     role: '',
@@ -35,25 +192,38 @@ export default function PortfolioBuilder() {
     username: '',
   });
 
-  const { theme, setTheme } = useTheme();
   const [viewSize, setViewSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDonationPrompt, setShowDonationPrompt] = useState(false);
   const [donationError, setDonationError] = useState<string | null>(null);
-  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishLoading, setPublishLoading] = useState(false); // button disabled state
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
 
-  const previewRef = useRef<HTMLDivElement>(null);
+  // overlay state
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const [overlayError, setOverlayError] = useState<string | null>(null);
+  const [overlayUrl, setOverlayUrl] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [steps, setSteps] = useState<Step[]>([
+    { key: 'repo', label: 'Creating GitHub repository', status: 'idle' },
+    { key: 'files', label: 'Uploading portfolio files', status: 'idle' },
+    { key: 'pages', label: 'Enabling GitHub Pages', status: 'idle' },
+    { key: 'db', label: 'Saving record', status: 'idle' },
+    { key: 'final', label: 'Finalizing & generating link', status: 'idle' },
+  ]);
+
+  const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors]);
 
   useEffect(() => {
-    loadFingerprintAndMetadata();
+    void loadFingerprintAndMetadata();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadFingerprintAndMetadata = async () => {
+  async function loadFingerprintAndMetadata() {
     try {
       const fp = await FingerprintJS.load();
       const result = await fp.get();
@@ -67,30 +237,62 @@ export default function PortfolioBuilder() {
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error('Supabase read error:', error);
-      }
+      if (error) console.error('Supabase read error:', error);
 
       if (data) {
         const expiryDate = new Date(data.expiry);
-        if (new Date() > expiryDate) setShowDonationPrompt(true);
-
+        if (Number.isFinite(expiryDate.getTime()) && new Date() > expiryDate) {
+          setShowDonationPrompt(true);
+        }
         if (data.github_repo) {
           const [owner, repo] = String(data.github_repo).split('/');
           if (owner && repo) setLiveUrl(`https://${owner}.github.io/${repo}/`);
         }
       }
-
-      // No placeholder insert here (schema requires github_repo). Row is created during /api/publish.
     } catch (err) {
       console.error('Error loading fingerprint:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
-  const handlePublish = async () => {
-    if (Object.values(errors).some((e) => e)) {
+  // Simulated stepper while the single publish request runs
+  function startOverlay() {
+    setOverlayOpen(true);
+    setOverlayError(null);
+    setOverlayUrl(null);
+    setElapsedMs(0);
+    setProgress(0);
+    setSteps((prev) =>
+      prev.map((s, i) => ({ ...s, status: i === 0 ? 'active' : 'idle' }))
+    );
+
+    // timer
+    const t0 = Date.now();
+    const timer = window.setInterval(() => setElapsedMs(Date.now() - t0), 250);
+
+    // step ticker (visual only, doesn’t change server logic)
+    let i = 0;
+    const schedule = [1200, 1300, 1400, 1100]; // timings between step bumps
+    let bumpTo = window.setTimeout(function next() {
+      i = Math.min(i + 1, steps.length - 2); // keep last step for success
+      setSteps((prev) =>
+        prev.map((s, idx) =>
+          idx < i ? { ...s, status: 'done' } : idx === i ? { ...s, status: 'active' } : s
+        )
+      );
+      setProgress(Math.min(92, 18 + i * 18)); // creep to ~92% while waiting
+      if (i < steps.length - 2) bumpTo = window.setTimeout(next, schedule[i % schedule.length]);
+    }, schedule[0]);
+
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(bumpTo);
+    };
+  }
+
+  async function handlePublish() {
+    if (hasErrors) {
       alert('Please fix all errors before publishing.');
       return;
     }
@@ -101,339 +303,273 @@ export default function PortfolioBuilder() {
 
     setPublishLoading(true);
     setLiveUrl(null);
+    const stopOverlay = startOverlay();
 
     try {
-      const response = await fetch('/api/publish', {
+      const res = await fetch('/api/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ portfolioData, fingerprint }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || 'Publish failed');
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok) throw new Error(data?.error || 'Publish failed');
 
-      setLiveUrl(data.url);
-      alert('Portfolio published successfully! Check the live URL below.');
-    } catch (err) {
+      // mark all steps done + finish bar
+      setSteps((prev) => prev.map((s) => ({ ...s, status: 'done' })));
+      setProgress(100);
+      setOverlayUrl(data.url ?? null);
+      setLiveUrl(data.url ?? null);
+    } catch (err: any) {
       console.error('Publish error:', err);
-      alert('Failed to publish portfolio. Check console for details.');
+      setOverlayError(err?.message || 'Failed to publish portfolio');
+      // Find the first active step and mark it error
+      setSteps((prev) => {
+        const idx = prev.findIndex((s) => s.status === 'active') || prev.length - 1;
+        return prev.map((s, i) =>
+          i < idx ? { ...s, status: 'done' } : i === idx ? { ...s, status: 'error' } : s
+        );
+      });
     } finally {
       setPublishLoading(false);
+      // keep overlay open; user closes with button
+      // stop timers after a short grace so the final state feels snappy
+      setTimeout(() => stopOverlay(), 300);
     }
-  };
+  }
 
-  const exportToPDF = () => {
-    if (previewRef.current && !Object.values(errors).some((e) => e)) {
-      html2canvas(previewRef.current, { scale: 2 }).then((canvas: HTMLCanvasElement) => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = 210;
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`${portfolioData.fullName || 'portfolio'}_portfolio.pdf`);
-      });
-    } else {
-      alert('Please fix all errors before exporting.');
-    }
-  };
-
-  // Export as a nice-looking Tailwind page (includes CDN + runtime config, so it matches your theme)
-  const exportToHTML = () => {
-    if (Object.values(errors).some((e) => e)) {
-      alert('Please fix all errors before exporting.');
-      return;
-    }
-
-    const esc = (s: string) =>
-      (s || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-    const skills = (portfolioData.skills || []).filter(Boolean);
-    const projects = (portfolioData.projects || []).filter(p => (p?.name && p.name.trim()) || (p?.description && p.description.trim()));
-    const certs = (portfolioData.certifications || []).filter(Boolean);
-    const media = (portfolioData.media || []).filter(m => (m?.title && m.title.trim()) || (m?.link && m.link.trim()));
-    const socials = (portfolioData.socials || []).filter(s => s?.label && s?.url);
-
-    const head = `
-<script>
-  tailwind = window.tailwind || {};
-  tailwind.config = {
-    darkMode: 'class',
-    theme: {
-      screens: { sm:'640px', md:'768px', lg:'1024px', xl:'1280px' },
-      extend: {
-        colors: {
-          navy:{ 700:'#1E3A8A' },
-          slate:{ 200:'#E2E8F0' },
-          teal:{ 500:'#14B8A6', 600:'#0F766E', 700:'#0F766E' },
-          gray:{ 50:'#F9FAFB', 600:'#4B5563', 800:'#1F2937' },
-        }
-      }
-    }
-  };
-</script>
-<script src="https://cdn.tailwindcss.com"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-    `.trim();
-
-    const html = `
-<!DOCTYPE html>
-<html lang="en" class="${theme === 'dark' ? 'dark' : ''}">
-<head>
-  <meta charset="UTF-8" />
-  <title>${esc(portfolioData.fullName || 'Portfolio')} | Portfolio</title>
-  ${head}
-</head>
-<body class="min-h-screen bg-gradient-to-b from-[#0A1C3A]/10 to-white text-gray-900 dark:bg-zinc-900 dark:text-white">
-  <header class="sticky top-0 z-40 bg-white/80 dark:bg-zinc-900/80 backdrop-blur border-b border-slate-200/60 dark:border-zinc-800">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl md:text-2xl font-bold text-navy-700 dark:text-white">${esc(portfolioData.fullName || 'Your Name')}</h1>
-      <div class="flex gap-2">
-        ${portfolioData.cvFileDataUrl ? `<a class="px-3 py-1.5 rounded-full bg-teal-600 text-white text-sm" href="${portfolioData.cvFileDataUrl}" download="${esc(portfolioData.cvFileName || 'cv.pdf')}">Download CV</a>` : ''}
-        ${portfolioData.linkedin ? `<a class="px-3 py-1.5 rounded-full border border-teal-600 text-teal-700 dark:text-teal-400 text-sm" href="${portfolioData.linkedin}" target="_blank" rel="noopener">LinkedIn</a>` : ''}
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background text-foreground">
+        Loading...
       </div>
-    </div>
-  </header>
+    );
+  }
 
-  <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
-    <section class="text-center">
-      ${portfolioData.photoDataUrl ? `<img src="${portfolioData.photoDataUrl}" alt="${esc(portfolioData.fullName || 'Headshot')}" class="mx-auto h-32 w-32 rounded-xl object-cover ring-2 ring-teal-500/40" />` : ''}
-      <h2 class="text-2xl md:text-3xl font-bold mt-4">${esc(portfolioData.fullName || 'Your Name')}${portfolioData.role ? ` · <span class="font-medium">${esc(portfolioData.role)}</span>` : ''}</h2>
-      ${portfolioData.tagline ? `<p class="text-gray-600 dark:text-gray-300 mt-2">${esc(portfolioData.tagline)}</p>` : ''}
-      ${portfolioData.location ? `<p class="text-gray-500 dark:text-gray-400 text-sm mt-1">${esc(portfolioData.location)}</p>` : ''}
-    </section>
-
-    ${portfolioData.about ? `
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-2">About</h3>
-      <p class="text-gray-700 dark:text-gray-300 leading-relaxed">${esc(portfolioData.about)}</p>
-    </section>` : ''}
-
-    ${skills.length ? `
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Skills</h3>
-      <div class="flex flex-wrap gap-2">
-        ${skills.map(s => `<span class="px-3 py-1 rounded-full bg-slate-200 dark:bg-zinc-800 text-sm">${esc(s)}</span>`).join('')}
-      </div>
-    </section>` : ''}
-
-    ${projects.length ? `
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Projects</h3>
-      <div class="space-y-4">
-        ${projects.map(p => `
-          <article class="rounded-lg border border-slate-200 dark:border-zinc-800 p-4">
-            <h4 class="text-lg font-semibold">${esc(p.name || 'Project')}</h4>
-            ${p.description ? `<p class="text-gray-700 dark:text-gray-300 mt-1">${esc(p.description)}</p>` : ''}
-            ${p.link ? `<a href="${p.link}" target="_blank" rel="noopener" class="inline-block mt-2 text-teal-700 dark:text-teal-400 underline">Visit</a>` : ''}
-          </article>
-        `).join('')}
-      </div>
-    </section>` : ''}
-
-    ${certs.length ? `
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Certifications</h3>
-      <ul class="list-disc pl-6 space-y-1">
-        ${certs.map(c => `<li>${esc(c)}</li>`).join('')}
-      </ul>
-    </section>` : ''}
-
-    ${media.length ? `
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Media</h3>
-      <div class="space-y-3">
-        ${media.map(m => `
-          <div>
-            <div class="font-medium">${esc(m.title || 'Media')}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400">${esc(m.type || 'video')}</div>
-            ${m.link ? `<a href="${m.link}" target="_blank" rel="noopener" class="inline-block mt-1 text-teal-700 dark:text-teal-400 underline">View</a>` : ''}
-          </div>
-        `).join('')}
-      </div>
-    </section>` : ''}
-
-    <section class="rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow">
-      <h3 class="text-xl font-semibold text-navy-700 dark:text-white mb-3">Contact</h3>
-      <div class="space-y-1">
-        ${portfolioData.email ? `<div>Email: <a href="mailto:${portfolioData.email}" class="underline">${esc(portfolioData.email)}</a></div>` : ''}
-        ${portfolioData.phone ? `<div>Phone: ${esc(portfolioData.phone)}</div>` : ''}
-        ${portfolioData.linkedin ? `<div>LinkedIn: <a href="${portfolioData.linkedin}" target="_blank" rel="noopener" class="underline">Profile</a></div>` : ''}
-        ${socials.length ? `<div class="mt-2"><div class="font-medium mb-1">Socials</div>${socials.map(s => `<a class="inline-block mr-3 underline" href="${s.url}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join('')}</div>` : ''}
-        ${portfolioData.cvFileDataUrl ? `<div class="mt-2"><a class="px-3 py-1.5 rounded-full bg-teal-600 text-white text-sm" href="${portfolioData.cvFileDataUrl}" download="${esc(portfolioData.cvFileName || 'cv.pdf')}">Download CV</a></div>` : ''}
-      </div>
-    </section>
-  </main>
-
-  <footer class="py-6 text-center text-gray-600 dark:text-gray-400">
-    © ${new Date().getFullYear()} ${esc(portfolioData.fullName || 'Your Name')} — Portfolio
-  </footer>
-</body>
-</html>
-    `.trim();
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${portfolioData.fullName || 'portfolio'}_portfolio.html`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const resetForm = () => {
-    setPortfolioData({
-      fullName: '',
-      role: '',
-      tagline: '',
-      location: '',
-      email: '',
-      phone: '',
-      linkedin: '',
-      photoDataUrl: '',
-      cvFileDataUrl: '',
-      cvFileName: '',
-      about: '',
-      skills: [''],
-      projects: [{ name: '', description: '', link: '' }],
-      certifications: [''],
-      media: [{ title: '', type: 'video', link: '' }],
-      socials: [{ label: '', url: '' }],
-      templateId: 'modern',
-      username: '',
-    });
-    setErrors({});
-    setLiveUrl(null);
-  };
-
-  if (isLoading) return <div className="flex justify-center items-center h-screen">Loading...</div>;
-
-  // runtime-safe width for preview (no dynamic Tailwind class)
+  // preview width caps
   const previewMaxWidth = viewSize === 'mobile' ? 375 : viewSize === 'tablet' ? 768 : 1280;
 
+  const PreviewBody = (
+    <div className="rounded-b-2xl bg-card p-6">
+      <div style={{ maxWidth: previewMaxWidth, marginLeft: 'auto', marginRight: 'auto' }}>
+        <PortfolioPreview data={portfolioData} />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0A1C3A]/10 to-white text-black dark:bg-zinc-900 dark:text-white p-4">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-teal-700 dark:text-teal-400">Portfolio Builder</h1>
-        <Button variant="outline" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-          Toggle Theme
-        </Button>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="mx-auto mb-6 flex max-w-7xl items-center justify-between px-4 pt-6">
+        <h1 className="text-2xl font-bold">Portfolio Builder</h1>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setPortfolioData({
+                fullName: '',
+                role: '',
+                tagline: '',
+                location: '',
+                email: '',
+                phone: '',
+                linkedin: '',
+                photoDataUrl: '',
+                cvFileDataUrl: '',
+                cvFileName: '',
+                about: '',
+                skills: [''],
+                projects: [{ name: '', description: '', link: '' }],
+                certifications: [''],
+                media: [{ title: '', type: 'video', link: '' }],
+                socials: [{ label: '', url: '' }],
+                templateId: 'modern',
+                username: '',
+              });
+              setErrors({});
+              setLiveUrl(null);
+            }}
+          >
+            Reset
+          </Button>
+          <Button onClick={handlePublish} disabled={publishLoading}>
+            {publishLoading ? 'Publishing…' : 'Publish'}
+          </Button>
+        </div>
       </header>
 
-      <main className="max-w-[90vw] mx-auto flex flex-col lg:flex-row gap-8 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white dark:bg-zinc-800 p-8 rounded-lg shadow-md order-1 min-h-[400px]"
-          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
-        >
-          <PortfolioForm
-            portfolioData={portfolioData}
-            setPortfolioData={setPortfolioData}
-            errors={errors}
-            setErrors={setErrors}
-          />
-          <div className="mt-4 flex gap-2">
-            <Button
-              className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
-              onClick={resetForm}
-            >
-              Reset
-            </Button>
-            <Button
-              className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
-              onClick={handlePublish}
-              disabled={publishLoading}
-            >
-              {publishLoading ? 'Publishing...' : 'Publish'}
-            </Button>
-          </div>
+      {/* Main (same sizes as CV page) */}
+      <main className="mx-auto max-w-[90vw] px-6">
+        <div className="flex flex-col gap-8 lg:flex-row">
+          {/* Left: Form */}
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-lg border border-border bg-card text-card-foreground shadow-card"
+            style={{
+              width: '45vw',
+              minWidth: '300px',
+              maxWidth: '800px',
+              transition: 'width 0.3s ease-in-out',
+            }}
+          >
+            <div className="p-6">
+              <PortfolioForm
+                portfolioData={portfolioData}
+                setPortfolioData={setPortfolioData}
+                errors={errors}
+                setErrors={setErrors}
+              />
 
-          {showDonationPrompt && (
-            <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-800 rounded-lg">
-              <h3 className="text-lg font-semibold text-black dark:text-white">Portfolio Expired</h3>
-              <p className="text-black dark:text-white">Support us to extend your portfolio!</p>
-              <div className="mt-2">
-                <a href="https://www.buymeacoffee.com/theidealprogen" target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=theidealprogen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FF0000"
-                    alt="Buy Me a Coffee"
-                    width={200}
-                    height={50}
-                  />
-                </a>
-              </div>
-              <p className="mt-2 text-sm text-black dark:text-white">
-                Each $5 donation extends your portfolio by 30 days (max 6 months). Extension applies automatically after confirmation.
-              </p>
-              {donationError && <p className="mt-2 text-red-500 dark:text-red-400">{donationError}</p>}
-            </div>
-          )}
+              {liveUrl && (
+                <div className="mt-4 rounded-lg border border-[hsl(var(--success))] bg-[hsl(var(--success))/0.12] p-4">
+                  <h3 className="text-lg font-semibold">Live Portfolio</h3>
+                  <p className="text-sm">
+                    Your portfolio is live at{' '}
+                    <a className="underline" href={liveUrl} target="_blank" rel="noopener noreferrer">
+                      {liveUrl}
+                    </a>
+                  </p>
+                </div>
+              )}
 
-          {liveUrl && (
-            <div className="mt-4 p-4 bg-green-100 dark:bg-green-800 rounded-lg">
-              <h3 className="text-lg font-semibold text-black dark:text-white">Live Portfolio</h3>
-              <p className="text-black dark:text-white">
-                Your portfolio is live at: <a href={liveUrl} target="_blank" rel="noopener noreferrer">{liveUrl}</a>
-              </p>
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl order-2 min-h-[400px] ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-50 overflow-y-auto' : ''}`}
-          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
-        >
-          <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
-            <div className="flex gap-1">
-              <span className="w-3 h-3 bg-red-500 rounded-full" />
-              <span className="w-3 h-3 bg-yellow-500 rounded-full" />
-              <span className="w-3 h-3 bg-green-500 rounded-full" />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-                className="bg-teal-600 text-white py-1 px-3 rounded hover:bg-teal-700 text-sm"
-              >
-                {isPreviewExpanded ? 'Collapse' : 'Expand'}
-              </button>
-              {isPreviewExpanded && (
-                <button
-                  onClick={() => setIsPreviewExpanded(false)}
-                  className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
-                >
-                  Close
-                </button>
+              {showDonationPrompt && (
+                <div className="mt-4 rounded-lg border border-[hsl(var(--warning))] bg-[hsl(var(--warning))/0.12] p-4">
+                  <h3 className="text-lg font-semibold">Portfolio Expired</h3>
+                  <p className="text-sm text-muted-foreground">Support us to extend your portfolio!</p>
+                  <div className="mt-2">
+                    <a
+                      href="https://www.buymeacoffee.com/theidealprogen"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Buy me a coffee"
+                    >
+                      <Image
+                        src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=☕&slug=theidealprogen&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=FF0000"
+                        alt="Buy Me a Coffee"
+                        width={200}
+                        height={50}
+                      />
+                    </a>
+                  </div>
+                  {donationError ? (
+                    <p className="mt-2 text-xs text-[hsl(var(--destructive))]">{donationError}</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Each $5 donation extends your portfolio by 30 days (max 6 months).
+                    </p>
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          </motion.section>
 
-          <div className="p-8 bg-white dark:bg-zinc-800 rounded-b-xl h-[calc(100%-2rem)] overflow-y-auto text-black dark:text-white">
-            <div className="preview-section">
-              <div className="flex justify-end space-x-2 mb-4">
-                <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')}>Mobile</Button>
-                <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')}>Tablet</Button>
-                <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>Desktop</Button>
+          {/* Right: Preview */}
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+            className="rounded-2xl border border-border bg-card text-card-foreground shadow-card"
+            style={{
+              width: '45vw',
+              minWidth: '300px',
+              maxWidth: '800px',
+              transition: 'width 0.3s ease-in-out',
+            }}
+          >
+            {/* Faux window chrome */}
+            <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-muted/60 px-4 py-2">
+              <div className="flex gap-1.5" aria-hidden>
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--destructive))]" />
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
               </div>
-
-              <div ref={previewRef} style={{ maxWidth: previewMaxWidth, marginLeft: 'auto', marginRight: 'auto' }}>
-                <PortfolioPreview data={portfolioData} />
-                <div className="mt-4 flex gap-2 justify-center">
-                  <Button onClick={exportToPDF} disabled={Object.values(errors).some((e) => e)}>Export to PDF</Button>
-                  <Button onClick={exportToHTML} disabled={Object.values(errors).some((e) => e)}>Export to HTML</Button>
-                </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')} aria-label="Mobile view">
+                  Mobile
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')} aria-label="Tablet view">
+                  Tablet
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')} aria-label="Desktop view">
+                  Desktop
+                </Button>
+                <Button size="sm" onClick={() => setIsPreviewExpanded(true)} aria-label="Expand preview">
+                  Expand
+                </Button>
               </div>
             </div>
-          </div>
-        </motion.div>
+
+            {PreviewBody}
+          </motion.section>
+        </div>
       </main>
+
+      <footer className="mt-20">
+        <SectionIntro className="py-16" from="up" hue={192}>
+          <div className="container-app">
+            <h2 className="sr-only">Live platform stats</h2>
+            <Counters />
+          </div>
+        </SectionIntro>
+      </footer>
+
+      {/* Expanded Preview Modal */}
+      {isPreviewExpanded && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Expanded portfolio preview"
+        >
+          <div className="w-[min(92vw,1400px)] max-h-[85vh] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-card">
+            <div className="flex items-center justify-between border-b border-border bg-muted/70 px-4 py-2">
+              <div className="flex gap-1.5" aria-hidden>
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--destructive))]" />
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
+                <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')}>
+                  Mobile
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')}>
+                  Tablet
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>
+                  Desktop
+                </Button>
+                <Button size="sm" onClick={() => setIsPreviewExpanded(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+            <div className="max-h-[calc(85vh-44px)] overflow-y-auto">{PreviewBody}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Publish overlay */}
+      <PublishingOverlay
+        open={overlayOpen}
+        error={overlayError}
+        url={overlayUrl}
+        onClose={() => {
+          setOverlayOpen(false);
+          setOverlayError(null);
+          setOverlayUrl(null);
+          setElapsedMs(0);
+          setProgress(0);
+          setSteps((prev) => prev.map((s) => ({ ...s, status: 'idle' })));
+        }}
+        brand="TheIdealProGen"
+        // logoSrc="/logo.svg" // <- optional if you have a logo file
+        steps={steps}
+        elapsedMs={elapsedMs}
+        progressPct={progress}
+      />
     </div>
   );
 }

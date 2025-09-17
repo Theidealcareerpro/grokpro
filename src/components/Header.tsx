@@ -141,7 +141,7 @@ export default function Header() {
             })}
             <Button variant="outline" className="ml-1 mr-1" asChild>
               <a
-                href="https://buymeacoffee.com/placeholder"
+                href="buymeacoffee.com/theidealcag"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Donate 5 dollars"
