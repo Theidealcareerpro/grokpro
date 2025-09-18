@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Loader2, X, Copy, Link as LinkIcon } from 'lucide-react';
-import Image from 'next/image';
+import Image, { StaticImageData } from 'next/image';
 import { Button } from '@/components/ui/button';
 
 export type Step = {
@@ -13,6 +13,34 @@ export type Step = {
   label: string;
   status: 'idle' | 'active' | 'done' | 'error';
 };
+
+
+function SafeLogo({
+  src,
+  fallback = '/favicon.ico',
+  size = 24,
+}: {
+  src: string | StaticImageData;
+  fallback?: string;
+  size?: number;
+}) {
+  const [imgSrc, setImgSrc] = React.useState<string | StaticImageData>(src);
+  const useIco = typeof imgSrc === 'string' && imgSrc.endsWith('.ico');
+
+  return (
+    <Image
+      src={imgSrc}
+      alt="Brand"
+      width={size}
+      height={size}
+      priority
+      sizes={`${size}px`}
+      unoptimized={useIco}               // .ico isn’t transformable—skip optimization
+      onError={() => setImgSrc(fallback)}
+      className="object-contain"
+    />
+  );
+}
 
 function formatElapsed(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -87,7 +115,7 @@ export default function PublishProgress({
             <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-5 py-3">
               <div className="flex items-center gap-3">
                 <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-black/30">
-                  <Image src={logoSrc} alt="Brand" width={24} height={24} />
+                  <SafeLogo src={logoSrc} fallback="/favicon.ico" size={24} />
                 </div>
                 <div>
                   <div className="text-sm leading-tight text-zinc-400">Publishing</div>

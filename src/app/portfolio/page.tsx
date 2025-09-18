@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import SectionIntro from '@/components/SectionIntro';
+import brandLogo from '@/logo.svg';
 import Counters from '@/components/AnimatedCounters';
 import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
@@ -468,7 +469,7 @@ export default function PortfolioPage() {
       {/* Publish overlay (driven by state above) */}
       <PublishProgress
         open={progressOpen}
-        logoSrc="/logo.png"
+        logoSrc={brandLogo}
         steps={steps}
         activePercent={activePercent}
         startedAt={startedAt}
