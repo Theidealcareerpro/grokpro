@@ -1,3 +1,4 @@
+// src/app/portfolio/page.tsx
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -5,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import SectionIntro from '@/components/SectionIntro';
-import brandLogo from '@/components/logo.svg';
+import brandLogo from '@/components/logo.svg'; // keep your working import
 import Counters from '@/components/AnimatedCounters';
 import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
@@ -25,12 +26,22 @@ type PublishApiResponse = {
 };
 
 type StepStatus = 'idle' | 'active' | 'done' | 'error';
-
 type Step = {
   key: 'prepare' | 'upload' | 'configure' | 'save' | 'activate';
   label: string;
   status: StepStatus;
 };
+
+type UsageOk = {
+  ok: true;
+  admin: boolean;
+  fingerprint: string;
+  counts: { publishesToday: number; publishedThisMonth: number; liveSites: number };
+  limits: { daily: number; monthly: number; live: number };
+  nextResetAt: string;
+  expirySoon: boolean;
+};
+type UsageRes = UsageOk | { ok: false; error: string };
 
 /* ----------------------------- Page ------------------------------ */
 
@@ -64,6 +75,9 @@ export default function PortfolioPage() {
   const [showDonationPrompt, setShowDonationPrompt] = useState(false);
   const [donationError, setDonationError] = useState<string | null>(null);
 
+  // ---- Usage chips state ----
+  const [usage, setUsage] = useState<UsageOk | null>(null);
+
   // ---- Publish overlay state (drives PublishProgress) ----
   const [progressOpen, setProgressOpen] = useState(false);
   const [steps, setSteps] = useState<Step[]>([
@@ -73,7 +87,7 @@ export default function PortfolioPage() {
     { key: 'save',      label: 'Save deployment',         status: 'idle' },
     { key: 'activate',  label: 'Activate & verify',       status: 'idle' },
   ]);
-  const [activePercent, setActivePercent] = useState(0); // micro bar for active step
+  const [activePercent, setActivePercent] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -82,6 +96,8 @@ export default function PortfolioPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors]);
 
+  /* ----------------------- Init & usage fetch ---------------------- */
+
   useEffect(() => {
     (async () => {
       try {
@@ -89,6 +105,7 @@ export default function PortfolioPage() {
         const { visitorId } = await fp.get();
         setFingerprint(visitorId);
 
+        // legacy meta read (unchanged)
         const { data, error } = await supabase
           .from('portfolios')
           .select('expiry, donation_status, github_repo')
@@ -123,7 +140,26 @@ export default function PortfolioPage() {
     })();
   }, []);
 
-  // Helpers to update step status/labels
+  // Fetch usage once we have the fingerprint
+  useEffect(() => {
+    const run = async () => {
+      if (!fingerprint) return;
+      const resp = await fetch('/api/usage', { headers: { 'x-fingerprint': fingerprint } });
+      const json = (await resp.json()) as UsageRes;
+      if (json.ok) setUsage(json);
+    };
+    void run();
+  }, [fingerprint]);
+
+  const refreshUsage = async () => {
+    if (!fingerprint) return;
+    const resp = await fetch('/api/usage', { headers: { 'x-fingerprint': fingerprint } });
+    const json = (await resp.json()) as UsageRes;
+    if (json.ok) setUsage(json);
+  };
+
+  /* ---------------------- Progress helpers ------------------------ */
+
   const setStepStatus = (key: Step['key'], status: StepStatus) =>
     setSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
 
@@ -142,6 +178,8 @@ export default function PortfolioPage() {
     setPublishError(null);
     setResultUrl(null);
   };
+
+  /* -------------------------- Publish ----------------------------- */
 
   const handlePublish = async () => {
     if (hasErrors) {
@@ -239,6 +277,9 @@ export default function PortfolioPage() {
         setStepStatus('activate', 'done');
         setResultUrl(url);
       }
+
+      // Refresh usage chips after a successful publish
+      await refreshUsage();
     } catch (err) {
       console.error('Publish error:', err);
       setPublishError(err instanceof Error ? err.message : 'Failed to publish portfolio.');
@@ -270,43 +311,68 @@ export default function PortfolioPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="mx-auto mb-6 flex max-w-7xl items-center justify-between px-4 pt-6">
-        <h1 className="text-2xl font-bold">Portfolio Builder</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setPortfolioData({
-                fullName: '',
-                role: '',
-                tagline: '',
-                location: '',
-                email: '',
-                phone: '',
-                linkedin: '',
-                photoDataUrl: '',
-                cvFileDataUrl: '',
-                cvFileName: '',
-                about: '',
-                skills: [''],
-                projects: [{ name: '', description: '', link: '' }],
-                certifications: [''],
-                media: [{ title: '', type: 'video', link: '' }],
-                socials: [{ label: '', url: '' }],
-                templateId: 'modern',
-                username: '',
-              });
-              setErrors({});
-              setResultUrl(null);
-            }}
-          >
-            Reset
-          </Button>
-          <Button onClick={handlePublish}>
-            Publish
-          </Button>
+      <header className="mx-auto mb-6 flex max-w-7xl flex-col gap-3 px-4 pt-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Portfolio Builder</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setPortfolioData({
+                  fullName: '',
+                  role: '',
+                  tagline: '',
+                  location: '',
+                  email: '',
+                  phone: '',
+                  linkedin: '',
+                  photoDataUrl: '',
+                  cvFileDataUrl: '',
+                  cvFileName: '',
+                  about: '',
+                  skills: [''],
+                  projects: [{ name: '', description: '', link: '' }],
+                  certifications: [''],
+                  media: [{ title: '', type: 'video', link: '' }],
+                  socials: [{ label: '', url: '' }],
+                  templateId: 'modern',
+                  username: '',
+                });
+                setErrors({});
+                setResultUrl(null);
+              }}
+            >
+              Reset
+            </Button>
+            <Button onClick={handlePublish}>Publish</Button>
+          </div>
         </div>
+
+        {/* Usage chips */}
+        {usage && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full border border-border bg-muted/40 px-2 py-1">
+              Publishes today: {usage.counts.publishesToday}/{usage.limits.daily}
+            </span>
+            <span className="rounded-full border border-border bg-muted/40 px-2 py-1">
+              This month: {usage.counts.publishedThisMonth}/{usage.limits.monthly}
+            </span>
+            <span className="rounded-full border border-border bg-muted/40 px-2 py-1">
+              Live sites: {usage.counts.liveSites}/{usage.limits.live}
+            </span>
+            {usage.expirySoon && (
+              <span className="rounded-full border border-yellow-800 bg-yellow-900/30 px-2 py-1 text-yellow-200">
+                Expiring soon
+              </span>
+            )}
+            {usage.admin && (
+              <span className="rounded-full border border-emerald-800 bg-emerald-900/30 px-2 py-1 text-emerald-200">
+                Admin
+              </span>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Main */}

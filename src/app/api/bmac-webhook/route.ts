@@ -1,108 +1,103 @@
-// src/app/api/bmac-webhook/route.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
-export const runtime = 'nodejs';        // needed for node 'crypto'
-export const dynamic = 'force-dynamic'; // don't cache webhooks
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-// Utility: JSON response helper
-const json = (body: any, status = 200) => NextResponse.json(body, { status });
+type DonationStatus = { amount?: number; extendedDays?: number };
+type AccountRecord = { expiry: string; donation_status: DonationStatus | null };
+
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status });
+}
 
 export async function POST(req: Request) {
-  // --- Verify signature using RAW body ---
   const signature = req.headers.get('x-bmac-signature');
   const secret = process.env.BMAC_WEBHOOK_SECRET;
-
-  if (!signature || !secret) {
-    return json({ error: 'Missing signature or secret' }, 401);
-  }
+  if (!signature || !secret) return json({ error: 'Missing signature or secret' }, 401);
 
   const raw = await req.text();
-  const computedSignature = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  const computed = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+  if (computed !== signature) return json({ error: 'Invalid signature' }, 401);
 
-  if (computedSignature !== signature) {
-    return json({ error: 'Invalid signature' }, 401);
-  }
-
-  // Parse JSON AFTER computing signature
-  let body: any;
+  let evt: {
+    type: string;
+    data?: { object?: { amount?: number; currency?: string; fingerprint?: string } };
+  };
   try {
-    body = JSON.parse(raw);
+    evt = JSON.parse(raw) as typeof evt;
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  const { type, data } = body ?? {};
-  if (type !== 'support' || !data?.object) {
-    return json({ error: 'Invalid webhook event' }, 400);
-  }
+  if (evt.type !== 'support' || !evt.data?.object) return json({ error: 'Invalid event' }, 400);
 
-  const amount = Number(data.object.amount);
-  const currency = String(data.object.currency || '').toLowerCase();
-  const fingerprint = String(data.object.fingerprint || '');
-
+  const amount = Number(evt.data.object.amount ?? 0);
+  const currency = String(evt.data.object.currency ?? '').toLowerCase();
+  const fingerprint = String(evt.data.object.fingerprint ?? '');
   if (!fingerprint) return json({ error: 'Missing fingerprint' }, 400);
-  if (currency !== 'usd' || !(amount >= 5)) {
-    return json({ error: 'Minimum $5 USD donation required' }, 400);
-  }
+  if (currency !== 'usd' || amount < 5) return json({ error: 'Minimum $5 USD donation required' }, 400);
 
-  try {
-    // READ: allow 0/1 row without 406
-    const { data: portfolio, error: readError } = await supabase
-      .from('portfolios')
-      .select('expiry, donation_status')
-      .eq('fingerprint', fingerprint)
-      .limit(1)
-      .maybeSingle();
+  // Read account
+  const { data: acc, error: accErr } = await supabaseAdmin
+    .from('accounts')
+    .select('expiry, donation_status')
+    .eq('fingerprint', fingerprint)
+    .maybeSingle();
 
-    if (readError) {
-      console.error('Supabase read error:', readError);
-      return json({ error: 'Database error' }, 500);
-    }
-    if (!portfolio) {
-      return json({ error: 'Portfolio not found' }, 404);
-    }
+  if (accErr) return json({ error: accErr.message }, 500);
+  if (!acc) return json({ error: 'Account not found' }, 404);
 
-    // Compute extension: $5 = 30 days
-    const extendedDays = Math.floor(amount / 5) * 30;
-    const newExpiry = new Date(portfolio.expiry);
-    newExpiry.setDate(newExpiry.getDate() + extendedDays);
+  const extendedDays = Math.floor(amount / 5) * 30;
+  const currentExpiry = new Date((acc as AccountRecord).expiry);
+  const newExpiry = new Date(currentExpiry.getTime());
+  newExpiry.setUTCDate(newExpiry.getUTCDate() + extendedDays);
 
-    // Cap to +180 days from NOW (preserves your original behavior)
-    const maxExpiry = new Date();
-    maxExpiry.setDate(maxExpiry.getDate() + 180);
-    if (newExpiry > maxExpiry) newExpiry.setTime(maxExpiry.getTime());
+  // Cap to +180 days from NOW
+  const cap = new Date();
+  cap.setUTCDate(cap.getUTCDate() + 180);
+  if (newExpiry > cap) newExpiry.setTime(cap.getTime());
 
-    // Update JSONB donation_status (merge + increment)
-    const current = portfolio.donation_status ?? { amount: 0, extendedDays: 0 };
-    const nextDonationStatus = {
-      amount: (current.amount ?? 0) + amount,
-      extendedDays: (current.extendedDays ?? 0) + extendedDays,
-    };
+  const current = ((acc as AccountRecord).donation_status ?? { amount: 0, extendedDays: 0 }) as DonationStatus;
+  const donation_status: DonationStatus = {
+    amount: (current.amount ?? 0) + amount,
+    extendedDays: (current.extendedDays ?? 0) + extendedDays,
+  };
 
-    const { error: updateError } = await supabase
-      .from('portfolios')
-      .update({
-        expiry: newExpiry.toISOString(),
-        donation_status: nextDonationStatus, // JSONB ✅
-      })
+  // Update account
+  const { error: updErr } = await supabaseAdmin
+    .from('accounts')
+    .update({ expiry: newExpiry.toISOString(), donation_status })
+    .eq('fingerprint', fingerprint);
+
+  if (updErr) return json({ error: updErr.message }, 500);
+
+  // Update all deployments expiry and revive if now in the future
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  // Set new expires_at for all deployments of this user
+  const { error: depUpdErr } = await supabaseAdmin
+    .from('deployments')
+    .update({ expires_at: newExpiry.toISOString() })
+    .eq('fingerprint', fingerprint);
+
+  if (depUpdErr) return json({ error: depUpdErr.message }, 500);
+
+  // If new expiry is in the future, mark all as live (revive)
+  if (newExpiry > now) {
+    const { error: reviveErr } = await supabaseAdmin
+      .from('deployments')
+      .update({ live: true })
       .eq('fingerprint', fingerprint);
 
-    if (updateError) {
-      console.error('Supabase update error:', updateError);
-      return json({ error: 'Failed to update portfolio' }, 500);
-    }
-
-    return json({ success: true, newExpiry: newExpiry.toISOString() });
-  } catch (err) {
-    console.error('Webhook error:', err);
-    return json({ error: 'Failed to process webhook' }, 500);
+    if (reviveErr) return json({ error: reviveErr.message }, 500);
   }
+
+  return json({ success: true, newExpiry: newExpiry.toISOString() });
 }
 
-// Optional: explicitly 405 other methods
 export function GET() {
   return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }
