@@ -3,39 +3,62 @@
 import * as React from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { Button } from '@/components/ui/button';
+import { Copy, Check, ExternalLink, RefreshCcw, Info } from 'lucide-react';
 
-const BMC_URL = 'https://www.buymeacoffee.com/theidealcag'; // 👈 your BMAC page
+const BMC_URL = 'https://www.buymeacoffee.com/theidealcag'; // your public BMAC page
 const MIN_USD = 5;
 const MIN_GBP = 5;
 
 export default function DonatePage() {
-  // Optional community goal UI — tweak or remove
-  const goal = 100;   // coffees
-  const raised = 25;  // coffees
+  // Community goal (optional UI)
+  const goal = 100;  // coffees
+  const raised = 25; // coffees
   const pct = Math.max(0, Math.min(100, Math.round((raised / goal) * 100)));
 
   const [fp, setFp] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [copyOk, setCopyOk] = React.useState(false);
+  const [copyErr, setCopyErr] = React.useState<string | null>(null);
+  const [loadingId, setLoadingId] = React.useState(true);
 
   const tag = fp ? `fp:${fp}` : '';
 
-  async function getIdAndCopy() {
-    setErrorMsg(null);
-    try {
-      let id = fp;
-      if (!id) {
+  // Get fingerprint on mount (quietly)
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
         const agent = await FingerprintJS.load();
         const { visitorId } = await agent.get();
-        id = visitorId;
-        setFp(visitorId);
+        if (mounted) setFp(visitorId);
+      } catch {
+        // fall back to manual fetch when user clicks
+      } finally {
+        if (mounted) setLoadingId(false);
       }
-      const toCopy = `fp:${id}`;
-      await navigator.clipboard.writeText(toCopy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function ensureId() {
+    if (fp) return fp;
+    const agent = await FingerprintJS.load();
+    const { visitorId } = await agent.get();
+    setFp(visitorId);
+    return visitorId;
+  }
+
+  async function copyTag() {
+    setCopyErr(null);
+    try {
+      const id = await ensureId();
+      const text = `fp:${id}`;
+      await navigator.clipboard.writeText(text);
+      setCopyOk(true);
+      setTimeout(() => setCopyOk(false), 2200);
     } catch {
-      setErrorMsg("Couldn't copy automatically — we’ll show your ID so you can copy it manually.");
+      setCopyErr('Copy failed. Please select the code and copy manually.');
     }
   }
 
@@ -43,104 +66,179 @@ export default function DonatePage() {
     window.open(BMC_URL, '_blank', 'noopener');
   }
 
+  function ManualCode() {
+    return (
+      <div className="group relative flex items-center gap-2">
+        <code
+          className="rounded-md border border-border bg-muted px-2 py-1 text-xs"
+          title="Your anonymous extension ID"
+        >
+          {tag || 'fp:…'}
+        </code>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8"
+          onClick={copyTag}
+          disabled={loadingId}
+        >
+          {copyOk ? <Check className="mr-1.5 h-4 w-4" /> : <Copy className="mr-1.5 h-4 w-4" />}
+          {copyOk ? 'Copied' : 'Copy'}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <main className="container-app max-w-3xl py-12">
-      <section className="card p-8">
-        <header className="mb-4">
-          <p className="section-title">Support The Ideal Professional</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
-            Support Us
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Your coffee keeps this platform free for students and early-career professionals. Thank you!
+      <section className="rounded-2xl border border-border bg-card p-8">
+        {/* Heading */}
+        <header className="mb-6">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Support The Ideal Professional
           </p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground">
+            Support Us & Extend Your Portfolio
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We keep the builder free for students and early-career pros. A small tip helps cover hosting
+            and lets us keep shipping features.
+          </p>
+
+          {/* Currency rule pill */}
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+            <Info className="h-3.5 w-3.5" />
+            We accept <strong className="mx-1 text-foreground">USD</strong> or{' '}
+            <strong className="mx-1 text-foreground">GBP</strong>. Any amount{' '}
+            <strong className="mx-1 text-foreground">≥ ${MIN_USD} / £{MIN_GBP}</strong> adds{' '}
+            <strong className="mx-1 text-foreground">+30 days</strong> automatically.
+          </div>
         </header>
 
-        {/* --- How to donate (folded inline) --- */}
+        {/* 4-step visual guide */}
         <section>
-          <h2 className="text-xl font-semibold">How to donate (and extend your time)</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            We accept <strong>USD</strong> or <strong>GBP</strong>. Any amount <strong>≥ ${MIN_USD} / £{MIN_GBP}</strong> automatically extends your portfolio by <strong>30 days</strong> via our webhook.
-          </p>
-
-          <ol className="mt-4 space-y-3">
+          <ol className="relative ml-3 space-y-4 before:absolute before:left-[-1px] before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border">
             {/* Step 1 */}
-            <li className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-medium">1) Get your extension ID</div>
+            <li className="relative rounded-xl border border-border bg-card/60 p-4">
+              <span className="absolute -left-[21px] top-4 grid h-5 w-5 place-items-center rounded-full border border-border bg-background text-[10px]">
+                1
+              </span>
+              <div className="text-sm font-medium">Get your extension ID</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                We use an anonymous ID to match your donation to your account.
+                We use an anonymous ID to match your donation to your account. It never contains personal data.
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Button onClick={getIdAndCopy} className="h-9">
-                  {copied ? 'Copied!' : 'Get my ID (copies)'}
-                </Button>
-                {tag ? (
-                  <code className="rounded bg-muted px-2 py-1 text-xs">{tag}</code>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {loadingId ? (
+                  <Button disabled size="sm" className="h-8">
+                    Fetching ID…
+                  </Button>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Your ID will appear here after fetching.</span>
+                  <>
+                    <ManualCode />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8"
+                      onClick={async () => {
+                        setLoadingId(true);
+                        try {
+                          const agent = await FingerprintJS.load();
+                          const { visitorId } = await agent.get();
+                          setFp(visitorId);
+                        } finally {
+                          setLoadingId(false);
+                        }
+                      }}
+                    >
+                      <RefreshCcw className="mr-1.5 h-4 w-4" />
+                      Refresh ID
+                    </Button>
+                  </>
                 )}
               </div>
-              {errorMsg ? <p className="mt-2 text-xs text-red-400">{errorMsg}</p> : null}
-              {!copied && tag ? (
-                <button
-                  className="mt-2 text-xs underline underline-offset-4 opacity-80 hover:opacity-100"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(tag);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2500);
-                    } catch {
-                      setErrorMsg('Copy failed — please select and copy the code above.');
-                    }
-                  }}
-                >
-                  Copy again
-                </button>
+              {copyErr ? <p className="mt-2 text-xs text-red-400">{copyErr}</p> : null}
+              {!copyOk && tag ? (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Tip: Paste <code className="rounded bg-muted px-1">fp:…</code> into the BMAC message box.
+                </p>
               ) : null}
             </li>
 
             {/* Step 2 */}
-            <li className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-medium">2) Open our Buy Me a Coffee page</div>
+            <li className="relative rounded-xl border border-border bg-card/60 p-4">
+              <span className="absolute -left-[21px] top-4 grid h-5 w-5 place-items-center rounded-full border border-border bg-background text-[10px]">
+                2
+              </span>
+              <div className="text-sm font-medium">Open our Buy Me a Coffee page</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                We’ll open it in a new tab so you can paste your ID.
+                We’ll open it in a new tab so you can paste your ID in the message field.
               </p>
-              <div className="mt-2">
-                <Button onClick={openBmac} variant="secondary" className="h-9">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button type="button" onClick={openBmac} className="h-9">
+                  <ExternalLink className="mr-2 h-4 w-4" />
                   Open Buy Me a Coffee
                 </Button>
+                <a
+                  href={BMC_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs underline underline-offset-4"
+                  aria-label="Open the Buy Me a Coffee page"
+                >
+                  Or copy link
+                </a>
               </div>
             </li>
 
             {/* Step 3 */}
-            <li className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-medium">3) Paste your ID in “Say something nice…”</div>
+            <li className="relative rounded-xl border border-border bg-card/60 p-4">
+              <span className="absolute -left-[21px] top-4 grid h-5 w-5 place-items-center rounded-full border border-border bg-background text-[10px]">
+                3
+              </span>
+              <div className="text-sm font-medium">Paste your ID in “Say something nice…”</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Paste the code that looks like <code>fp:abc123…</code> into the message box on the BMAC checkout.
+                Paste the code that looks like <code className="rounded bg-muted px-1">fp:abc123…</code>.
+                This lets our webhook extend the correct portfolio automatically.
               </p>
+
+              {/* Faux message field illustration */}
+              <div className="mt-3 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+                <div className="mb-1 text-[11px] uppercase tracking-wide">Example</div>
+                <div className="rounded-md border border-border bg-background px-3 py-2">
+                  Say something nice… <span className="text-foreground">fp:abc123def456…</span>
+                </div>
+              </div>
             </li>
 
             {/* Step 4 */}
-            <li className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-medium">4) Complete your donation</div>
+            <li className="relative rounded-xl border border-border bg-card/60 p-4">
+              <span className="absolute -left-[21px] top-4 grid h-5 w-5 place-items-center rounded-full border border-border bg-background text-[10px]">
+                4
+              </span>
+              <div className="text-sm font-medium">Complete your donation</div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Any amount <strong>≥ ${MIN_USD} / £{MIN_GBP}</strong> adds <strong>30 days</strong>. Larger amounts scale linearly (e.g., $10 ⇒ 60 days). We cap total extensions to keep things fair.
+                Any amount <strong>≥ ${MIN_USD} / £{MIN_GBP}</strong> adds <strong>+30 days</strong>.
+                Larger amounts scale linearly (e.g., $10 → +60 days). We cap total extension to keep it fair.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                After payment, our system updates your expiry automatically via a secure webhook. Refresh your deployments page to see the new date.
+                After payment, our webhook updates your expiry automatically. Give it a minute, then refresh
+                your <span className="underline underline-offset-2">Deployments</span> page to see the new date.
               </p>
             </li>
           </ol>
 
-          {/* Optional quick links */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* Quick amount shortcuts (optional) */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             {['$5', '$10', '$25'].map((amt) => (
               <a
                 key={amt}
                 href={BMC_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary"
+                className="inline-flex h-9 items-center rounded-md border border-border bg-card px-3 text-sm hover:bg-muted/50"
                 aria-label={`Donate ${amt} on Buy Me a Coffee`}
               >
                 Give {amt}
@@ -148,26 +246,27 @@ export default function DonatePage() {
             ))}
           </div>
 
-          {/* Help & privacy */}
+          {/* Trust / Help */}
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="text-sm font-semibold">Troubleshooting</div>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>• Copy failed? Select the <code>fp:…</code> code and copy manually.</li>
-                <li>• Don’t see an ID? Click “Get my ID (copies)” again.</li>
-                <li>• Donation done but time not extended? Give it a moment, then refresh your deployments page.</li>
+                <li>• Copy failed? Select the <code className="rounded bg-muted px-1">fp:…</code> code and copy manually.</li>
+                <li>• No ID showing? Tap <em>Refresh ID</em> (Step 1) and try again.</li>
+                <li>• Donated but time not extended? Wait a minute and refresh your Deployments page.</li>
               </ul>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
-              <div className="text-sm font-semibold">Privacy & security</div>
+              <div className="text-sm font-semibold">Privacy & Security</div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Your ID is anonymous and used only to match donations. Payments happen on Buy Me a Coffee; we don’t see or store your card details.
+                Your ID is anonymous and used only to match donations. Payments happen on Buy Me a Coffee;
+                we don’t see or store your card details.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Community goal (optional) */}
+        {/* Community goal (optional visual) */}
         <div className="mt-10">
           <h2 className="text-base font-semibold text-foreground">Community Goal</h2>
           <p className="mt-1 text-sm text-muted-foreground">
