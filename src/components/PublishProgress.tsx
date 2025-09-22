@@ -18,7 +18,7 @@ export type Step = {
 function SafeLogo({
   src,
   fallback = '/favicon.ico',
-  size = 24,
+  size = 34,
 }: {
   src: string | StaticImageData;
   fallback?: string;
@@ -115,12 +115,12 @@ export default function PublishProgress({
             <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-5 py-3">
               <div className="flex items-center gap-3">
                 <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-black/30">
-                  <SafeLogo src={logoSrc} fallback="/favicon.ico" size={24} />
+                  <SafeLogo src={logoSrc} fallback="/favicon.ico" size={34} />
                 </div>
                 <div>
                   <div className="text-sm leading-tight text-zinc-400">Publishing</div>
                   <div className="text-base font-semibold leading-tight text-zinc-50">
-                    Generating your GitHub Pages site…
+                    Generating your Portfolio…
                   </div>
                 </div>
               </div>
@@ -139,7 +139,7 @@ export default function PublishProgress({
               </div>
               <div className="mt-2 flex justify-between text-xs text-zinc-500">
                 <span>{Math.floor(overall)}%</span>
-                <span>GitHub Pages</span>
+                <span>Portfolio Pages</span>
               </div>
             </div>
 
@@ -180,7 +180,7 @@ export default function PublishProgress({
 
             {!resultUrl && !error && typeof etaSec === 'number' && (
               <div className="mx-5 mb-2 flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
-                <div className="text-sm text-zinc-400">Waiting for GitHub Pages to activate…</div>
+                <div className="text-sm text-zinc-400">Waiting for Portfolio Pages to activate…</div>
                 <div className="grid h-10 w-16 place-items-center rounded-md bg-zinc-800 text-xl font-extrabold tabular-nums">
                   {etaSec}s
                 </div>

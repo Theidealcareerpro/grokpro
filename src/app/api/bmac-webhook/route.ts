@@ -1,3 +1,4 @@
+// src/app/api/bmac-webhook/route.ts
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -5,14 +6,114 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type DonationStatus = { amount?: number; extendedDays?: number };
-type AccountRecord = { expiry: string; donation_status: DonationStatus | null };
+/* ---------------- helpers ---------------- */
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status });
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+/** Pull amount/currency from common BMAC shapes (flat or nested). */
+function getAmountCurrency(payload: unknown): { amount: number; currency: string } | null {
+  if (!isRecord(payload)) return null;
+
+  // Many payloads use { data: {...} }, some use { object: {...} }
+  const container = ((): Record<string, unknown> | null => {
+    if (isRecord(payload.data)) return payload.data as Record<string, unknown>;
+    if (isRecord(payload.object)) return payload.object as Record<string, unknown>;
+    return null;
+  })();
+
+  if (!container) return null;
+
+  // Try flat first
+  const flatAmountRaw = container.amount;
+  const flatCurrencyRaw = container.currency;
+  // Then nested under .object
+  const nested = isRecord(container.object) ? (container.object as Record<string, unknown>) : null;
+  const nestedAmountRaw = nested?.amount;
+  const nestedCurrencyRaw = nested?.currency;
+
+  const amountRaw = flatAmountRaw ?? nestedAmountRaw;
+  const currencyRaw = flatCurrencyRaw ?? nestedCurrencyRaw;
+
+  const amount = typeof amountRaw === 'string' ? Number(amountRaw) : typeof amountRaw === 'number' ? amountRaw : NaN;
+  const currency =
+    typeof currencyRaw === 'string' && currencyRaw.trim() ? currencyRaw.trim().toUpperCase() : '';
+
+  if (!Number.isFinite(amount) || !currency) return null;
+  return { amount, currency };
+}
+
+/** Pull supporter note/message where the user pastes fp:xxxx. */
+function getSupportNote(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  const container = ((): Record<string, unknown> | null => {
+    if (isRecord(payload.data)) return payload.data as Record<string, unknown>;
+    if (isRecord(payload.object)) return payload.object as Record<string, unknown>;
+    return null;
+  })();
+  if (!container) return null;
+
+  const flat =
+    (typeof container.support_note === 'string' && container.support_note) ||
+    (typeof container.message === 'string' && container.message) ||
+    (typeof container.note === 'string' && container.note) ||
+    null;
+
+  const nested = isRecord(container.object) ? (container.object as Record<string, unknown>) : null;
+  const nestedNote =
+    (nested && typeof nested.support_note === 'string' && nested.support_note) ||
+    (nested && typeof nested.message === 'string' && nested.message) ||
+    (nested && typeof nested.note === 'string' && nested.note) ||
+    null;
+
+  const val = flat ?? nestedNote;
+  return val && val.trim() ? val.trim() : null;
+}
+
+/** If BMAC ever sends a dedicated fingerprint field, use it. */
+function getDirectFingerprint(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  const container = ((): Record<string, unknown> | null => {
+    if (isRecord(payload.data)) return payload.data as Record<string, unknown>;
+    if (isRecord(payload.object)) return payload.object as Record<string, unknown>;
+    return null;
+  })();
+  if (!container) return null;
+
+  const flat =
+    (typeof container.fingerprint === 'string' && container.fingerprint) || null;
+
+  const nested = isRecord(container.object) ? (container.object as Record<string, unknown>) : null;
+  const nestedFp =
+    (nested && typeof nested.fingerprint === 'string' && nested.fingerprint) || null;
+
+  const fp = flat ?? nestedFp;
+  return fp && fp.trim() ? fp.trim() : null;
+}
+
+/** Extract `fp:xxxxxxxx` from free-text note. */
+function extractFingerprint(note: string | null): string | null {
+  if (!note) return null;
+  const m = note.match(/fp:([a-z0-9_-]{8,64})/i);
+  return m?.[1] ?? null;
+}
+
+/* ---------------- webhook ---------------- */
+
+type BmacEvent = {
+  type?: string;
+  live_mode?: boolean;
+  data?: unknown;
+  object?: unknown;
+};
+
 export async function POST(req: Request) {
+  // 1) Verify signature
   const signature = req.headers.get('x-bmac-signature');
   const secret = process.env.BMAC_WEBHOOK_SECRET;
   if (!signature || !secret) return json({ error: 'Missing signature or secret' }, 401);
@@ -21,25 +122,37 @@ export async function POST(req: Request) {
   const computed = crypto.createHmac('sha256', secret).update(raw).digest('hex');
   if (computed !== signature) return json({ error: 'Invalid signature' }, 401);
 
-  let evt: {
-    type: string;
-    data?: { object?: { amount?: number; currency?: string; fingerprint?: string } };
-  };
+  // 2) Parse
+  let evt: BmacEvent;
   try {
-    evt = JSON.parse(raw) as typeof evt;
+    evt = JSON.parse(raw) as BmacEvent;
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  if (evt.type !== 'support' || !evt.data?.object) return json({ error: 'Invalid event' }, 400);
+  const type = (evt.type || '').toLowerCase();
+  // Accept common variants
+  if (!['donation.created', 'support.created', 'support'].includes(type)) {
+    return json({ error: `Unhandled event type: ${evt.type ?? 'unknown'}` }, 400);
+  }
 
-  const amount = Number(evt.data.object.amount ?? 0);
-  const currency = String(evt.data.object.currency ?? '').toLowerCase();
-  const fingerprint = String(evt.data.object.fingerprint ?? '');
-  if (!fingerprint) return json({ error: 'Missing fingerprint' }, 400);
-  if (currency !== 'usd' || amount < 5) return json({ error: 'Minimum $5 USD donation required' }, 400);
+  // 3) Normalize amount/currency
+  const amtCur = getAmountCurrency(evt);
+  if (!amtCur) return json({ error: 'Missing amount/currency' }, 400);
 
-  // Read account
+  const amount = amtCur.amount;
+  const currency = amtCur.currency; // e.g., "USD" | "GBP"
+
+  // Multi-currency (simple): accept USD or GBP, amount >= 5
+  if (!['USD', 'GBP'].includes(currency) || amount < 5) {
+    return json({ error: 'Minimum 5 in USD or GBP required' }, 400);
+  }
+
+  // 4) Find fingerprint (direct or fp:xxxx in note)
+  const fingerprint = getDirectFingerprint(evt) ?? extractFingerprint(getSupportNote(evt)) ?? '';
+  if (!fingerprint) return json({ error: 'Missing fingerprint (paste fp:xxxx in the note)' }, 400);
+
+  // 5) Extend account + deployments
   const { data: acc, error: accErr } = await supabaseAdmin
     .from('accounts')
     .select('expiry, donation_status')
@@ -49,18 +162,26 @@ export async function POST(req: Request) {
   if (accErr) return json({ error: accErr.message }, 500);
   if (!acc) return json({ error: 'Account not found' }, 404);
 
+  // Every full 5 units = +30 days
   const extendedDays = Math.floor(amount / 5) * 30;
-  const currentExpiry = new Date((acc as AccountRecord).expiry);
-  const newExpiry = new Date(currentExpiry.getTime());
-  newExpiry.setUTCDate(newExpiry.getUTCDate() + extendedDays);
 
-  // Cap to +180 days from NOW
-  const cap = new Date();
+  const now = new Date();
+  const cap = new Date(now.getTime());
   cap.setUTCDate(cap.getUTCDate() + 180);
+
+  const currentExpiry = new Date((acc as { expiry: string }).expiry);
+  const base = Number.isFinite(currentExpiry.getTime()) ? currentExpiry : now;
+
+  const newExpiry = new Date(base.getTime());
+  newExpiry.setUTCDate(newExpiry.getUTCDate() + extendedDays);
   if (newExpiry > cap) newExpiry.setTime(cap.getTime());
 
-  const current = ((acc as AccountRecord).donation_status ?? { amount: 0, extendedDays: 0 }) as DonationStatus;
-  const donation_status: DonationStatus = {
+  // donation_status: keep aggregating
+  const current = ((acc as { donation_status?: { amount?: number; extendedDays?: number } }).donation_status) ?? {
+    amount: 0,
+    extendedDays: 0,
+  };
+  const donation_status = {
     amount: (current.amount ?? 0) + amount,
     extendedDays: (current.extendedDays ?? 0) + extendedDays,
   };
@@ -73,31 +194,26 @@ export async function POST(req: Request) {
 
   if (updErr) return json({ error: updErr.message }, 500);
 
-  // Update all deployments expiry and revive if now in the future
-  const now = new Date();
-  const nowIso = now.toISOString();
-
-  // Set new expires_at for all deployments of this user
-  const { error: depUpdErr } = await supabaseAdmin
+  // Update all live deployments (your schema uses expires_at)
+  const { error: depErr } = await supabaseAdmin
     .from('deployments')
     .update({ expires_at: newExpiry.toISOString() })
-    .eq('fingerprint', fingerprint);
+    .eq('fingerprint', fingerprint)
+    .eq('live', true);
 
-  if (depUpdErr) return json({ error: depUpdErr.message }, 500);
+  if (depErr) return json({ error: depErr.message }, 500);
 
-  // If new expiry is in the future, mark all as live (revive)
-  if (newExpiry > now) {
-    const { error: reviveErr } = await supabaseAdmin
-      .from('deployments')
-      .update({ live: true })
-      .eq('fingerprint', fingerprint);
-
-    if (reviveErr) return json({ error: reviveErr.message }, 500);
-  }
-
-  return json({ success: true, newExpiry: newExpiry.toISOString() });
+  return json({
+    success: true,
+    fingerprint,
+    currency,
+    amount,
+    extendedDays,
+    newExpiry: newExpiry.toISOString(),
+  });
 }
 
+// Optional: explicitly 405 others
 export function GET() {
   return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
 }

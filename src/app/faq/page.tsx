@@ -26,8 +26,8 @@ const FAQS: FAQ[] = [
     a: (
       <>
         It’s a toolkit to help you ship a professional portfolio, CV, and cover
-        letter in minutes—live preview, beautiful templates, and one-click deploy
-        to GitHub Pages. Your data stays on your device until you export.
+        letter in minutes—live preview, beautiful templates, and one-click deploy.
+        Your data stays on your device until you export.
       </>
     ),
   },
@@ -59,7 +59,7 @@ const FAQS: FAQ[] = [
       <>
         Go to <Link className="underline" href="/portfolio">Portfolio Builder</Link>,
         pick a template, edit with live preview, then click <em>Deploy</em> to publish
-        to GitHub Pages. We’ll guide you through the repo and branch setup.
+        your portfolio. We’ll guide you through the repo and branch setup.
       </>
     ),
   },
@@ -68,7 +68,7 @@ const FAQS: FAQ[] = [
     q: 'Can I use my own domain?',
     a: (
       <>
-        Yes. Point your domain to GitHub Pages (CNAME). Then add your domain in the
+        Yes. Point your domain to your portfolio (CNAME). Then add your domain in the
         repo settings. We include basic instructions in the deploy step.
       </>
     ),
@@ -109,7 +109,7 @@ const FAQS: FAQ[] = [
     a: (
       <>
         By default, your content stays on your device. When you choose to deploy or export,
-        we only process what’s required (e.g., GitHub Pages). See our privacy note in the UI.
+        we only process what’s required. See our privacy note in the UI.
       </>
     ),
   },

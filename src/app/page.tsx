@@ -310,7 +310,7 @@ const TESTIMONIALS: Testimonial[] = [
   },
   {
     quote:
-      "Deploying to GitHub Pages with one click is brilliant. The upgrade path for longer hosting is fair.",
+      "Deploying portfolio with one click is brilliant. The upgrade path for longer hosting is fair.",
     name: "Zara L.",
     role: "Data Analyst",
     initial: "Z",
@@ -427,7 +427,7 @@ export default function HomePage() {
           </RevealItem>
           <RevealItem delay={0.05}>
             <p className="mx-auto mt-3 max-w-3xl text-pretty text-lg text-muted-foreground">
-              Live preview, beautiful templates, dark mode, and one-click deploy to GitHub Pages.
+              Live preview, beautiful templates, dark mode, and one-click deploy of portfolio.
               CV & Cover Letter tools included — PDF export only, never stored.
             </p>
           </RevealItem>
@@ -462,7 +462,7 @@ export default function HomePage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { title: "In-browser, privacy-first", desc: "Your data stays on your device. Export PDF/JSON when you choose." },
-              { title: "GitHub Pages deploy", desc: "Clean URLs on your org or username site. Upgrade to extend hosting." },
+              { title: "Portfolio Pages deploy", desc: "Clean URLs on your org or username site. Upgrade to extend hosting." },
               { title: "Live preview", desc: "Edit and see changes immediately. No guessing." },
               { title: "Dark mode & themes", desc: "Accessible color system with AA contrast and brand tinting." },
               { title: "ATS-friendly CVs", desc: "Templates that avoid images/columns in the core content." },
@@ -487,12 +487,12 @@ export default function HomePage() {
         hue={226}
       >
         <div className="container-app">
-          <SectionTitle eyebrow="Three steps" title="Pick a template, edit with live preview, deploy to GitHub Pages" />
+          <SectionTitle eyebrow="Three steps" title="Pick a template, edit with live preview, deploy Portfolio" />
           <ol className="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-3">
             {[
               { k: "1", t: "Pick a template", d: "Modern, Classic, or Minimal." },
               { k: "2", t: "Edit live", d: "Update content and theme instantly." },
-              { k: "3", t: "Deploy", d: "One-click GitHub Pages publish." },
+              { k: "3", t: "Deploy", d: "One-click Portfolio publish." },
             ].map((s, i) => (
               <RevealItem key={s.k} delay={i * 0.06}>
                 <li className="card p-6 text-center">

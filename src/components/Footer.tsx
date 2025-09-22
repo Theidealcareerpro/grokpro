@@ -61,7 +61,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-              Free, beautiful documents for students — powered by $5 coffees.
+              Free, beautiful documents for students and Professionals — powered by $5 coffees.
             </p>
             <div className="mt-3 flex gap-3">
               {SOCIAL.map((s) => (

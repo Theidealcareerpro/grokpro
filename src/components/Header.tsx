@@ -189,7 +189,7 @@ export default function Header() {
                 })}
                 <Button variant="outline" className="mt-2" asChild>
                   <a
-                    href="https://buymeacoffee.com/placeholder"
+                    href="https://buymeacoffee.com/theidealcag"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setIsOpen(false)}
