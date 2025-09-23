@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import SectionIntro from '@/components/SectionIntro';
-import brandLogo from '@/components/logo.svg'; // keep your working import
+import brandLogo from '@/components/logo.png'; // keep your working import
 import Counters from '@/components/AnimatedCounters';
 import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';

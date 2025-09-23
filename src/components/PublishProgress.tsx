@@ -62,7 +62,7 @@ export default function PublishProgress({
   onCopyLink,
 }: {
   open: boolean;
-  logoSrc?: string;
+  logoSrc?: string | StaticImageData;
   steps: Step[];
   activePercent: number;
   startedAt: number | null;
