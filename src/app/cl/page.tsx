@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Document, Page, Text, StyleSheet } from '@react-pdf/renderer';
@@ -115,13 +115,13 @@ export default function CLPage() {
         </PDFDownloadLink>
       </header>
 
-      <main className="mx-auto max-w-[90vw] px-6 flex flex-col lg:flex-row gap-8">
+      {/* MOBILE SIZING FIXES */}
+      <main className="mx-auto w-full max-w-none px-4 lg:max-w-[90vw] lg:px-6 flex flex-col lg:flex-row gap-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-zinc-800 p-8 rounded-lg shadow-md h-fit"
-          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
+          className="bg-white dark:bg-zinc-800 p-4 sm:p-8 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
         >
           <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
             Build your professional cover letter. It updates live on the right.
@@ -137,7 +137,7 @@ export default function CLPage() {
             <CLForm clData={clData} setCLData={setCLData} />
           )}
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
             {currentStep < 2 ? (
               <Button
                 type="button"
@@ -179,10 +179,9 @@ export default function CLPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit ${
+          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${
             isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-40 overflow-y-auto' : ''
           }`}
-          style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
         >
           <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
@@ -210,7 +209,7 @@ export default function CLPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-1 h-[calc(100%-2rem)] overflow-y-auto">
+          <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">
             {loading ? (
               <div className="space-y-4">
                 <Skeleton className="h-6 w-1/3" />

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
   import { CLData } from '@/lib/types';
 
   interface CLPreviewProps {

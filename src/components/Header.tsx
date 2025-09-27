@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -90,12 +90,13 @@ export default function Header() {
         className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50"
         role="banner"
       >
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        {/* MOBILE ADAPTABILITY: full-width container on mobile, clamp on md+; comfy paddings */}
+        <div className="w-full max-w-none md:container md:mx-auto px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between">
           {/* Brand */}
           <Link
             href="/"
             aria-label="TheIdealProGen home"
-            className="group inline-flex items-center gap-2 text-xl font-bold text-foreground"
+            className="group inline-flex items-center gap-2 text-lg md:text-xl font-bold text-foreground"
           >
             <motion.img
               src="/favicon.ico"
@@ -103,7 +104,7 @@ export default function Header() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="h-8 w-auto"
+              className="h-7 w-auto md:h-8"
               loading="eager"
               decoding="async"
             />
@@ -141,7 +142,7 @@ export default function Header() {
             })}
             <Button variant="outline" className="ml-1 mr-1" asChild>
               <a
-                href="buymeacoffee.com/theidealcag"
+                href="https://buymeacoffee.com/theidealcag"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Donate 5 dollars"
@@ -168,8 +169,18 @@ export default function Header() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent id="mobile-menu" side="right" className="w-[240px] sm:w-[300px]">
-              <nav className="mt-6 flex flex-col gap-1" aria-label="Mobile">
+            {/* MOBILE ADAPTABILITY: wider sheet on small screens, bigger tap targets */}
+            <SheetContent
+              id="mobile-menu"
+              side="right"
+              className="w-[88vw] max-w-xs sm:max-w-sm p-0"
+            >
+              <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between">
+                <span className="text-base font-semibold">Menu</span>
+                <ThemeToggle />
+              </div>
+
+              <nav className="p-2 flex flex-col gap-1" aria-label="Mobile">
                 {NAV_LINKS.map((link) => {
                   const active = pathname === link.href;
                   return (
@@ -179,7 +190,7 @@ export default function Header() {
                       aria-current={active ? 'page' : undefined}
                       onClick={() => setIsOpen(false)}
                       className={[
-                        'rounded-md px-3 py-2 transition',
+                        'rounded-md px-3 py-3 text-base transition',
                         active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
                       ].join(' ')}
                     >
@@ -187,20 +198,24 @@ export default function Header() {
                     </Link>
                   );
                 })}
-                <Button variant="outline" className="mt-2" asChild>
-                  <a
-                    href="https://buymeacoffee.com/theidealcag"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsOpen(false)}
-                    aria-label="Donate 5 dollars"
-                  >
-                    <Coffee className="mr-2 h-5 w-5" />
-                    Donate $5
-                  </a>
-                </Button>
-                <div className="pt-2">
-                  <ThemeToggle />
+
+                <div className="p-2">
+                  <Button variant="outline" className="w-full justify-center py-3 text-base" asChild>
+                    <a
+                      href="https://buymeacoffee.com/theidealcag"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsOpen(false)}
+                      aria-label="Donate 5 dollars"
+                    >
+                      <Coffee className="mr-2 h-5 w-5" />
+                      Donate $5
+                    </a>
+                  </Button>
+                </div>
+
+                <div className="px-4 py-2 text-xs text-muted-foreground">
+                  External links open in a new tab.
                 </div>
               </nav>
             </SheetContent>

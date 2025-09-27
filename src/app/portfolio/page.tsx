@@ -1,4 +1,4 @@
-// src/app/portfolio/page.tsx
+﻿// src/app/portfolio/page.tsx
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -300,9 +300,15 @@ export default function PortfolioPage() {
 
   const previewMaxWidth = viewSize === 'mobile' ? 375 : viewSize === 'tablet' ? 768 : 1280;
 
+  // NEW: mobile-specific preview style (tablet/desktop use original maxWidth)
+  const previewStyle =
+    viewSize === 'mobile'
+      ? { width: 'min(calc(100vw - 2rem), 390px)', marginLeft: 'auto', marginRight: 'auto' }
+      : { maxWidth: previewMaxWidth, marginLeft: 'auto', marginRight: 'auto' };
+
   const PreviewBody = (
-    <div className="rounded-b-2xl bg-card p-6">
-      <div ref={previewRef} style={{ maxWidth: previewMaxWidth, marginLeft: 'auto', marginRight: 'auto' }}>
+    <div className="rounded-b-2xl bg-card p-4 sm:p-6">
+      <div ref={previewRef} style={previewStyle}>
         <PortfolioPreview data={portfolioData} />
       </div>
     </div>
@@ -314,7 +320,7 @@ export default function PortfolioPage() {
       <header className="mx-auto mb-6 flex max-w-7xl flex-col gap-3 px-4 pt-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Portfolio Builder</h1>
-          <div className="flex gap-2">
+          <div className="hidden lg:flex gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -376,17 +382,16 @@ export default function PortfolioPage() {
       </header>
 
       {/* Main */}
-      <main className="mx-auto max-w-[90vw] px-6">
+      <main className="mx-auto w-full max-w-none px-4 lg:max-w-[90vw] lg:px-6">
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Left: Form */}
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-lg border border-border bg-card text-card-foreground shadow-card"
-            style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
+            className="w-full lg:w-[45vw] lg:max-w-[800px] rounded-lg border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <PortfolioForm
                 portfolioData={portfolioData}
                 setPortfolioData={setPortfolioData}
@@ -475,8 +480,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-            className="rounded-2xl border border-border bg-card text-card-foreground shadow-card"
-            style={{ width: '45vw', minWidth: '300px', maxWidth: '800px', transition: 'width 0.3s ease-in-out' }}
+            className="w-full lg:w-[45vw] lg:max-w-[800px] rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
             <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-muted/60 px-4 py-2">
               <div className="flex gap-1.5" aria-hidden>
@@ -484,7 +488,7 @@ export default function PortfolioPage() {
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
               </div>
-              <div className="flex gap-2">
+              <div className="hidden lg:flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')} aria-label="Mobile view">Mobile</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')} aria-label="Tablet view">Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')} aria-label="Desktop view">Desktop</Button>
@@ -520,7 +524,7 @@ export default function PortfolioPage() {
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
               </div>
-              <div className="flex gap-2">
+              <div className="hidden lg:flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')}>Mobile</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')}>Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>Desktop</Button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { CLData, EMPTY_CL } from '@/lib/types';
 import Section from './Section';

@@ -68,7 +68,7 @@ export default function DonatePage() {
 
   function ManualCode() {
     return (
-      <div className="group relative flex items-center gap-2">
+      <div className="group relative flex flex-wrap items-center gap-2">
         <code
           className="rounded-md border border-border bg-muted px-2 py-1 text-xs"
           title="Your anonymous extension ID"
@@ -91,8 +91,9 @@ export default function DonatePage() {
   }
 
   return (
-    <main className="container-app max-w-3xl py-12">
-      <section className="rounded-2xl border border-border bg-card p-8">
+    // MOBILE SIZING FIXES: make container full-width on mobile; restore clamp on lg+
+    <main className="container-app w-full max-w-none px-4 sm:px-6 lg:max-w-3xl py-12">
+      <section className="rounded-2xl border border-border bg-card p-4 sm:p-8">
         {/* Heading */}
         <header className="mb-6">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -107,7 +108,7 @@ export default function DonatePage() {
           </p>
 
           {/* Currency rule pill */}
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
             <Info className="h-3.5 w-3.5" />
             We accept <strong className="mx-1 text-foreground">USD</strong> or{' '}
             <strong className="mx-1 text-foreground">GBP</strong>. Any amount{' '}
