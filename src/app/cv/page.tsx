@@ -5,12 +5,12 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import dynamic from 'next/dynamic';
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
-import Section from '@/components/Section';
 import Skeleton from '@/components/Skeleton';
 import SectionIntro from '@/components/SectionIntro';
 import Counters  from '@/components/AnimatedCounters';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
+import { Button } from '@/components/ui/button';
 
 const PDFDownloadLink = dynamic(
   () => import('@react-pdf/renderer').then((mod) => ({ default: mod.PDFDownloadLink })),
@@ -229,6 +229,7 @@ export default function CVPage() {
   const [cvData, setCVData] = useState<CVData>(EMPTY_CV);
   const [loading, setLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [isFormExpanded, setIsFormExpanded] = useState(false); // NEW
 
   useEffect(() => {
     const storedCV = localStorage.getItem(STORAGE_KEY);
@@ -249,69 +250,96 @@ export default function CVPage() {
   const currentStep = cvData.name ? (cvData.education.length > 0 && cvData.education[0].school ? 2 : 1) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col p-4 bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
-      <header className="mb-6 flex justify-between items-center">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
+      <header className="mb-4 sm:mb-6 flex justify-between items-center px-3 sm:px-6 pt-4">
         <h1 className="text-2xl font-bold text-white">CV Builder</h1>
         <PDFDownloadLink
           document={<CVPDFDocument cvData={SAMPLE_CV} />}
           fileName="sample-cv.pdf"
-          className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm"
+          className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm"
         >
           {({ loading }) => (loading ? 'Generating Sample CV...' : 'Download Sample CV')}
         </PDFDownloadLink>
       </header>
 
-      {/* MOBILE SIZING FIXES */}
-      <main className="mx-auto w-full max-w-none px-4 lg:max-w-[90vw] lg:px-6 flex flex-col lg:flex-row gap-8">
+      <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* FORM PANEL — supports Expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-zinc-800 p-4 sm:p-8 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
+          className={[
+            'bg-white dark:bg-zinc-800 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out',
+            isFormExpanded ? 'fixed inset-0 z-50 w-full h-[100dvh] overflow-y-auto' : 'relative',
+          ].join(' ')}
+          role={isFormExpanded ? 'dialog' : undefined}
+          aria-modal={isFormExpanded || undefined}
+          aria-label="Edit CV form"
         >
-          <div className="mb-4 text-sm text-gray-600 dark:text-gray-300">
-            Build your professional CV. It updates live on the right.
-          </div>
-          {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : (
-            <CVForm cvData={cvData} setCVData={setCVData} />
-          )}
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <button
-              className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
-              disabled={currentStep < 2}
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              {currentStep < 2 ? (
-                'Complete Form to Download'
-              ) : (
-                <PDFDownloadLink document={<CVPDFDocument cvData={cvData} />} fileName={`${cvData.name}_CV.pdf`}>
-                  {({ loading }) => (loading ? 'Generating PDF...' : 'Download CV')}
-                </PDFDownloadLink>
+          {/* Sticky header inside expanded mode */}
+          <div className="sticky top-0 z-10 bg-gray-100/80 dark:bg-zinc-900/70 backdrop-blur px-3 sm:px-5 py-2 rounded-t-lg border-b border-border flex items-center justify-between">
+            <div className="text-sm font-medium">Edit CV</div>
+            <div className="flex gap-2">
+              {!isFormExpanded && (
+                <Button size="sm" variant="outline" onClick={() => setIsFormExpanded(true)}>
+                  Expand
+                </Button>
               )}
-            </button>
-            <button
-              className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
-              onClick={() => setCVData(EMPTY_CV)}
-            >
-              <ArrowPathIcon className="h-5 w-5" />
-              Reset
-            </button>
+              {isFormExpanded && (
+                <Button size="sm" onClick={() => setIsFormExpanded(false)}>
+                  Collapse
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="p-3 sm:p-5">
+            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+              Build your professional CV. It updates live on the right.
+            </div>
+            {loading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : (
+              <CVForm cvData={cvData} setCVData={setCVData} />
+            )}
+
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <button
+                className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
+                disabled={currentStep < 2}
+              >
+                <ArrowDownTrayIcon className="h-5 w-5" />
+                {currentStep < 2 ? (
+                  'Complete Form to Download'
+                ) : (
+                  <PDFDownloadLink document={<CVPDFDocument cvData={cvData} />} fileName={`${cvData.name}_CV.pdf`}>
+                    {({ loading }) => (loading ? 'Generating PDF...' : 'Download CV')}
+                  </PDFDownloadLink>
+                )}
+              </button>
+              <button
+                className="px-3 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
+                onClick={() => setCVData(EMPTY_CV)}
+              >
+                <ArrowPathIcon className="h-5 w-5" />
+                Reset
+              </button>
+            </div>
           </div>
         </motion.div>
 
+        {/* PREVIEW PANEL — existing expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-screen z-50 overflow-y-auto' : ''}`}
+          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-[100dvh] z-40 overflow-y-auto' : ''}`}
         >
-          <div className="flex justify-between items-center px-4 py-1 bg-gray-800 rounded-t-xl">
+          <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
               <span className="w-3 h-3 bg-red-500 rounded-full" />
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
@@ -326,7 +354,7 @@ export default function CVPage() {
           </div>
           <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Skeleton className="h-6 w-1/3" />
                 <Skeleton className="h-4 w-2/3" />
                 <Skeleton className="h-4 w-full" />
@@ -339,8 +367,8 @@ export default function CVPage() {
         </motion.div>
       </main>
 
-      <footer className="mt-20">
-        <SectionIntro className="py-16" from="up" hue={192}>
+      <footer className="mt-16">
+        <SectionIntro className="py-12" from="up" hue={192}>
           <div className="container-app">
             <h2 className="sr-only">Live platform stats</h2>
             <Counters />

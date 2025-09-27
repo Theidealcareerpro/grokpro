@@ -274,10 +274,11 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
         <Textarea label="Professional Summary" value={localData.summary} onChange={(e) => handleChange('summary', e.target.value)} />
       </Section>
 
+      {/* EDUCATION — updated for mobile-first grid + min-w-0 */}
       <Section title="Education" isCollapsed={collapsedSections.education} onToggle={() => toggleSection('education')}>
         {localData.education.map((edu, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 border rounded p-4">
-            <div className="relative">
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 border rounded p-4 min-w-0">
+            <div className="relative min-w-0">
               <Input
                 label="School"
                 value={edu.school}
@@ -294,7 +295,8 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
               )}
             </div>
-            <div className="relative">
+
+            <div className="relative min-w-0">
               <Input
                 label="Degree"
                 value={edu.degree}
@@ -311,12 +313,19 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
               )}
             </div>
-            <Input label="Location" value={edu.location} onChange={(e) => handleEducationChange(i, 'location', e.target.value)} />
-            <Input label="Date" value={edu.date} onChange={(e) => handleEducationChange(i, 'date', e.target.value)} />
-            <div className="col-span-2">
+
+            <div className="min-w-0">
+              <Input label="Location" value={edu.location} onChange={(e) => handleEducationChange(i, 'location', e.target.value)} />
+            </div>
+            <div className="min-w-0">
+              <Input label="Date" value={edu.date} onChange={(e) => handleEducationChange(i, 'date', e.target.value)} />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2">
               <Textarea label="Details" value={edu.details} onChange={(e) => handleEducationChange(i, 'details', e.target.value)} />
             </div>
-            <div className="col-span-2">
+
+            <div className="sm:col-span-2">
               <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeEducation(i)}>
                 Remove Education
               </Button>
@@ -332,10 +341,11 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
         <Button type="button" onClick={addEducation}>+ Add Education</Button>
       </Section>
 
+      {/* EXPERIENCE — updated for mobile-first grid + min-w-0 */}
       <Section title="Professional Experience" isCollapsed={collapsedSections.experience} onToggle={() => toggleSection('experience')}>
         {localData.experience.map((exp, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 border rounded p-4">
-            <div className="relative">
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 border rounded p-4 min-w-0">
+            <div className="relative min-w-0">
               <Input
                 label="Company"
                 value={exp.company}
@@ -352,7 +362,8 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
               )}
             </div>
-            <div className="relative">
+
+            <div className="relative min-w-0">
               <Input
                 label="Role"
                 value={exp.role}
@@ -369,12 +380,19 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
               )}
             </div>
-            <Input label="Location" value={exp.location} onChange={(e) => handleExperienceChange(i, 'location', e.target.value)} />
-            <Input label="Date" value={exp.date} onChange={(e) => handleExperienceChange(i, 'date', e.target.value)} />
-            <div className="col-span-2">
+
+            <div className="min-w-0">
+              <Input label="Location" value={exp.location} onChange={(e) => handleExperienceChange(i, 'location', e.target.value)} />
+            </div>
+            <div className="min-w-0">
+              <Input label="Date" value={exp.date} onChange={(e) => handleExperienceChange(i, 'date', e.target.value)} />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2">
               <Textarea label="Description" value={exp.description} onChange={(e) => handleExperienceChange(i, 'description', e.target.value)} />
             </div>
-            <div className="col-span-2">
+
+            <div className="min-w-0 sm:col-span-2">
               <p className="text-sm font-medium text-gray-700">Key Achievements</p>
               {exp.achievements.map((ach, j) => (
                 <div key={j} className="flex gap-2 mt-1">
@@ -384,7 +402,8 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
               ))}
               <Button type="button" onClick={() => addAchievement(i)}>+ Add Achievement</Button>
             </div>
-            <div className="col-span-2">
+
+            <div className="sm:col-span-2">
               <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeExperience(i)}>
                 Remove Experience
               </Button>
