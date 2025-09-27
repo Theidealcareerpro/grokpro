@@ -10,7 +10,6 @@ import SectionIntro from '@/components/SectionIntro';
 import Counters  from '@/components/AnimatedCounters';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
-import { Button } from '@/components/ui/button';
 
 const PDFDownloadLink = dynamic(
   () => import('@react-pdf/renderer').then((mod) => ({ default: mod.PDFDownloadLink })),
@@ -229,7 +228,6 @@ export default function CVPage() {
   const [cvData, setCVData] = useState<CVData>(EMPTY_CV);
   const [loading, setLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-  const [isFormExpanded, setIsFormExpanded] = useState(false); // NEW
 
   useEffect(() => {
     const storedCV = localStorage.getItem(STORAGE_KEY);
@@ -263,81 +261,53 @@ export default function CVPage() {
       </header>
 
       <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col lg:flex-row gap-6 lg:gap-8">
-        {/* FORM PANEL — supports Expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className={[
-            'bg-white dark:bg-zinc-800 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out',
-            isFormExpanded ? 'fixed inset-0 z-50 w-full h-[100dvh] overflow-y-auto' : 'relative',
-          ].join(' ')}
-          role={isFormExpanded ? 'dialog' : undefined}
-          aria-modal={isFormExpanded || undefined}
-          aria-label="Edit CV form"
+          className="bg-white dark:bg-zinc-800 p-3 sm:p-5 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
         >
-          {/* Sticky header inside expanded mode */}
-          <div className="sticky top-0 z-10 bg-gray-100/80 dark:bg-zinc-900/70 backdrop-blur px-3 sm:px-5 py-2 rounded-t-lg border-b border-border flex items-center justify-between">
-            <div className="text-sm font-medium">Edit CV</div>
-            <div className="flex gap-2">
-              {!isFormExpanded && (
-                <Button size="sm" variant="outline" onClick={() => setIsFormExpanded(true)}>
-                  Expand
-                </Button>
-              )}
-              {isFormExpanded && (
-                <Button size="sm" onClick={() => setIsFormExpanded(false)}>
-                  Collapse
-                </Button>
-              )}
-            </div>
+          <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+            Build your professional CV. It updates live on the right.
           </div>
-
-          <div className="p-3 sm:p-5">
-            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-              Build your professional CV. It updates live on the right.
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
             </div>
-            {loading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            ) : (
-              <CVForm cvData={cvData} setCVData={setCVData} />
-            )}
-
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <button
-                className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
-                disabled={currentStep < 2}
-              >
-                <ArrowDownTrayIcon className="h-5 w-5" />
-                {currentStep < 2 ? (
-                  'Complete Form to Download'
-                ) : (
-                  <PDFDownloadLink document={<CVPDFDocument cvData={cvData} />} fileName={`${cvData.name}_CV.pdf`}>
-                    {({ loading }) => (loading ? 'Generating PDF...' : 'Download CV')}
-                  </PDFDownloadLink>
-                )}
-              </button>
-              <button
-                className="px-3 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
-                onClick={() => setCVData(EMPTY_CV)}
-              >
-                <ArrowPathIcon className="h-5 w-5" />
-                Reset
-              </button>
-            </div>
+          ) : (
+            <CVForm cvData={cvData} setCVData={setCVData} />
+          )}
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <button
+              className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
+              disabled={currentStep < 2}
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              {currentStep < 2 ? (
+                'Complete Form to Download'
+              ) : (
+                <PDFDownloadLink document={<CVPDFDocument cvData={cvData} />} fileName={`${cvData.name}_CV.pdf`}>
+                  {({ loading }) => (loading ? 'Generating PDF...' : 'Download CV')}
+                </PDFDownloadLink>
+              )}
+            </button>
+            <button
+              className="px-3 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
+              onClick={() => setCVData(EMPTY_CV)}
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+              Reset
+            </button>
           </div>
         </motion.div>
 
-        {/* PREVIEW PANEL — existing expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-[100dvh] z-40 overflow-y-auto' : ''}`}
+          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-[100dvh] z-50 overflow-y-auto' : ''}`}
         >
           <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">

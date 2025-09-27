@@ -74,7 +74,6 @@ export default function CLPage() {
   const [clData, setCLData] = useState<CLData>(EMPTY_CL);
   const [loading, setLoading] = useState(true);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-  const [isFormExpanded, setIsFormExpanded] = useState(false); // NEW
 
   useEffect(() => {
     const storedCL = localStorage.getItem(STORAGE_KEY_CL);
@@ -110,91 +109,64 @@ export default function CLPage() {
       </header>
 
       <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col lg:flex-row gap-6 lg:gap-8">
-        {/* FORM PANEL — supports Expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className={[
-            'bg-white dark:bg-zinc-800 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out',
-            isFormExpanded ? 'fixed inset-0 z-50 w-full h-[100dvh] overflow-y-auto' : 'relative',
-          ].join(' ')}
-          role={isFormExpanded ? 'dialog' : undefined}
-          aria-modal={isFormExpanded || undefined}
-          aria-label="Edit cover letter form"
+          className="bg-white dark:bg-zinc-800 p-3 sm:p-5 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
         >
-          {/* Sticky header inside expanded mode */}
-          <div className="sticky top-0 z-10 bg-gray-100/80 dark:bg-zinc-900/70 backdrop-blur px-3 sm:px-5 py-2 rounded-t-lg border-b border-border flex items-center justify-between">
-            <div className="text-sm font-medium">Edit Cover Letter</div>
-            <div className="flex gap-2">
-              {!isFormExpanded && (
-                <Button size="sm" variant="outline" onClick={() => setIsFormExpanded(true)}>
-                  Expand
-                </Button>
-              )}
-              {isFormExpanded && (
-                <Button size="sm" onClick={() => setIsFormExpanded(false)}>
-                  Collapse
-                </Button>
-              )}
-            </div>
+          <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
+            Build your professional cover letter. It updates live on the right.
           </div>
 
-          <div className="p-3 sm:p-5">
-            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-              Build your professional cover letter. It updates live on the right.
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
             </div>
+          ) : (
+            <CLForm clData={clData} setCLData={setCLData} />
+          )}
 
-            {loading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            ) : (
-              <CLForm clData={clData} setCLData={setCLData} />
-            )}
-
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              {currentStep < 2 ? (
-                <Button
-                  type="button"
-                  disabled
-                  className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
-                >
-                  <ArrowDownTrayIcon className="h-5 w-5" />
-                  Complete Form to Download
-                </Button>
-              ) : (
-                <Button type="button" className="px-0 py-0 h-9 overflow-hidden" variant="default" asChild aria-label="Download Cover Letter PDF">
-                  <PDFDownloadLink
-                    document={<CLPDFDocument clData={clData} />}
-                    fileName={`${clData.hiringManagerName}_CoverLetter.pdf`}
-                    className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
-                  >
-                    {({ loading }) => (
-                      <>
-                        <ArrowDownTrayIcon className="h-5 w-5" />
-                        {loading ? 'Generating PDF...' : 'Download Cover Letter'}
-                      </>
-                    )}
-                  </PDFDownloadLink>
-                </Button>
-              )}
-
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {currentStep < 2 ? (
               <Button
                 type="button"
-                className="px-3 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
-                onClick={() => setCLData(EMPTY_CL)}
+                disabled
+                className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
               >
-                <ArrowPathIcon className="h-5 w-5" />
-                Reset
+                <ArrowDownTrayIcon className="h-5 w-5" />
+                Complete Form to Download
               </Button>
-            </div>
+            ) : (
+              <Button type="button" className="px-0 py-0 h-9 overflow-hidden" variant="default" asChild aria-label="Download Cover Letter PDF">
+                <PDFDownloadLink
+                  document={<CLPDFDocument clData={clData} />}
+                  fileName={`${clData.hiringManagerName}_CoverLetter.pdf`}
+                  className="px-4 py-2 rounded bg-teal-600 text-white hover:bg-teal-700 transition text-sm flex items-center gap-2"
+                >
+                  {({ loading }) => (
+                    <>
+                      <ArrowDownTrayIcon className="h-5 w-5" />
+                      {loading ? 'Generating PDF...' : 'Download Cover Letter'}
+                    </>
+                  )}
+                </PDFDownloadLink>
+              </Button>
+            )}
+
+            <Button
+              type="button"
+              className="px-3 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition text-sm flex items-center gap-2"
+              onClick={() => setCLData(EMPTY_CL)}
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+              Reset
+            </Button>
           </div>
         </motion.div>
 
-        {/* PREVIEW PANEL — existing expand */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -229,7 +201,7 @@ export default function CLPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">
+        <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-6 w-1/3" />
