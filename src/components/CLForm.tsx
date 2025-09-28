@@ -47,12 +47,10 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
     body: '',
   });
 
-  // If parent ever replaces clData (e.g., reset), keep localData in sync.
   useEffect(() => {
     setLocalData(clData);
   }, [clData]);
 
-  // Compute validation errors from localData (pure + memoized).
   const computedErrors = useMemo(() => {
     const next = {
       name: '',
@@ -65,48 +63,26 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
       body: '',
     };
 
-    if (!localData.name || !localData.name.trim()) {
-      next.name = 'Name is required';
-    }
+    if (!localData.name || !localData.name.trim()) next.name = 'Name is required';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!localData.email || !emailRegex.test(localData.email)) {
-      next.email = 'Valid email is required';
-    }
+    if (!localData.email || !emailRegex.test(localData.email)) next.email = 'Valid email is required';
 
-    if (!localData.jobTitle || !localData.jobTitle.trim()) {
-      next.jobTitle = 'Job title is required';
-    }
+    if (!localData.jobTitle || !localData.jobTitle.trim()) next.jobTitle = 'Job title is required';
+    if (!localData.companyName || !localData.companyName.trim()) next.companyName = 'Company name is required';
+    if (!localData.hiringManagerName || !localData.hiringManagerName.trim()) next.hiringManagerName = 'Hiring manager name is required';
+    if (!localData.companyAddress || !localData.companyAddress.trim()) next.companyAddress = 'Company address is required';
+    if (!localData.cityStateZip || !localData.cityStateZip.trim()) next.cityStateZip = 'City, State, ZIP is required';
 
-    if (!localData.companyName || !localData.companyName.trim()) {
-      next.companyName = 'Company name is required';
-    }
-
-    if (!localData.hiringManagerName || !localData.hiringManagerName.trim()) {
-      next.hiringManagerName = 'Hiring manager name is required';
-    }
-
-    if (!localData.companyAddress || !localData.companyAddress.trim()) {
-      next.companyAddress = 'Company address is required';
-    }
-
-    if (!localData.cityStateZip || !localData.cityStateZip.trim()) {
-      next.cityStateZip = 'City, State, ZIP is required';
-    }
-
-    if (localData.bodyParagraphs.length === 0) {
-      next.body = 'At least one body paragraph is required';
-    }
+    if (localData.bodyParagraphs.length === 0) next.body = 'At least one body paragraph is required';
 
     return next;
   }, [localData]);
 
-  // Apply errors only when they actually change (prevents setState loops).
   useEffect(() => {
     setErrors((prev) => (shallowEqualErrors(prev, computedErrors) ? prev : computedErrors));
   }, [computedErrors]);
 
-  // Push localData up to parent when it changes.
   useEffect(() => {
     setCLData(localData);
   }, [localData, setCLData]);
@@ -135,11 +111,13 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
     setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  const hintErr = 'text-[11px]';
+
   return (
-    <form className="space-y-8 w-full">
+    <form className="space-y-6 sm:space-y-7 w-full">
       <Section title="Header" isCollapsed={collapsedSections.header} onToggle={() => toggleSection('header')}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div className="relative mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="Full Name"
               value={localData.name}
@@ -148,13 +126,13 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               className={errors.name ? 'border-red-500' : localData.name.trim() ? 'border-green-500' : ''}
             />
             {errors.name && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.name}
               </div>
             )}
             {localData.name.trim() && !errors.name && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
           <Input
@@ -163,7 +141,7 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
             placeholder="e.g., London, UK or 123 Main St, London, UK"
             onChange={(e) => handleChange('address', e.target.value)}
           />
-          <div className="relative mb-6">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="Email"
               type="email"
@@ -173,13 +151,13 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               className={errors.email ? 'border-red-500' : localData.email.trim() ? 'border-green-500' : ''}
             />
             {errors.email && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.email}
               </div>
             )}
             {localData.email.trim() && !errors.email && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
           <Input
@@ -217,28 +195,26 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
         isCollapsed={collapsedSections.hiringManager}
         onToggle={() => toggleSection('hiringManager')}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div className="relative mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="Hiring Manager’s Name"
               value={localData.hiringManagerName}
               placeholder="e.g., Ms. Emily Carter"
               onChange={(e) => handleChange('hiringManagerName', e.target.value)}
-              className={
-                errors.hiringManagerName ? 'border-red-500' : localData.hiringManagerName.trim() ? 'border-green-500' : ''
-              }
+              className={errors.hiringManagerName ? 'border-red-500' : localData.hiringManagerName.trim() ? 'border-green-500' : ''}
             />
             {errors.hiringManagerName && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.hiringManagerName}
               </div>
             )}
             {localData.hiringManagerName.trim() && !errors.hiringManagerName && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <div className="relative mb-6">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="Company Name"
               value={localData.companyName}
@@ -247,36 +223,34 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               className={errors.companyName ? 'border-red-500' : localData.companyName.trim() ? 'border-green-500' : ''}
             />
             {errors.companyName && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.companyName}
               </div>
             )}
             {localData.companyName.trim() && !errors.companyName && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <div className="relative mb-6">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="Company Address"
               value={localData.companyAddress}
               placeholder="e.g., 123 Tech St"
               onChange={(e) => handleChange('companyAddress', e.target.value)}
-              className={
-                errors.companyAddress ? 'border-red-500' : localData.companyAddress.trim() ? 'border-green-500' : ''
-              }
+              className={errors.companyAddress ? 'border-red-500' : localData.companyAddress.trim() ? 'border-green-500' : ''}
             />
             {errors.companyAddress && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.companyAddress}
               </div>
             )}
             {localData.companyAddress.trim() && !errors.companyAddress && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <div className="relative mb-6">
+          <div className="relative mb-5 min-w-0">
             <Input
               label="City, State, ZIP"
               value={localData.cityStateZip}
@@ -285,20 +259,20 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
               className={errors.cityStateZip ? 'border-red-500' : localData.cityStateZip.trim() ? 'border-green-500' : ''}
             />
             {errors.cityStateZip && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.cityStateZip}
               </div>
             )}
             {localData.cityStateZip.trim() && !errors.cityStateZip && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
         </div>
       </Section>
 
       <Section title="Job Information" isCollapsed={collapsedSections.intro} onToggle={() => toggleSection('intro')}>
-        <div className="relative mb-6">
+        <div className="relative mb-5 min-w-0">
           <Input
             label="Job Title"
             value={localData.jobTitle}
@@ -307,13 +281,13 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
             className={errors.jobTitle ? 'border-red-500' : localData.jobTitle.trim() ? 'border-green-500' : ''}
           />
           {errors.jobTitle && (
-            <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+            <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
               <ExclamationCircleIcon className="w-4 h-4 mr-1" />
               {errors.jobTitle}
             </div>
           )}
           {localData.jobTitle.trim() && !errors.jobTitle && (
-            <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+            <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
           )}
         </div>
       </Section>
@@ -329,25 +303,25 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
 
       <Section title="Body Paragraphs" isCollapsed={collapsedSections.body} onToggle={() => toggleSection('body')}>
         {localData.bodyParagraphs.map((paragraph, i) => (
-          <div key={i} className="mb-4">
+          <div key={i} className="mb-3">
             <Textarea
               label={`Body Paragraph ${i + 1}`}
               value={paragraph}
               placeholder="e.g., In my role at [Company], I: Developed [Project], improving [Metric] by [Percentage]. Add specific achievements to showcase your skills."
               onChange={(e) => handleBodyChange(i, e.target.value)}
             />
-            <Button type="button" className="bg-red-600 hover:bg-red-700 mt-2" onClick={() => removeBodyParagraph(i)}>
+            <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700 mt-2" onClick={() => removeBodyParagraph(i)}>
               Remove Paragraph
             </Button>
           </div>
         ))}
         {errors.body && localData.bodyParagraphs.length === 0 && (
-          <div className="text-red-500 text-xs flex items-center mt-2 mb-2">
+          <div className={`text-red-500 ${hintErr} flex items-center mt-2 mb-2`}>
             <ExclamationCircleIcon className="w-4 h-4 mr-1" />
             {errors.body}
           </div>
         )}
-        <Button type="button" onClick={addBodyParagraph}>
+        <Button type="button" size="sm" onClick={addBodyParagraph}>
           + Add Body Paragraph
         </Button>
       </Section>
@@ -389,7 +363,8 @@ export default function CLForm({ clData, setCLData }: CLFormProps) {
 
       <Button
         type="button"
-        className="w-full mt-4 bg-gray-600 hover:bg-gray-700"
+        size="sm"
+        className="w-full mt-3 bg-gray-600 hover:bg-gray-700"
         onClick={() => {
           localStorage.removeItem('clData');
           setLocalData(EMPTY_CL);

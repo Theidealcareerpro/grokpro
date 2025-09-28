@@ -33,8 +33,8 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
     name: '',
     email: '',
     phone: '',
-    education: Array(cvData.education.length).fill(''), // Sync with initial cvData
-    experience: Array(cvData.experience.length).fill(''), // Sync with initial cvData
+    education: Array(cvData.education.length).fill(''),
+    experience: Array(cvData.experience.length).fill(''),
   });
 
   useEffect(() => {
@@ -46,32 +46,28 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
     let isValid = true;
     const newErrors = { name: '', email: '', phone: '', education: [...errors.education], experience: [...errors.experience] };
 
-    // Name validation
     if (!localData.name || !localData.name.trim()) {
       newErrors.name = 'Name is required';
       isValid = false;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!localData.email || !emailRegex.test(localData.email)) {
       newErrors.email = 'Valid email is required';
       isValid = false;
     }
 
-    // Phone validation (UK format: 07..., +44...)
     const phoneRegex = /^(\+44|0)7\d{9}$/;
     if (localData.phone && !phoneRegex.test(localData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Valid UK phone number required (e.g., 07123456789 or +447123456789)';
       isValid = false;
     }
 
-    // Education validation
     if (localData.education.length === 0) {
       newErrors.education = ['At least one education entry is required'];
       isValid = false;
     } else {
-      newErrors.education = localData.education.map((edu, i) => {
+      newErrors.education = localData.education.map((edu) => {
         const eduErrors = [];
         if (!edu.school || !edu.school.trim()) eduErrors.push('School is required');
         if (!edu.degree || !edu.degree.trim()) eduErrors.push('Degree is required');
@@ -80,13 +76,12 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
       if (newErrors.education.some(error => error)) isValid = false;
     }
 
-    // Experience validation
     if (localData.experience.length === 0) {
       newErrors.experience = ['At least one experience entry is required'];
       isValid = false;
     } else {
-      newErrors.experience = localData.experience.map((exp, i) => {
-        const expErrors = [];
+      newErrors.experience = localData.experience.map((exp) => {
+        const expErrors: string[] = [];
         if (!exp.company || !exp.company.trim()) expErrors.push('Company is required');
         if (!exp.role || !exp.role.trim()) expErrors.push('Role is required');
         return expErrors.length ? expErrors.join(', ') : '';
@@ -101,13 +96,10 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
   const handleChange = (field: keyof CVData, value: string) => {
     setLocalData(prev => {
       const updated = { ...prev, [field]: value };
-      // Type guard for Theme and FontChoice using literal checks
       if (field === 'theme' && !['blue', 'emerald', 'rose'].includes(value as Theme)) {
-        console.warn(`Invalid theme: ${value}, defaulting to 'blue'`);
         updated.theme = 'blue';
       }
       if (field === 'font' && !['Helvetica', 'Roboto', 'Times'].includes(value as FontChoice)) {
-        console.warn(`Invalid font: ${value}, defaulting to 'Helvetica'`);
         updated.font = 'Helvetica';
       }
       return updated;
@@ -199,23 +191,13 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const handleResetCV = () => {
-    localStorage.removeItem('cvData');
-    setLocalData(EMPTY_CV); // Sync with EMPTY_CV
-    setErrors({
-      name: '',
-      email: '',
-      phone: '',
-      education: Array(EMPTY_CV.education.length).fill(''),
-      experience: Array(EMPTY_CV.experience.length).fill(''),
-    });
-  };
+  const hintErr = 'text-[11px]';
 
   return (
-    <form className="space-y-8 w-full">
+    <form className="space-y-6 sm:space-y-7 w-full">
       <Section title="Personal Information" isCollapsed={collapsedSections.personal} onToggle={() => toggleSection('personal')}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-          <div className="relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-5">
+          <div className="relative min-w-0">
             <Input
               label="Name"
               value={localData.name}
@@ -223,16 +205,16 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
               className={errors.name ? 'border-red-500' : localData.name.trim() ? 'border-green-500' : ''}
             />
             {errors.name && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.name}
               </div>
             )}
             {localData.name.trim() && !errors.name && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <div className="relative">
+          <div className="relative min-w-0">
             <Input
               label="Email"
               type="email"
@@ -241,16 +223,16 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
               className={errors.email ? 'border-red-500' : localData.email && !errors.email ? 'border-green-500' : ''}
             />
             {errors.email && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.email}
               </div>
             )}
             {localData.email && !errors.email && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <div className="relative">
+          <div className="relative min-w-0">
             <Input
               label="Phone"
               value={localData.phone}
@@ -258,26 +240,32 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
               className={errors.phone ? 'border-red-500' : localData.phone && !errors.phone ? 'border-green-500' : ''}
             />
             {errors.phone && (
-              <div className="absolute -bottom-5 left-0 flex items-center text-red-500 text-xs">
+              <div className={`absolute -bottom-5 left-0 flex items-center text-red-500 ${hintErr}`}>
                 <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                 {errors.phone}
               </div>
             )}
             {localData.phone && !errors.phone && (
-              <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
             )}
           </div>
-          <Input label="Location" value={localData.location} onChange={(e) => handleChange('location', e.target.value)} />
-          <Input label="LinkedIn" value={localData.linkedin} onChange={(e) => handleChange('linkedin', e.target.value)} />
-          <Input label="Portfolio" value={localData.portfolio} onChange={(e) => handleChange('portfolio', e.target.value)} />
+          <div className="min-w-0">
+            <Input label="Location" value={localData.location} onChange={(e) => handleChange('location', e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Input label="LinkedIn" value={localData.linkedin} onChange={(e) => handleChange('linkedin', e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Input label="Portfolio" value={localData.portfolio} onChange={(e) => handleChange('portfolio', e.target.value)} />
+          </div>
         </div>
         <Textarea label="Professional Summary" value={localData.summary} onChange={(e) => handleChange('summary', e.target.value)} />
       </Section>
 
-      {/* EDUCATION — updated for mobile-first grid + min-w-0 */}
+      {/* EDUCATION */}
       <Section title="Education" isCollapsed={collapsedSections.education} onToggle={() => toggleSection('education')}>
         {localData.education.map((edu, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 border rounded p-4 min-w-0">
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 border rounded p-3 sm:p-4 min-w-0">
             <div className="relative min-w-0">
               <Input
                 label="School"
@@ -286,13 +274,13 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 className={errors.education[i] ? 'border-red-500' : edu.school.trim() ? 'border-green-500' : ''}
               />
               {errors.education[i] && (
-                <div className="absolute -bottom-6 left-0 flex items-center text-red-500 text-xs">
+                <div className={`absolute -bottom-6 left-0 flex items-center text-red-500 ${hintErr}`}>
                   <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                   {errors.education[i]}
                 </div>
               )}
               {edu.school.trim() && !errors.education[i] && (
-                <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+                <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
               )}
             </div>
 
@@ -304,13 +292,13 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 className={errors.education[i] ? 'border-red-500' : edu.degree.trim() ? 'border-green-500' : ''}
               />
               {errors.education[i] && (
-                <div className="absolute -bottom-6 left-0 flex items-center text-red-500 text-xs">
+                <div className={`absolute -bottom-6 left-0 flex items-center text-red-500 ${hintErr}`}>
                   <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                   {errors.education[i]}
                 </div>
               )}
               {edu.degree.trim() && !errors.education[i] && (
-                <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+                <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
               )}
             </div>
 
@@ -326,25 +314,25 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
             </div>
 
             <div className="sm:col-span-2">
-              <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeEducation(i)}>
+              <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => removeEducation(i)}>
                 Remove Education
               </Button>
             </div>
           </div>
         ))}
         {errors.education.length > 0 && errors.education[0] && (
-          <div className="text-red-500 text-xs flex items-center mt-2 mb-2">
+          <div className={`text-red-500 ${hintErr} flex items-center mt-2 mb-2`}>
             <ExclamationCircleIcon className="w-4 h-4 mr-1" />
             {errors.education[0]}
           </div>
         )}
-        <Button type="button" onClick={addEducation}>+ Add Education</Button>
+        <Button type="button" size="sm" onClick={addEducation}>+ Add Education</Button>
       </Section>
 
-      {/* EXPERIENCE — updated for mobile-first grid + min-w-0 */}
+      {/* EXPERIENCE */}
       <Section title="Professional Experience" isCollapsed={collapsedSections.experience} onToggle={() => toggleSection('experience')}>
         {localData.experience.map((exp, i) => (
-          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 border rounded p-4 min-w-0">
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 border rounded p-3 sm:p-4 min-w-0">
             <div className="relative min-w-0">
               <Input
                 label="Company"
@@ -353,13 +341,13 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 className={errors.experience[i] ? 'border-red-500' : exp.company.trim() ? 'border-green-500' : ''}
               />
               {errors.experience[i] && (
-                <div className="absolute -bottom-6 left-0 flex items-center text-red-500 text-xs">
+                <div className={`absolute -bottom-6 left-0 flex items-center text-red-500 ${hintErr}`}>
                   <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                   {errors.experience[i]}
                 </div>
               )}
               {exp.company.trim() && !errors.experience[i] && (
-                <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+                <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
               )}
             </div>
 
@@ -371,13 +359,13 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
                 className={errors.experience[i] ? 'border-red-500' : exp.role.trim() ? 'border-green-500' : ''}
               />
               {errors.experience[i] && (
-                <div className="absolute -bottom-6 left-0 flex items-center text-red-500 text-xs">
+                <div className={`absolute -bottom-6 left-0 flex items-center text-red-500 ${hintErr}`}>
                   <ExclamationCircleIcon className="w-4 h-4 mr-1" />
                   {errors.experience[i]}
                 </div>
               )}
               {exp.role.trim() && !errors.experience[i] && (
-                <CheckIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-500" />
+                <CheckIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
               )}
             </div>
 
@@ -393,30 +381,30 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
             </div>
 
             <div className="min-w-0 sm:col-span-2">
-              <p className="text-sm font-medium text-gray-700">Key Achievements</p>
+              <p className="text-[13px] font-medium text-gray-700">Key Achievements</p>
               {exp.achievements.map((ach, j) => (
                 <div key={j} className="flex gap-2 mt-1">
                   <Input label={`Achievement ${j + 1}`} value={ach} onChange={(e) => handleAchievementChange(i, j, e.target.value)} />
-                  <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeAchievement(i, j)}>-</Button>
+                  <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => removeAchievement(i, j)}>-</Button>
                 </div>
               ))}
-              <Button type="button" onClick={() => addAchievement(i)}>+ Add Achievement</Button>
+              <Button type="button" size="sm" onClick={() => addAchievement(i)}>+ Add Achievement</Button>
             </div>
 
             <div className="sm:col-span-2">
-              <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeExperience(i)}>
+              <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => removeExperience(i)}>
                 Remove Experience
               </Button>
             </div>
           </div>
         ))}
         {errors.experience.length > 0 && errors.experience[0] && (
-          <div className="text-red-500 text-xs flex items-center mt-2 mb-2">
+          <div className={`text-red-500 ${hintErr} flex items-center mt-2 mb-2`}>
             <ExclamationCircleIcon className="w-4 h-4 mr-1" />
             {errors.experience[0]}
           </div>
         )}
-        <Button type="button" onClick={addExperience}>+ Add Experience</Button>
+        <Button type="button" size="sm" onClick={addExperience}>+ Add Experience</Button>
       </Section>
 
       {(['skills', 'certifications', 'projects'] as const).map((field) => (
@@ -424,15 +412,15 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
           {(localData[field] as string[]).map((item, i) => (
             <div key={i} className="flex gap-2 mb-2">
               <Input label={`${field.slice(0, -1)} ${i + 1}`} value={item} onChange={(e) => handleListChange(e, field, i)} />
-              <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => removeListItem(field, i)}>-</Button>
+              <Button type="button" size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => removeListItem(field, i)}>-</Button>
             </div>
           ))}
-          <Button type="button" onClick={() => addListItem(field)}>+ Add {field.slice(0, -1)}</Button>
+          <Button type="button" size="sm" onClick={() => addListItem(field)}>+ Add {field.slice(0, -1)}</Button>
         </Section>
       ))}
 
       <Section title="Customization" isCollapsed={collapsedSections.customization} onToggle={() => toggleSection('customization')}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
           <select
             value={localData.theme}
             onChange={(e) => handleChange('theme', e.target.value as Theme)}
@@ -441,9 +429,6 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
             <option value="blue">Blue</option>
             <option value="emerald">Emerald</option>
             <option value="rose">Rose</option>
-            {/* Remove unsupported themes unless added to Theme type */}
-            {/* <option value="black">Black</option>
-            <option value="teal">Teal</option> */}
           </select>
           <select
             value={localData.font}
@@ -459,8 +444,19 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
 
       <Button
         type="button"
-        className="w-full mt-4 bg-gray-600 hover:bg-gray-700"
-        onClick={handleResetCV}
+        size="sm"
+        className="w-full mt-3 bg-gray-600 hover:bg-gray-700"
+        onClick={() => {
+          localStorage.removeItem('cvData');
+          setLocalData(EMPTY_CV);
+          setErrors({
+            name: '',
+            email: '',
+            phone: '',
+            education: Array(EMPTY_CV.education.length).fill(''),
+            experience: Array(EMPTY_CV.experience.length).fill(''),
+          });
+        }}
       >
         Reset CV
       </Button>

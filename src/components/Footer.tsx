@@ -37,30 +37,26 @@ export default function Footer() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       aria-label="Footer"
-      // Slim height + glass, aligned with header
-      className="glass-footer relative py-5 sm:py-6"
+      className="glass-footer relative py-4 sm:py-5"
     >
-      {/* Top separators (hairline + soft brand accent) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[hsl(var(--border))]"
-      />
+      {/* Top separators */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[hsl(var(--border))]" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-[1px] h-px bg-gradient-to-r from-[hsl(var(--primary)/0)] via-[hsl(var(--primary)/0.35)] to-[hsl(var(--primary)/0)]"
       />
 
-      {/* Top row */}
+      {/* Top row (2 columns now) */}
       <div className="container-app px-4 sm:px-6">
-        <div className="grid items-start gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-          {/* Brand + socials (compact) */}
+        <div className="grid items-start gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+          {/* Brand + socials */}
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm sm:text-base font-semibold tracking-tight text-[hsl(var(--foreground))]">
+              <span className="text-[13px] sm:text-sm font-semibold tracking-tight text-[hsl(var(--foreground))]">
                 TheIdealProGen
               </span>
             </div>
-            <p className="mt-1 text-xs sm:text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="mt-1 text-[11px] sm:text-xs text-[hsl(var(--muted-foreground))]">
               Free, beautiful documents for students and Professionals — powered by $5 coffees.
             </p>
             <div className="mt-3 flex flex-wrap gap-3">
@@ -73,15 +69,15 @@ export default function Footer() {
                   aria-label={s.label}
                   className="text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))] transition-colors"
                 >
-                  <s.icon className="h-5 w-5" />
+                  <s.icon className="h-4 w-4" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Quick links (2 columns, tight) */}
+          {/* Quick links */}
           <nav aria-label="Quick links">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
               Quick Links
             </div>
             <ul className="mt-2 grid grid-cols-2 gap-2">
@@ -89,7 +85,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="block py-1.5 text-sm text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))] transition-colors"
+                    className="block py-1.5 text-[13px] text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))] transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -97,40 +93,10 @@ export default function Footer() {
               ))}
             </ul>
           </nav>
-
-          {/* Newsletter (stacks on mobile) */}
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-              Stay in the loop
-            </div>
-            <form
-              className="mt-2 flex flex-col sm:flex-row gap-2"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <label htmlFor="newsletter-email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="newsletter-email"
-                type="email"
-                placeholder="you@example.com"
-                className="
-                  w-full rounded-md border border-[hsl(var(--border))]
-                  bg-[hsl(var(--card))] px-3 py-2 text-sm
-                  text-[hsl(var(--foreground))]
-                  outline-none ring-offset-[hsl(var(--background))]
-                  focus:ring-2 focus:ring-[hsl(var(--ring))]
-                "
-              />
-              <Button className="w-full sm:w-auto px-3 py-2 text-sm min-h-10">
-                Subscribe
-              </Button>
-            </form>
-          </div>
         </div>
       </div>
 
-      {/* Bottom bar (mobile-friendly) */}
+      {/* Bottom bar */}
       <div className="container-app px-4 sm:px-6 mt-4 sm:mt-5 flex flex-col sm:flex-row gap-2 sm:gap-4 items-center justify-between">
         <p className="text-[11px] sm:text-xs leading-none text-[hsl(var(--muted-foreground))] text-center sm:text-left">
           © {year} TheIdealProGen. All rights reserved.
@@ -140,7 +106,7 @@ export default function Footer() {
           size="sm"
           onClick={backToTop}
           aria-label="Back to top"
-          className="gap-1 px-2 py-2 text-xs min-h-10"
+          className="gap-1 px-2 py-1.5 text-xs"
         >
           <ArrowUp className="h-4 w-4" />
           Top

@@ -292,7 +292,7 @@ export default function PortfolioPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
+      <div className="flex h-screen items-center justify-center bg-background text-foreground text-[var(--font-body)]">
         Loading…
       </div>
     );
@@ -315,11 +315,11 @@ export default function PortfolioPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground text-[var(--font-body)] leading-relaxed">
       {/* Header */}
       <header className="mx-auto mb-6 flex max-w-7xl flex-col gap-3 px-4 pt-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Portfolio Builder</h1>
+        <div className="flex items-center justify-between min-w-0">
+          <h1 className="text-[clamp(20px,5vw,28px)] font-bold">Portfolio Builder</h1>
           <div className="hidden lg:flex gap-2">
             <Button
               variant="ghost"
@@ -389,7 +389,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full lg:w-[45vw] lg:max-w-[800px] rounded-lg border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
+            className="min-w-0 w-full lg:w-[45vw] lg:max-w-[800px] rounded-lg border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
             <div className="p-4 sm:p-6">
               <PortfolioForm
@@ -480,7 +480,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-            className="w-full lg:w-[45vw] lg:max-w-[800px] rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
+            className="min-w-0 w-full lg:w-[45vw] lg:max-w-[800px] rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
             <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-muted/60 px-4 py-2">
               <div className="flex gap-1.5" aria-hidden>
@@ -488,11 +488,30 @@ export default function PortfolioPage() {
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
               </div>
+
+              {/* Desktop controls (unchanged) */}
               <div className="hidden lg:flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')} aria-label="Mobile view">Mobile</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')} aria-label="Tablet view">Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')} aria-label="Desktop view">Desktop</Button>
                 <Button size="sm" onClick={() => setIsPreviewExpanded(true)} aria-label="Expand preview">Expand</Button>
+              </div>
+
+              {/* Mobile controls (NEW) */}
+              <div className="lg:hidden flex items-center gap-2">
+                <select
+                  aria-label="Preview size"
+                  value={viewSize}
+                  onChange={(e) => setViewSize(e.target.value as typeof viewSize)}
+                  className="h-9 rounded-md border border-border bg-card px-2 text-xs"
+                >
+                  <option value="mobile">Mobile</option>
+                  <option value="tablet">Tablet</option>
+                  <option value="desktop">Desktop</option>
+                </select>
+                <Button size="sm" onClick={() => setIsPreviewExpanded(true)} aria-label="Expand preview">
+                  Expand
+                </Button>
               </div>
             </div>
             {PreviewBody}
@@ -517,7 +536,7 @@ export default function PortfolioPage() {
           aria-modal="true"
           aria-label="Expanded portfolio preview"
         >
-          <div className="w-[min(92vw,1400px)] max-h-[85vh] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-card">
+          <div className="w-[min(92vw,1400px)] h-[min(92vh,100dvh)] max-h-[100dvh] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-card">
             <div className="flex items-center justify-between border-b border-border bg-muted/70 px-4 py-2">
               <div className="flex gap-1.5" aria-hidden>
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--destructive))]" />
@@ -530,8 +549,12 @@ export default function PortfolioPage() {
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>Desktop</Button>
                 <Button size="sm" onClick={() => setIsPreviewExpanded(false)}>Close</Button>
               </div>
+              {/* Mobile close */}
+              <div className="lg:hidden">
+                <Button size="sm" onClick={() => setIsPreviewExpanded(false)}>Close</Button>
+              </div>
             </div>
-            <div className="max-h-[calc(85vh-44px)] overflow-y-auto">{PreviewBody}</div>
+            <div className="max-h-[calc(100dvh-56px)] overflow-y-auto">{PreviewBody}</div>
           </div>
         </div>
       )}

@@ -22,7 +22,7 @@ const ThemeToggle = dynamic(
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10"
+            className="h-9 w-9"
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             aria-label="Toggle dark mode"
             aria-pressed={isDark}
@@ -54,11 +54,10 @@ export default function Header() {
   useMotionValueEvent(scrollY, 'change', (latest) => {
     const prev = scrollY.getPrevious() ?? 0;
     const goingDown = latest > prev;
-    setHidden(goingDown && latest > 24); // hide only after slight scroll
+    setHidden(goingDown && latest > 24);
   });
 
   useEffect(() => {
-    // close sheet when route changes
     setIsOpen(false);
   }, [pathname]);
 
@@ -80,23 +79,20 @@ export default function Header() {
       />
 
       <motion.header
-        variants={{
-          visible: { y: 0 },
-          hidden: { y: -88 },
-        }}
+        variants={{ visible: { y: 0 }, hidden: { y: -88 } }}
         initial="visible"
         animate={hidden ? 'hidden' : 'visible'}
         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
         className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50"
         role="banner"
       >
-        {/* MOBILE ADAPTABILITY: full-width container on mobile, clamp on md+; comfy paddings */}
-        <div className="w-full max-w-none md:container md:mx-auto px-4 md:px-6 py-2.5 md:py-3 flex items-center justify-between">
+        {/* Mobile full width; clamp on md+ */}
+        <div className="w-full max-w-none md:container md:mx-auto px-4 md:px-6 py-2 md:py-2.5 flex items-center justify-between">
           {/* Brand */}
           <Link
             href="/"
             aria-label="TheIdealProGen home"
-            className="group inline-flex items-center gap-2 text-lg md:text-xl font-bold text-foreground"
+            className="group inline-flex items-center gap-2 text-base md:text-lg font-bold text-foreground"
           >
             <motion.img
               src="/favicon.ico"
@@ -104,7 +100,7 @@ export default function Header() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="h-7 w-auto md:h-8"
+              className="h-6 w-auto md:h-7"
               loading="eager"
               decoding="async"
             />
@@ -123,7 +119,7 @@ export default function Header() {
                   href={link.href}
                   aria-current={active ? 'page' : undefined}
                   className={[
-                    'relative rounded-md px-3 py-2 text-sm transition',
+                    'relative rounded-md px-2.5 py-1.5 text-[13px] transition',
                     active ? 'text-primary' : 'text-foreground hover:text-primary',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   ].join(' ')}
@@ -140,7 +136,7 @@ export default function Header() {
                 </Link>
               );
             })}
-            <Button variant="outline" className="ml-1 mr-1" asChild>
+            <Button variant="outline" size="sm" className="ml-1 mr-1" asChild>
               <a
                 href="https://buymeacoffee.com/theidealcag"
                 target="_blank"
@@ -161,7 +157,7 @@ export default function Header() {
               <Button
                 variant="outline"
                 size="icon"
-                className="md:hidden h-10 w-10"
+                className="md:hidden h-9 w-9"
                 aria-label="Open menu"
                 aria-controls="mobile-menu"
                 aria-expanded={isOpen}
@@ -169,14 +165,10 @@ export default function Header() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            {/* MOBILE ADAPTABILITY: wider sheet on small screens, bigger tap targets */}
-            <SheetContent
-              id="mobile-menu"
-              side="right"
-              className="w-[88vw] max-w-xs sm:max-w-sm p-0"
-            >
-              <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between">
-                <span className="text-base font-semibold">Menu</span>
+
+            <SheetContent id="mobile-menu" side="right" className="w-[88vw] max-w-xs sm:max-w-sm p-0">
+              <div className="px-3.5 py-2.5 border-b border-border/60 flex items-center justify-between">
+                <span className="text-[15px] font-semibold">Menu</span>
                 <ThemeToggle />
               </div>
 
@@ -190,7 +182,7 @@ export default function Header() {
                       aria-current={active ? 'page' : undefined}
                       onClick={() => setIsOpen(false)}
                       className={[
-                        'rounded-md px-3 py-3 text-base transition',
+                        'rounded-md px-3 py-2.5 text-[15px] transition',
                         active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
                       ].join(' ')}
                     >
@@ -200,7 +192,7 @@ export default function Header() {
                 })}
 
                 <div className="p-2">
-                  <Button variant="outline" className="w-full justify-center py-3 text-base" asChild>
+                  <Button variant="outline" size="sm" className="w-full justify-center py-2.5 text-[15px]" asChild>
                     <a
                       href="https://buymeacoffee.com/theidealcag"
                       target="_blank"
@@ -214,9 +206,7 @@ export default function Header() {
                   </Button>
                 </div>
 
-                <div className="px-4 py-2 text-xs text-muted-foreground">
-                  External links open in a new tab.
-                </div>
+                <div className="px-4 py-2 text-xs text-muted-foreground">External links open in a new tab.</div>
               </nav>
             </SheetContent>
           </Sheet>

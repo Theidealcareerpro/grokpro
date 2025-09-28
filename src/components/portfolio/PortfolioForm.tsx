@@ -11,11 +11,10 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import type { PortfolioData, PortfolioProject, PortfolioSocial, Media } from '@/lib/portfolio-types';
 
-/* ----------------- helpers (module scope = stable) ----------------- */
+/* ----------------- helpers ----------------- */
 
 const isValidUrl = (value: string) => {
   try {
-    // Accept data URLs and http(s)
     if (value.startsWith('data:')) return true;
     const u = new URL(value);
     return u.protocol === 'http:' || u.protocol === 'https:';
@@ -39,9 +38,7 @@ interface PortfolioFormProps {
   setPortfolioData: (data: PortfolioData) => void;
   errors: Record<string, string>;
   setErrors: (
-    errors:
-      | Record<string, string>
-      | ((prev: Record<string, string>) => Record<string, string>)
+    errors: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)
   ) => void;
   onUsernameUpdate?: (newUsername: string) => Promise<void>;
 }
@@ -63,14 +60,13 @@ export default function PortfolioForm({
     media: false,
   });
 
-  // memoize frequently read arrays to calm hook-deps warnings (optional but tidy)
   const skills = useMemo(() => portfolioData.skills ?? [], [portfolioData.skills]);
   const projects = useMemo(() => portfolioData.projects ?? [], [portfolioData.projects]);
   const certifications = useMemo(() => portfolioData.certifications ?? [], [portfolioData.certifications]);
   const socials = useMemo(() => portfolioData.socials ?? [], [portfolioData.socials]);
   const media = useMemo(() => portfolioData.media ?? [], [portfolioData.media]);
 
-  /* ----------------------- validation (fixed) ----------------------- */
+  /* ----------------------- validation ----------------------- */
 
   const computedErrors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -128,25 +124,17 @@ export default function PortfolioForm({
   };
 
   const addSocial = () =>
-    setPortfolioData({
-      ...portfolioData,
-      socials: [...socials, { label: '', url: '' }],
-    });
+    setPortfolioData({ ...portfolioData, socials: [...socials, { label: '', url: '' }] });
 
   const updateMedia = (index: number, field: keyof Media, value: string) => {
     const next: Media[] = [...media];
     next[index] = { ...next[index], [field]: value } as Media;
-    if (field === 'type' && !['video', 'podcast', 'article'].includes(value)) {
-      next[index].type = 'video';
-    }
+    if (field === 'type' && !['video', 'podcast', 'article'].includes(value)) next[index].type = 'video';
     setPortfolioData({ ...portfolioData, media: next });
   };
 
   const addMedia = () =>
-    setPortfolioData({
-      ...portfolioData,
-      media: [...media, { title: '', type: 'video', link: '' }],
-    });
+    setPortfolioData({ ...portfolioData, media: [...media, { title: '', type: 'video', link: '' }] });
 
   const updateProject = (index: number, field: keyof PortfolioProject, value: string) => {
     const next: PortfolioProject[] = [...projects];
@@ -155,10 +143,7 @@ export default function PortfolioForm({
   };
 
   const addProject = () =>
-    setPortfolioData({
-      ...portfolioData,
-      projects: [...projects, { name: '', description: '', link: '' }],
-    });
+    setPortfolioData({ ...portfolioData, projects: [...projects, { name: '', description: '', link: '' }] });
 
   const updateSkill = (index: number, value: string) => {
     const next = [...skills];
@@ -166,11 +151,7 @@ export default function PortfolioForm({
     setPortfolioData({ ...portfolioData, skills: next });
   };
 
-  const addSkill = () =>
-    setPortfolioData({
-      ...portfolioData,
-      skills: [...skills, ''],
-    });
+  const addSkill = () => setPortfolioData({ ...portfolioData, skills: [...skills, ''] });
 
   const updateCertification = (index: number, value: string) => {
     const next = [...certifications];
@@ -179,15 +160,11 @@ export default function PortfolioForm({
   };
 
   const addCertification = () =>
-    setPortfolioData({
-      ...portfolioData,
-      certifications: [...certifications, ''],
-    });
+    setPortfolioData({ ...portfolioData, certifications: [...certifications, ''] });
 
   const onDragEnd = useCallback(
     (result: DropResult) => {
       if (!result.destination) return;
-
       const { type, source, destination } = result;
 
       if (type === 'skills') {
@@ -214,7 +191,6 @@ export default function PortfolioForm({
         return;
       }
 
-      // media
       const items = [...media];
       const [moved] = items.splice(source.index, 1);
       items.splice(destination.index, 0, moved);
@@ -233,21 +209,25 @@ export default function PortfolioForm({
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Edit Portfolio</CardTitle>
+      <CardHeader className="p-2.5 sm:p-3">
+        <CardTitle className="text-base font-semibold leading-tight">Edit Portfolio</CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      {/* tighter spacing/padding */}
+      <CardContent className="p-3 sm:p-4 space-y-2.5 sm:space-y-3">
         {Object.entries(isOpen).map(([section, open]) => (
           <div key={section} className={`border rounded-lg ${section}-section`}>
             <Button
               variant="ghost"
-              className="w-full text-left font-semibold p-3 flex justify-between items-center"
+              size="sm"
+              className="w-full text-left font-semibold p-2 flex justify-between items-center"
               onClick={() => setIsOpen((prev) => ({ ...prev, [section]: !prev[section] }))}
               aria-label={`Toggle ${section} section`}
             >
-              {section.charAt(0).toUpperCase() + section.slice(1)}
-              {open ? <ChevronUp /> : <ChevronDown />}
+              <span className="text-[13px] sm:text-sm">
+                {section.charAt(0).toUpperCase() + section.slice(1)}
+              </span>
+              {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
 
             <AnimatePresence>
@@ -256,12 +236,12 @@ export default function PortfolioForm({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="p-4 space-y-4"
+                  className="p-3 sm:p-3.5 space-y-2.5 sm:space-y-3"
                 >
                   {section === 'header' && (
                     <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">
                           Full Name <span className="text-xs text-gray-500">(e.g., John Doe)</span>
                         </label>
                         <Input
@@ -271,11 +251,11 @@ export default function PortfolioForm({
                           className={errors.name ? 'border-red-500' : ''}
                           aria-label="Full Name"
                         />
-                        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                        {errors.name && <p className="text-[12px] text-red-500">{errors.name}</p>}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">
                           Role <span className="text-xs text-gray-500">(e.g., Software Engineer)</span>
                         </label>
                         <Input
@@ -286,8 +266,8 @@ export default function PortfolioForm({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">
                           Tagline <span className="text-xs text-gray-500">(e.g., Building Innovative Solutions)</span>
                         </label>
                         <Input
@@ -298,8 +278,8 @@ export default function PortfolioForm({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">
                           Location <span className="text-xs text-gray-500">(e.g., London, UK)</span>
                         </label>
                         <Input
@@ -310,8 +290,8 @@ export default function PortfolioForm({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">
                           Username <span className="text-xs text-gray-500">(e.g., johndoe, optional)</span>
                         </label>
                         <Input
@@ -322,33 +302,33 @@ export default function PortfolioForm({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Upload Image</label>
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">Upload Image</label>
                         <Input
                           type="file"
                           accept="image/*"
                           onChange={(e) => handleFileUpload('photo', e)}
-                          className="mt-1 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="mt-1 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           aria-label="Upload Headshot"
                         />
-                        {errors.photo && <p className="text-red-500 text-sm">{errors.photo}</p>}
+                        {errors.photo && <p className="text-[12px] text-red-500">{errors.photo}</p>}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Upload CV</label>
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">Upload CV</label>
                         <Input
                           type="file"
                           accept="application/pdf"
                           onChange={(e) => handleFileUpload('cv', e)}
-                          className="mt-1 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          className="mt-1 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                           aria-label="Upload CV"
                         />
-                        {errors.cv && <p className="text-red-500 text-sm">{errors.cv}</p>}
+                        {errors.cv && <p className="text-[12px] text-red-500">{errors.cv}</p>}
                       </div>
 
-                      {/* ======= UPDATED TEMPLATE BLOCK ONLY ======= */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Template</label>
+                      {/* Template */}
+                      <div className="min-w-0">
+                        <label className="block text-[13px] sm:text-sm font-medium text-gray-700">Template</label>
                         <Select
                           value={portfolioData.templateId}
                           onValueChange={(value: string) => {
@@ -361,92 +341,20 @@ export default function PortfolioForm({
                           }}
                         >
                           <SelectTrigger
-                            className="
-                              w-full py-2 px-4 rounded-md text-sm
-                              border border-gray-300
-                              bg-[hsl(var(--card))] text-[hsl(var(--foreground))]
-                              focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]
-                            "
+                            className="w-full py-2 px-3 rounded-md text-[13px] border border-gray-300 bg-[hsl(var(--card))] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
                           >
                             <SelectValue placeholder="Select Template" />
                           </SelectTrigger>
-
-                          {/* Solid, non-transparent dropdown to prevent overlay/casting */}
-                          <SelectContent
-                            sideOffset={6}
-                            position="popper"
-                            className="menu-surface menu-elevated w-full rounded-md p-1 shadow-lg z-50"
-                          >
-                            <SelectItem
-                              value="modern"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Modern
-                            </SelectItem>
-                            <SelectItem
-                              value="classic"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Classic
-                            </SelectItem>
-                            <SelectItem
-                              value="minimal"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Minimal
-                            </SelectItem>
-                            <SelectItem
-                              value="tech"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Tech
-                            </SelectItem>
-                            <SelectItem
-                              value="creative"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Creative
-                            </SelectItem>
-                            <SelectItem
-                              value="corporate"
-                              className="
-                                menu-item
-                                data-[highlighted]:bg-[hsl(var(--muted))]
-                                data-[state=checked]:bg-[hsl(var(--accent)/0.18)]
-                                data-[state=checked]:text-[hsl(var(--foreground))]
-                              "
-                            >
-                              Corporate
-                            </SelectItem>
+                          <SelectContent sideOffset={6} position="popper" className="menu-surface menu-elevated w-full rounded-md p-1 shadow-lg z-50">
+                            <SelectItem value="modern" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Modern</SelectItem>
+                            <SelectItem value="classic" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Classic</SelectItem>
+                            <SelectItem value="minimal" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Minimal</SelectItem>
+                            <SelectItem value="tech" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Tech</SelectItem>
+                            <SelectItem value="creative" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Creative</SelectItem>
+                            <SelectItem value="corporate" className="menu-item data-[highlighted]:bg-[hsl(var(--muted))] data-[state=checked]:bg-[hsl(var(--accent)/0.18)]">Corporate</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      {/* ======= /UPDATED TEMPLATE BLOCK ONLY ======= */}
                     </>
                   )}
 
@@ -468,7 +376,7 @@ export default function PortfolioForm({
                         className={errors.email ? 'border-red-500' : ''}
                         aria-label="Email"
                       />
-                      {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+                      {errors.email && <p className="text-[12px] text-red-500">{errors.email}</p>}
 
                       <Input
                         placeholder="Phone (e.g., +44 123 456 7890)"
@@ -477,7 +385,7 @@ export default function PortfolioForm({
                         className={errors.phone ? 'border-red-500' : ''}
                         aria-label="Phone"
                       />
-                      {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+                      {errors.phone && <p className="text-[12px] text-red-500">{errors.phone}</p>}
 
                       <Input
                         placeholder="LinkedIn URL (e.g., https://linkedin.com/in/johndoe)"
@@ -486,27 +394,32 @@ export default function PortfolioForm({
                         className={errors.linkedin ? 'border-red-500' : ''}
                         aria-label="LinkedIn URL"
                       />
-                      {errors.linkedin && <p className="text-red-500 text-sm">{errors.linkedin}</p>}
+                      {errors.linkedin && <p className="text-[12px] text-red-500">{errors.linkedin}</p>}
 
-                      {socials.map((social, index) => (
-                        <div key={index} className="grid grid-cols-2 gap-2 mt-2">
-                          <Input
-                            placeholder="Label (e.g., Twitter)"
-                            value={social.label}
-                            onChange={(e) => updateSocial(index, 'label', e.target.value)}
-                            aria-label={`Social Label ${index + 1}`}
-                          />
-                          <Input
-                            placeholder="URL (e.g., https://twitter.com/johndoe)"
-                            value={social.url}
-                            onChange={(e) => updateSocial(index, 'url', e.target.value)}
-                            className={errors.socials ? 'border-red-500' : ''}
-                            aria-label={`Social URL ${index + 1}`}
-                          />
-                        </div>
-                      ))}
-                      {errors.socials && <p className="text-red-500 text-sm">{errors.socials}</p>}
-                      <Button onClick={addSocial} className="mt-2" aria-label="Add Social Link">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                        {socials.map((social, index) => (
+                          <div key={index} className="min-w-0">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <Input
+                                placeholder="Label (e.g., Twitter)"
+                                value={social.label}
+                                onChange={(e) => updateSocial(index, 'label', e.target.value)}
+                                aria-label={`Social Label ${index + 1}`}
+                                className="min-w-0"
+                              />
+                              <Input
+                                placeholder="URL (e.g., https://twitter.com/johndoe)"
+                                value={social.url}
+                                onChange={(e) => updateSocial(index, 'url', e.target.value)}
+                                className={`min-w-0 ${errors.socials ? 'border-red-500' : ''}`}
+                                aria-label={`Social URL ${index + 1}`}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {errors.socials && <p className="text-[12px] text-red-500">{errors.socials}</p>}
+                      <Button onClick={addSocial} size="sm" className="mt-2" aria-label="Add Social Link">
                         Add Social
                       </Button>
                     </>
@@ -524,13 +437,13 @@ export default function PortfolioForm({
                                     ref={drag.innerRef}
                                     {...drag.draggableProps}
                                     {...drag.dragHandleProps}
-                                    className="flex items-center gap-2 mt-2"
+                                    className="flex items-center gap-2 mt-2 min-w-0"
                                   >
                                     <Input
                                       placeholder="Skill (e.g., JavaScript)"
                                       value={skill}
                                       onChange={(e) => updateSkill(index, e.target.value)}
-                                      className="flex-1"
+                                      className="flex-1 min-w-0"
                                       aria-label={`Skill ${index + 1}`}
                                     />
                                   </div>
@@ -541,7 +454,7 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addSkill} className="mt-2" aria-label="Add Skill">
+                      <Button onClick={addSkill} size="sm" className="mt-2" aria-label="Add Skill">
                         Add Skill
                       </Button>
                     </DragDropContext>
@@ -559,25 +472,27 @@ export default function PortfolioForm({
                                     ref={drag.innerRef}
                                     {...drag.draggableProps}
                                     {...drag.dragHandleProps}
-                                    className="space-y-2 mt-2 border p-2 rounded"
+                                    className="space-y-2 mt-2 border p-2.5 sm:p-3 rounded min-w-0"
                                   >
                                     <Input
                                       placeholder="Project Name (e.g., Portfolio Website)"
                                       value={project.name}
                                       onChange={(e) => updateProject(index, 'name', e.target.value)}
                                       aria-label={`Project Name ${index + 1}`}
+                                      className="min-w-0"
                                     />
                                     <Textarea
                                       placeholder="Description (e.g., Built a responsive site with React)"
                                       value={project.description}
                                       onChange={(e) => updateProject(index, 'description', e.target.value)}
                                       aria-label={`Project Description ${index + 1}`}
+                                      className="min-w-0"
                                     />
                                     <Input
                                       placeholder="Link (e.g., https://example.com)"
                                       value={project.link}
                                       onChange={(e) => updateProject(index, 'link', e.target.value)}
-                                      className={errors.projects ? 'border-red-500' : ''}
+                                      className={`min-w-0 ${errors.projects ? 'border-red-500' : ''}`}
                                       aria-label={`Project Link ${index + 1}`}
                                     />
                                   </div>
@@ -588,7 +503,7 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addProject} className="mt-2" aria-label="Add Project">
+                      <Button onClick={addProject} size="sm" className="mt-2" aria-label="Add Project">
                         Add Project
                       </Button>
                     </DragDropContext>
@@ -606,13 +521,13 @@ export default function PortfolioForm({
                                     ref={drag.innerRef}
                                     {...drag.draggableProps}
                                     {...drag.dragHandleProps}
-                                    className="flex items-center gap-2 mt-2"
+                                    className="flex items-center gap-2 mt-2 min-w-0"
                                   >
                                     <Input
                                       placeholder="Certification (e.g., AWS Certified Developer)"
                                       value={cert}
                                       onChange={(e) => updateCertification(index, e.target.value)}
-                                      className="flex-1"
+                                      className="flex-1 min-w-0"
                                       aria-label={`Certification ${index + 1}`}
                                     />
                                   </div>
@@ -623,7 +538,7 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addCertification} className="mt-2" aria-label="Add Certification">
+                      <Button onClick={addCertification} size="sm" className="mt-2" aria-label="Add Certification">
                         Add Certification
                       </Button>
                     </DragDropContext>
@@ -641,15 +556,15 @@ export default function PortfolioForm({
                                     ref={drag.innerRef}
                                     {...drag.draggableProps}
                                     {...drag.dragHandleProps}
-                                    className="space-y-2 mt-2 border p-2 rounded"
+                                    className="space-y-2 mt-2 border p-2.5 sm:p-3 rounded min-w-0"
                                   >
                                     <Input
                                       placeholder="Title (e.g., Tech Talk Video)"
                                       value={item.title}
                                       onChange={(e) => updateMedia(index, 'title', e.target.value)}
                                       aria-label={`Media Title ${index + 1}`}
+                                      className="min-w-0"
                                     />
-                                    {/* Native select is fine here */}
                                     <select
                                       value={item.type}
                                       onChange={(e) => updateMedia(index, 'type', e.target.value)}
@@ -664,7 +579,7 @@ export default function PortfolioForm({
                                       placeholder="Link (e.g., https://youtube.com/watch)"
                                       value={item.link}
                                       onChange={(e) => updateMedia(index, 'link', e.target.value)}
-                                      className={errors.media ? 'border-red-500' : ''}
+                                      className={`min-w-0 ${errors.media ? 'border-red-500' : ''}`}
                                       aria-label={`Media Link ${index + 1}`}
                                     />
                                   </div>
@@ -675,7 +590,7 @@ export default function PortfolioForm({
                           </div>
                         )}
                       </Droppable>
-                      <Button onClick={addMedia} className="mt-2" aria-label="Add Media">
+                      <Button onClick={addMedia} size="sm" className="mt-2" aria-label="Add Media">
                         Add Media
                       </Button>
                     </DragDropContext>
