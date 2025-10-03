@@ -320,7 +320,7 @@ export default function PortfolioPage() {
       <header className="mx-auto mb-6 flex max-w-7xl flex-col gap-3 px-4 pt-6">
         <div className="flex items-center justify-between min-w-0">
           <h1 className="text-[clamp(20px,5vw,28px)] font-bold">Portfolio Builder</h1>
-          <div className="hidden lg:flex gap-2">
+          <div className="hidden md:flex gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -382,14 +382,14 @@ export default function PortfolioPage() {
       </header>
 
       {/* Main */}
-      <main className="mx-auto w-full max-w-none px-4 lg:max-w-[90vw] lg:px-6">
-        <div className="flex flex-col gap-8 lg:flex-row">
+      <main className="mx-auto w-full max-w-none px-4 md:max-w-[90vw] md:px-6">
+        <div className="flex flex-col gap-8 md:flex-row">
           {/* Left: Form */}
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="min-w-0 w-full lg:w-[45vw] lg:max-w-[800px] rounded-lg border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
+            className="min-w-0 w-full md:w-[45vw] md:max-w-[800px] rounded-lg border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
             <div className="p-4 sm:p-6">
               <PortfolioForm
@@ -480,7 +480,7 @@ export default function PortfolioPage() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-            className="min-w-0 w-full lg:w-[45vw] lg:max-w-[800px] rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
+            className="min-w-0 w-full md:w-[45vw] md:max-w-[800px] rounded-2xl border border-border bg-card text-card-foreground shadow-card transition-[width] duration-300 ease-in-out"
           >
             <div className="flex items-center justify-between rounded-t-2xl border-b border-border bg-muted/60 px-4 py-2">
               <div className="flex gap-1.5" aria-hidden>
@@ -490,7 +490,7 @@ export default function PortfolioPage() {
               </div>
 
               {/* Desktop controls (unchanged) */}
-              <div className="hidden lg:flex gap-2">
+              <div className="hidden md:flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')} aria-label="Mobile view">Mobile</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')} aria-label="Tablet view">Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')} aria-label="Desktop view">Desktop</Button>
@@ -498,7 +498,7 @@ export default function PortfolioPage() {
               </div>
 
               {/* Mobile controls (NEW) */}
-              <div className="lg:hidden flex items-center gap-2">
+              <div className="md:hidden flex items-center gap-2">
                 <select
                   aria-label="Preview size"
                   value={viewSize}
@@ -543,14 +543,14 @@ export default function PortfolioPage() {
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--warning))]" />
                 <span className="h-3 w-3 rounded-full bg-[hsl(var(--success))]" />
               </div>
-              <div className="hidden lg:flex gap-2">
+              <div className="hidden md:flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewSize('mobile')}>Mobile</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('tablet')}>Tablet</Button>
                 <Button variant="outline" size="sm" onClick={() => setViewSize('desktop')}>Desktop</Button>
                 <Button size="sm" onClick={() => setIsPreviewExpanded(false)}>Close</Button>
               </div>
               {/* Mobile close */}
-              <div className="lg:hidden">
+              <div className="md:hidden">
                 <Button size="sm" onClick={() => setIsPreviewExpanded(false)}>Close</Button>
               </div>
             </div>

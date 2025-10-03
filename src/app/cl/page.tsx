@@ -73,8 +73,7 @@ const CLPDFDocument = ({ clData }: { clData: CLData }) => (
 export default function CLPage() {
   const [clData, setCLData] = useState<CLData>(EMPTY_CL);
   const [loading, setLoading] = useState(true);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-
+  
   useEffect(() => {
     const storedCL = localStorage.getItem(STORAGE_KEY_CL);
     if (storedCL) {
@@ -108,12 +107,12 @@ export default function CLPage() {
         </PDFDownloadLink>
       </header>
 
-      <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col md:flex-row gap-6 md:gap-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white dark:bg-zinc-800 p-3 sm:p-5 rounded-lg shadow-md h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
+          className="bg-white dark:bg-zinc-800 p-3 sm:p-5 rounded-lg shadow-md h-fit w-full md:w-[45vw] md:max-w-[800px] transition-[width] duration-300 ease-in-out"
         >
           <div className="mb-3 text-sm text-gray-600 dark:text-gray-300">
             Build your professional cover letter. It updates live on the right.
@@ -171,9 +170,8 @@ export default function CLPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${
-            isPreviewExpanded ? 'fixed top-0 left-0 w-full h-[100dvh] z-40 overflow-y-auto' : ''
-          }`}
+          className="bg-gray-900 rounded-2xl shadow-xl h-fit w-full md:w-[45vw] md:max-w-[800px] transition-[width] duration-300 ease-in-out"
+
         >
           <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
@@ -181,24 +179,7 @@ export default function CLPage() {
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
               <span className="w-3 h-3 bg-green-500 rounded-full" />
             </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsPreviewExpanded((v) => !v)}
-                className="bg-teal-600 text-white py-1 px-3 rounded hover:bg-teal-700 text-sm"
-              >
-                {isPreviewExpanded ? 'Collapse' : 'Expand'}
-              </button>
-              {isPreviewExpanded && (
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewExpanded(false)}
-                  className="bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 text-sm"
-                >
-                  Close
-                </button>
-              )}
-            </div>
+
           </div>
 
         <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">

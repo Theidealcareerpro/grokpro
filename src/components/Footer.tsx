@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Github, Linkedin, Twitter, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 type Nav = { href: `/${string}` | '/'; label: string };
 type Social = {
@@ -28,7 +28,13 @@ const SOCIAL: readonly Social[] = [
 ] as const;
 
 export default function Footer() {
-  const year = new Date().getFullYear();
+  // Fix hydration: year is client-only
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
+
   const backToTop = useCallback(() => window.scrollTo({ top: 0, behavior: 'smooth' }), []);
 
   return (
@@ -99,7 +105,7 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="container-app px-4 sm:px-6 mt-4 sm:mt-5 flex flex-col sm:flex-row gap-2 sm:gap-4 items-center justify-between">
         <p className="text-[11px] sm:text-xs leading-none text-[hsl(var(--muted-foreground))] text-center sm:text-left">
-          © {year} TheIdealProGen. All rights reserved.
+          © {year ?? ''} TheIdealProGen. All rights reserved.
         </p>
         <Button
           variant="ghost"

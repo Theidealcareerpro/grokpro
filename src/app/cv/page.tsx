@@ -2,7 +2,7 @@
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import dynamic from 'next/dynamic';
+import dynamic from 'next/dynamic'; // NOTE: left in case other code needs dynamic, but we do not use it for PDFDownloadLink now
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
 import Skeleton from '@/components/Skeleton';
@@ -10,11 +10,6 @@ import SectionIntro from '@/components/SectionIntro';
 import Counters  from '@/components/AnimatedCounters';
 import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
-
-const PDFDownloadLink = dynamic(
-  () => import('@react-pdf/renderer').then((mod) => ({ default: mod.PDFDownloadLink })),
-  { ssr: false }
-);
 
 const SAMPLE_CV: CVData = {
   name: 'Jane Doe',
@@ -227,7 +222,10 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
 export default function CVPage() {
   const [cvData, setCVData] = useState<CVData>(EMPTY_CV);
   const [loading, setLoading] = useState(true);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+
+  // new: client-side download state
+  const [isDownloadingSample, setIsDownloadingSample] = useState(false);
+  const [isDownloadingCV, setIsDownloadingCV] = useState(false);
 
   useEffect(() => {
     const storedCV = localStorage.getItem(STORAGE_KEY);
@@ -247,17 +245,64 @@ export default function CVPage() {
 
   const currentStep = cvData.name ? (cvData.education.length > 0 && cvData.education[0].school ? 2 : 1) : 0;
 
+  // Utility: trigger download of a Blob with filename
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  // Handler: download the SAMPLE_CV
+  const handleDownloadSample = async () => {
+    try {
+      setIsDownloadingSample(true);
+      // Dynamically import pdf builder on demand (client only)
+      const { pdf } = await import('@react-pdf/renderer');
+      const blob = await pdf(<CVPDFDocument cvData={SAMPLE_CV} />).toBlob();
+      triggerBlobDownload(blob, 'sample-cv.pdf');
+    } catch (err) {
+      console.error('Download sample CV error:', err);
+      alert('Failed to generate sample PDF. Please try again.');
+    } finally {
+      setIsDownloadingSample(false);
+    }
+  };
+
+  // Handler: download the user's CV (uses current cvData)
+  const handleDownloadCV = async () => {
+    try {
+      setIsDownloadingCV(true);
+      const { pdf } = await import('@react-pdf/renderer');
+      const filenameSafe = (cvData.name || 'my-cv').replace(/\s+/g, '_');
+      const blob = await pdf(<CVPDFDocument cvData={cvData} />).toBlob();
+      triggerBlobDownload(blob, `${filenameSafe}_CV.pdf`);
+    } catch (err) {
+      console.error('Download CV error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsDownloadingCV(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
       <header className="mb-4 sm:mb-6 flex justify-between items-center px-3 sm:px-6 pt-4">
         <h1 className="text-2xl font-bold text-white">CV Builder</h1>
-        <PDFDownloadLink
-          document={<CVPDFDocument cvData={SAMPLE_CV} />}
-          fileName="sample-cv.pdf"
-          className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm"
+
+        {/* Sample download - replaced dynamic PDFDownloadLink with explicit handler */}
+        <button
+          onClick={handleDownloadSample}
+          className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
+          disabled={isDownloadingSample}
         >
-          {({ loading }) => (loading ? 'Generating Sample CV...' : 'Download Sample CV')}
-        </PDFDownloadLink>
+          <ArrowDownTrayIcon className="h-5 w-5" />
+          {isDownloadingSample ? 'Generating Sample CV...' : 'Download Sample CV'}
+        </button>
       </header>
 
       <main className="mx-auto w-full max-w-none px-3 sm:px-6 flex flex-col lg:flex-row gap-6 lg:gap-8">
@@ -282,15 +327,16 @@ export default function CVPage() {
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             <button
               className="px-3 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
-              disabled={currentStep < 2}
+              disabled={currentStep < 2 || isDownloadingCV}
+              onClick={currentStep < 2 ? undefined : handleDownloadCV}
             >
               <ArrowDownTrayIcon className="h-5 w-5" />
               {currentStep < 2 ? (
                 'Complete Form to Download'
+              ) : isDownloadingCV ? (
+                'Generating PDF...'
               ) : (
-                <PDFDownloadLink document={<CVPDFDocument cvData={cvData} />} fileName={`${cvData.name}_CV.pdf`}>
-                  {({ loading }) => (loading ? 'Generating PDF...' : 'Download CV')}
-                </PDFDownloadLink>
+                'Download CV'
               )}
             </button>
             <button
@@ -307,7 +353,7 @@ export default function CVPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className={`bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out ${isPreviewExpanded ? 'fixed top-0 left-0 w-full h-[100dvh] z-50 overflow-y-auto' : ''}`}
+          className="bg-gray-900 rounded-2xl shadow-xl h-fit w-full lg:w-[45vw] lg:max-w-[800px] transition-[width] duration-300 ease-in-out"
         >
           <div className="flex justify-between items-center px-3 py-1.5 bg-gray-800 rounded-t-xl">
             <div className="flex gap-1">
@@ -315,12 +361,7 @@ export default function CVPage() {
               <span className="w-3 h-3 bg-yellow-500 rounded-full" />
               <span className="w-3 h-3 bg-green-500 rounded-full" />
             </div>
-            <button
-              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-              className="bg-teal-600 text-white py-1 px-3 rounded hover:bg-teal-700 text-sm"
-            >
-              {isPreviewExpanded ? 'Collapse' : 'Expand'}
-            </button>
+
           </div>
           <div className="bg-white dark:bg-zinc-800 rounded-b-xl p-2 sm:p-3 h-[calc(100%-2rem)] overflow-y-auto">
             {loading ? (
