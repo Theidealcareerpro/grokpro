@@ -254,9 +254,9 @@ export default function CVPage() {
       const safeData = { ...SAMPLE_CV, theme: 'blue' as const };
       const blob = await pdf(<CVDocument cvData={safeData} />).toBlob();
       triggerBlobDownload(blob, 'sample-cv.pdf');
-    } catch (err: any) {
-      console.error('Sample PDF failed:', err);
-      alert('Sample PDF failed in dev mode (Turbopack issue). Works perfectly when deployed.');
+    } catch (error) {
+      console.error('Sample PDF failed:', error);
+      alert('Sample PDF failed in dev mode (Turbopack limitation). Works perfectly in production.');
     } finally {
       setIsDownloadingSample(false);
     }
@@ -279,22 +279,22 @@ export default function CVPage() {
       const filenameSafe = (cvData.name || 'my-cv').replace(/\s+/g, '_').trim();
       const blob = await pdf(<CVDocument cvData={safeData} />).toBlob();
       triggerBlobDownload(blob, `${filenameSafe}_CV.pdf`);
-    } catch (err: any) {
-      console.error('PDF generation failed:', err);
-      alert('PDF generation failed in dev mode (common with Turbopack). Works 100% in production.');
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('PDF generation failed in dev mode (Turbopack issue). Works 100% in production.');
     } finally {
       setIsDownloadingCV(false);
     }
   };
 
   const handleDownloadDocx = async () => {
-    if (currentStep < 2) return;
+    if (currentStep < 2 || isDownloadingDocx) return;
     try {
       setIsDownloadingDocx(true);
       const { generateDocx } = await import('@/lib/generateDocx');
       await generateDocx(cvData);
-    } catch (err) {
-      console.error('DOCX generation failed:', err);
+    } catch (error) {
+      console.error('DOCX generation failed:', error);
       alert('Failed to generate Word document. Please try again.');
     } finally {
       setIsDownloadingDocx(false);
@@ -307,8 +307,8 @@ export default function CVPage() {
         <h1 className="text-2xl font-bold text-white">CV Builder</h1>
         <button
           onClick={handleDownloadSample}
-          className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2"
           disabled={isDownloadingSample}
+          className="px-4 py-2 rounded bg-gray-800 text-white hover:bg-gray-900 transition text-sm flex items-center gap-2 disabled:opacity-60"
         >
           <ArrowDownTrayIcon className="h-5 w-5" />
           {isDownloadingSample ? 'Generating...' : 'Download Sample CV'}
