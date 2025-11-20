@@ -96,7 +96,7 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
   const handleChange = (field: keyof CVData, value: string) => {
     setLocalData(prev => {
       const updated = { ...prev, [field]: value };
-      if (field === 'theme' && !['blue', 'emerald', 'rose'].includes(value as Theme)) {
+      if (field === 'theme' && !['blue', 'emerald', 'rose', 'black', 'orange'].includes(value as Theme)) {
         updated.theme = 'blue';
       }
       if (field === 'font' && !['Helvetica', 'Roboto', 'Times'].includes(value as FontChoice)) {
@@ -429,6 +429,7 @@ export default function CVForm({ cvData, setCVData }: CVFormProps) {
             <option value="blue">Blue</option>
             <option value="emerald">Emerald</option>
             <option value="rose">Rose</option>
+            <option value="black">Black</option>
           </select>
           <select
             value={localData.font}

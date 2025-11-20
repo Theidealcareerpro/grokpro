@@ -16,14 +16,16 @@ interface CVPreviewProps {
 export default function CVPreview({ data }: CVPreviewProps) {
   const themeColor =
     data.theme === 'blue'
-      ? 'text-blue-600'
+      ? 'text-blue-700'
       : data.theme === 'emerald'
-      ? 'text-emerald-600'
+      ? 'text-emerald-700'
+      : data.theme === 'teal'
+      ? 'text-teal-700'
+      : data.theme === 'rose'
+      ? 'text-rose-700'
       : data.theme === 'black'
       ? 'text-black'
-      : data.theme === 'teal'
-      ? 'text-teal-600'
-      : 'text-rose-600';
+      : 'text-blue-700'; // fallback
 
   return (
     <motion.div
