@@ -1,297 +1,383 @@
 'use client';
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
-import { MapPinIcon } from '@heroicons/react/24/outline';
 
-// Register fonts
-// Note: Replace these src URLs with actual font file URLs (e.g., .ttf or .otf) or local file paths from your project
-// Example local paths: require('./fonts/Helvetica.ttf') or use public assets
+import React from 'react';
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Font,
+} from '@react-pdf/renderer';
+
+// ──────────────────────────────────────────────────────────────
+//  BEST-IN-CLASS FONT: Inter v4 (Official, Fast, Beautiful)
+// ──────────────────────────────────────────────────────────────
 Font.register({
-  family: 'Helvetica',
-  src: 'path/to/Helvetica.ttf', // Replace with actual font file URL or local path
+  family: 'Inter',
+  fonts: [
+    { src: 'https://rsms.me/inter/font-files/Inter-Regular.woff2', fontWeight: 'normal' },
+    { src: 'https://rsms.me/inter/font-files/Inter-Medium.woff2', fontWeight: 500 },
+    { src: 'https://rsms.me/inter/font-files/Inter-SemiBold.woff2', fontWeight: 600 },
+    { src: 'https://rsms.me/inter/font-files/Inter-Bold.woff2', fontWeight: 'bold' },
+  ],
 });
-Font.register({
-  family: 'Roboto',
-  src: 'path/to/Roboto-Regular.ttf', // Replace with actual font file URL or local path
-});
-Font.register({
-  family: 'Times',
-  src: 'path/to/Times-Roman.ttf', // Replace with actual font file URL or local path
-});
+
+const DEFAULT_FONT = 'Inter';
+
+// ──────────────────────────────────────────────────────────────
+//  Types
+// ──────────────────────────────────────────────────────────────
+interface Education {
+  school: string;
+  location: string;
+  date: string;
+  degree: string;
+  details?: string;
+}
+
+interface Experience {
+  company: string;
+  location?: string;
+  date?: string;
+  role: string;
+  description?: string;
+  achievements?: string[];
+}
 
 interface CVData {
   name: string;
-  theme: "blue" | "emerald" | "rose";
+  theme?: 'blue' | 'emerald' | 'violet' | 'orange';
+  customColor?: string;
   location?: string;
   phone?: string;
   email?: string;
   linkedin?: string;
   portfolio?: string;
   summary?: string;
-  education: { school: string; location: string; date: string; degree: string; details: string }[];
-  experience: { company: string; location?: string; date?: string; role: string; description: string; achievements: string[] }[];
+  education: Education[];
+  experience: Experience[];
   skills: string[];
   certifications: string[];
   projects: string[];
-  layout?: "one-column" | "sidebar";
-  fontFamily?: "Helvetica" | "Roboto" | "Times";
-  customColor?: string;
+  layout?: 'sidebar' | 'one-column';
+  fontFamily?: 'Inter' | 'Roboto' | 'Helvetica';
 }
 
-const themeColors = {
-  blue: '#2563eb',
-  emerald: '#059669',
-  rose: '#e11d48',
-};
+// ──────────────────────────────────────────────────────────────
+//  Themes
+// ──────────────────────────────────────────────────────────────
+const themes = {
+  blue: '#1d4ed8',
+  emerald: '#047857',
+  violet: '#7c3aed',
+  orange: '#ea580c',
+} as const;
 
+// ──────────────────────────────────────────────────────────────
+//  STYLES – Pixel-perfect & DOCX-matched
+// ──────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   page: {
-    padding: 24,
-    fontSize: 11,
-    lineHeight: 1.5,
-    flexDirection: 'column',
+    padding: 42,
+    paddingTop: 36,
+    fontFamily: DEFAULT_FONT,
+    fontSize: 10.5,
+    lineHeight: 1.55,
+    color: '#1f2937',
+    backgroundColor: '#ffffff',
   },
-  sidebar: {
-    width: 150,
-    paddingRight: 10,
-    borderRightWidth: 1,
-    borderRightColor: '#d1d5db',
-  },
-  mainContent: {
-    flex: 1,
-  },
+
   header: {
-    fontSize: 21,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: 'bold' as const,
     textAlign: 'center',
-    marginBottom: 3,
-    textTransform: 'uppercase',
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
+
   contact: {
-    fontSize: 9,
-    color: '#374151',
+    fontSize: 9.8,
     textAlign: 'center',
-    marginVertical: 6,
+    color: '#4b5563',
+    marginBottom: 18,
+    fontWeight: 500,
   },
-  separator: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#d1d5db',
-    marginVertical: 5,
+
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: 'bold' as const,
+    marginTop: 16,
+    marginBottom: 7,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.4,
   },
-  sectionHeader: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 3,
-    textTransform: 'uppercase',
-  },
+
   text: {
-    fontSize: 10,
-    marginBottom: 2,
+    fontSize: 10.5,
+    marginBottom: 4,
+    lineHeight: 1.5,
+  },
+
+  // Fixed bullet layout (never breaks)
+  bulletWrapper: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  bulletPoint: {
+    width: 14,
+    fontSize: 10.5,
+    textAlign: 'center' as const,
+    fontWeight: 'bold' as const,
   },
   bulletText: {
-    fontSize: 10,
-    marginLeft: 12,
-    marginBottom: 2,
-  },
-  twoColumn: {
-    flexDirection: 'row',
-  },
-  column: {
     flex: 1,
-    paddingRight: 8,
+    fontSize: 10.5,
+    lineHeight: 1.5,
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 11,
+  },
+
+  // Layout
+  twoColumn: { flexDirection: 'row', flexGrow: 1 },
+  sidebar: {
+    width: 190,
+    paddingRight: 24,
+    borderRightWidth: 1.2,
+    borderRightColor: '#e5e7eb',
+    paddingTop: 4,
+  },
+  main: { flex: 1, paddingLeft: 28, paddingTop: 4 },
+
+  // Experience/Education
+  jobTitle: { fontSize: 11.5, fontWeight: 'bold' as const },
+  jobMeta: { fontSize: 10, color: '#6b7280', marginBottom: 5 },
+  achievementHeader: {
+    fontSize: 10.8,
+    fontWeight: 'bold' as const,
+    marginTop: 6,
+    marginBottom: 4,
   },
 });
 
-export default function CVDocument({ cvData }: { cvData: CVData }) {
-  const themeColor = themeColors[cvData.theme] || themeColors.blue;
-  const customStyle = cvData.customColor ? { color: cvData.customColor } : {};
-  const fontFamily = cvData.fontFamily || 'Helvetica';
+// ──────────────────────────────────────────────────────────────
+//  COMPONENTS
+// ──────────────────────────────────────────────────────────────
+const BulletItem: React.FC<{ children: string; color?: string }> = ({
+  children,
+  color = '#1f2937',
+}) => (
+  <View style={styles.bulletWrapper}>
+    <Text style={[styles.bulletPoint, { color }]}>•</Text>
+    <Text style={styles.bulletText}>{children}</Text>
+  </View>
+);
+
+const Section: React.FC<{
+  title: string;
+  color: string;
+  children: React.ReactNode;
+  noSeparator?: boolean;
+}> = ({ title, color, children, noSeparator }) => (
+  <>
+    <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
+    {children}
+    {!noSeparator && <View style={styles.separator} />}
+  </>
+);
+
+// ──────────────────────────────────────────────────────────────
+//  MAIN DOCUMENT – 100% DOCX MATCHED
+// ──────────────────────────────────────────────────────────────
+const CVDocument: React.FC<{ cvData: CVData }> = ({ cvData }) => {
+  const themeColor = cvData.customColor || themes[cvData.theme || 'blue'];
+  const fontFamily = cvData.fontFamily || DEFAULT_FONT;
+
+  const contactItems = [
+    cvData.location,
+    cvData.phone,
+    cvData.email,
+    cvData.linkedin?.replace(/^https?:\/\//i, ''),
+    cvData.portfolio?.replace(/^https?:\/\//i, ''),
+  ].filter(Boolean);
+
+  const hasSidebarContent = cvData.skills.length > 0 || cvData.certifications.length > 0;
+  const isSidebar = cvData.layout === 'sidebar' && hasSidebarContent;
 
   return (
-    <Document>
+    <Document title={`${cvData.name} - CV`} author={cvData.name}>
       <Page size="A4" style={[styles.page, { fontFamily }]}>
-        {cvData.layout === 'sidebar' ? (
+        {isSidebar ? (
+          /* ====================== SIDEBAR LAYOUT ====================== */
           <View style={styles.twoColumn}>
+            {/* Sidebar */}
             <View style={styles.sidebar}>
-              <Text style={[styles.header, customStyle]}>{cvData.name || 'Your Name'}</Text>
-              <Text style={styles.contact}>
-                {[
-                  cvData.location,
-                  cvData.phone,
-                  cvData.email,
-                  cvData.linkedin?.replace(/^https?:\/\//, ''),
-                  cvData.portfolio?.replace(/^https?:\/\//, ''),
-                ].filter(Boolean).join(' | ')}
+              <Text style={[styles.header, { color: themeColor, fontSize: 28 }]}>
+                {cvData.name}
               </Text>
-              {cvData.skills.filter(s => s.trim()).length > 0 && (
-                <View>
-                  <Text style={[styles.sectionHeader, customStyle]}>Skills</Text>
-                  {cvData.skills.filter(s => s.trim()).map((skill, index) => (
-                    <Text key={index} style={styles.bulletText}>• {skill}</Text>
+              <Text style={styles.contact}>{contactItems.join(' • ')}</Text>
+
+              {cvData.skills.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: themeColor, fontSize: 12.5, marginTop: 22 }]}>
+                    Skills
+                  </Text>
+                  {cvData.skills.map((s, i) => (
+                    <BulletItem key={i} color={themeColor}>{s}</BulletItem>
                   ))}
-                </View>
+                </>
               )}
-              {cvData.certifications.filter(c => c.trim()).length > 0 && (
-                <View>
-                  <Text style={[styles.sectionHeader, customStyle]}>Certifications</Text>
-                  {cvData.certifications.filter(c => c.trim()).map((cert, index) => (
-                    <Text key={index} style={styles.bulletText}>• {cert}</Text>
+
+              {cvData.certifications.length > 0 && (
+                <>
+                  <Text style={[styles.sectionTitle, { color: themeColor, fontSize: 12.5, marginTop: 20 }]}>
+                    Certifications
+                  </Text>
+                  {cvData.certifications.map((c, i) => (
+                    <BulletItem key={i} color={themeColor}>{c}</BulletItem>
                   ))}
-                </View>
+                </>
               )}
             </View>
-            <View style={styles.mainContent}>
-              {/* Main content sections */}
+
+            {/* Main */}
+            <View style={styles.main}>
               {cvData.summary && (
-                <View>
-                  <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Summary</Text>
+                <Section title="Professional Summary" color={themeColor}>
                   <Text style={styles.text}>{cvData.summary}</Text>
-                  <View style={styles.separator} />
-                </View>
+                </Section>
               )}
-              {cvData.education.filter(e => e.school.trim()).length > 0 && (
-                <View>
-                  <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Education</Text>
-                  {cvData.education.filter(e => e.school.trim()).map((edu, index) => (
-                    <View key={index} style={{ marginBottom: 6 }}>
-                      <Text style={styles.text}>{edu.school} — {edu.location} — {edu.date}</Text>
-                      <Text style={styles.text}>{edu.degree}</Text>
-                      <Text style={styles.text}>{edu.details}</Text>
-                    </View>
-                  ))}
-                  <View style={styles.separator} />
-                </View>
-              )}
-              {cvData.experience.filter(e => e.company.trim()).length > 0 && (
-                <View>
-                  <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Experience</Text>
-                  {cvData.experience.filter(e => e.company.trim()).map((exp, index) => (
-                    <View key={index} style={{ marginBottom: 8 }}>
-                      <Text style={styles.text}>{exp.company.toUpperCase()} {exp.location ? `— ${exp.location}` : ''} {exp.date ? `(${exp.date})` : ''}</Text>
-                      <Text style={styles.text}>{exp.role}</Text>
-                      <Text style={styles.text}>{exp.description}</Text>
-                      {exp.achievements.filter(a => a.trim()).length > 0 && (
-                        <View>
-                          <Text style={[styles.sectionHeader, { color: themeColor, fontSize: 10 }, customStyle]}>Achievements</Text>
-                          {exp.achievements.filter(a => a.trim()).map((ach, achIndex) => (
-                            <Text key={achIndex} style={styles.bulletText}>• {ach}</Text>
+
+              {cvData.experience.length > 0 && (
+                <Section title="Experience" color={themeColor}>
+                  {cvData.experience.map((exp, i) => (
+                    <View key={i} style={{ marginBottom: 16 }}>
+                      <Text style={styles.jobTitle}>
+                        {exp.role} • {exp.company}{exp.location ? `, ${exp.location}` : ''}
+                      </Text>
+                      <Text style={styles.jobMeta}>{exp.date}</Text>
+                      {exp.description && <Text style={styles.text}>{exp.description}</Text>}
+                      {exp.achievements?.length ? (
+                        <>
+                          <Text style={[styles.achievementHeader, { color: themeColor }]}>
+                            Key Achievements
+                          </Text>
+                          {exp.achievements.map((a, j) => (
+                            <BulletItem key={j}>{a}</BulletItem>
                           ))}
-                        </View>
-                      )}
+                        </>
+                      ) : null}
                     </View>
                   ))}
-                  <View style={styles.separator} />
-                </View>
+                </Section>
               )}
-              {cvData.projects.filter(p => p.trim()).length > 0 && (
-                <View>
-                  <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Projects</Text>
-                  {cvData.projects.filter(p => p.trim()).map((proj, index) => (
-                    <Text key={index} style={styles.bulletText}>• {proj}</Text>
+
+              {cvData.education.length > 0 && (
+                <Section title="Education" color={themeColor}>
+                  {cvData.education.map((edu, i) => (
+                    <View key={i} style={{ marginBottom: 11 }}>
+                      <Text style={{ fontWeight: 'bold' as const, fontSize: 11 }}>{edu.degree}</Text>
+                      <Text style={styles.text}>{edu.school} • {edu.location}</Text>
+                      <Text style={{ fontSize: 9.8, color: '#6b7280' }}>{edu.date}</Text>
+                      {edu.details && <Text style={styles.text}>{edu.details}</Text>}
+                    </View>
                   ))}
-                </View>
+                </Section>
+              )}
+
+              {cvData.projects.length > 0 && (
+                <Section title="Projects" color={themeColor} noSeparator>
+                  {cvData.projects.map((p, i) => (
+                    <BulletItem key={i}>{p}</BulletItem>
+                  ))}
+                </Section>
               )}
             </View>
           </View>
         ) : (
-          <View>
-            <Text style={[styles.header, customStyle]}>{cvData.name || 'Your Name'}</Text>
-            <Text style={styles.contact}>
-              {[
-                cvData.location,
-                cvData.phone,
-                cvData.email,
-                cvData.linkedin?.replace(/^https?:\/\//, ''),
-                cvData.portfolio?.replace(/^https?:\/\//, ''),
-              ].filter(Boolean).join(' | ')}
-            </Text>
+          /* ====================== ONE-COLUMN LAYOUT ====================== */
+          <>
+            <Text style={[styles.header, { color: themeColor }]}>{cvData.name}</Text>
+            <Text style={styles.contact}>{contactItems.join(' • ')}</Text>
+            <View style={styles.separator} />
+
             {cvData.summary && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Summary</Text>
+              <Section title="Professional Summary" color={themeColor}>
                 <Text style={styles.text}>{cvData.summary}</Text>
-                <View style={styles.separator} />
-              </View>
+              </Section>
             )}
-            {cvData.education.filter(e => e.school.trim()).length > 0 && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Education</Text>
-                {cvData.education.filter(e => e.school.trim()).map((edu, index) => (
-                  <View key={index} style={{ marginBottom: 6 }}>
-                    <Text style={styles.text}>{edu.school} — {edu.location} — {edu.date}</Text>
-                    <Text style={styles.text}>{edu.degree}</Text>
-                    <Text style={styles.text}>{edu.details}</Text>
-                  </View>
-                ))}
-                <View style={styles.separator} />
-              </View>
-            )}
-            {cvData.experience.filter(e => e.company.trim()).length > 0 && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Experience</Text>
-                {cvData.experience.filter(e => e.company.trim()).map((exp, index) => (
-                  <View key={index} style={{ marginBottom: 8 }}>
-                    <Text style={styles.text}>{exp.company.toUpperCase()} {exp.location ? `— ${exp.location}` : ''} {exp.date ? `(${exp.date})` : ''}</Text>
-                    <Text style={styles.text}>{exp.role}</Text>
-                    <Text style={styles.text}>{exp.description}</Text>
-                    {exp.achievements.filter(a => a.trim()).length > 0 && (
-                      <View>
-                        <Text style={[styles.sectionHeader, { color: themeColor, fontSize: 10 }, customStyle]}>Achievements</Text>
-                        {exp.achievements.filter(a => a.trim()).map((ach, achIndex) => (
-                          <Text key={achIndex} style={styles.bulletText}>• {ach}</Text>
+
+            {cvData.experience.length > 0 && (
+              <Section title="Experience" color={themeColor}>
+                {cvData.experience.map((exp, i) => (
+                  <View key={i} style={{ marginBottom: 16 }}>
+                    <Text style={styles.jobTitle}>
+                      {exp.role} at {exp.company}
+                    </Text>
+                    <Text style={styles.jobMeta}>
+                      {exp.location} {exp.date ? `• ${exp.date}` : ''}
+                    </Text>
+                    {exp.description && <Text style={styles.text}>{exp.description}</Text>}
+                    {exp.achievements?.length ? (
+                      <>
+                        <Text style={[styles.achievementHeader, { color: themeColor }]}>
+                          Key Achievements
+                        </Text>
+                        {exp.achievements.map((a, j) => (
+                          <BulletItem key={j}>{a}</BulletItem>
                         ))}
-                      </View>
-                    )}
+                      </>
+                    ) : null}
                   </View>
                 ))}
-                <View style={styles.separator} />
-              </View>
+              </Section>
             )}
-            {cvData.skills.filter(s => s.trim()).length > 0 && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Skills</Text>
-                <View style={styles.twoColumn}>
-                  <View style={styles.column}>
-                    {cvData.skills.filter(s => s.trim()).slice(0, Math.ceil(cvData.skills.length / 2)).map((skill, index) => (
-                      <Text key={index} style={styles.bulletText}>• {skill}</Text>
-                    ))}
+
+            {cvData.education.length > 0 && (
+              <Section title="Education" color={themeColor}>
+                {cvData.education.map((edu, i) => (
+                  <View key={i} style={{ marginBottom: 11 }}>
+                    <Text style={{ fontWeight: 'bold' as const, fontSize: 11 }}>{edu.degree}</Text>
+                    <Text style={styles.text}>{edu.school}, {edu.location}</Text>
+                    <Text style={{ fontSize: 9.8, color: '#6b7280' }}>{edu.date}</Text>
                   </View>
-                  <View style={styles.column}>
-                    {cvData.skills.filter(s => s.trim()).slice(Math.ceil(cvData.skills.length / 2)).map((skill, index) => (
-                      <Text key={index} style={styles.bulletText}>• {skill}</Text>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.separator} />
-              </View>
-            )}
-            {cvData.certifications.filter(c => c.trim()).length > 0 && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Certifications</Text>
-                <View style={styles.twoColumn}>
-                  <View style={styles.column}>
-                    {cvData.certifications.filter(c => c.trim()).slice(0, Math.ceil(cvData.certifications.length / 2)).map((cert, index) => (
-                      <Text key={index} style={styles.bulletText}>• {cert}</Text>
-                    ))}
-                  </View>
-                  <View style={styles.column}>
-                    {cvData.certifications.filter(c => c.trim()).slice(Math.ceil(cvData.certifications.length / 2)).map((cert, index) => (
-                      <Text key={index} style={styles.bulletText}>• {cert}</Text>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.separator} />
-              </View>
-            )}
-            {cvData.projects.filter(p => p.trim()).length > 0 && (
-              <View>
-                <Text style={[styles.sectionHeader, { color: themeColor }, customStyle]}>Projects</Text>
-                {cvData.projects.filter(p => p.trim()).map((proj, index) => (
-                  <Text key={index} style={styles.bulletText}>• {proj}</Text>
                 ))}
-              </View>
+              </Section>
             )}
-          </View>
+
+            {/* SKILLS & CERTIFICATIONS — EXACTLY LIKE DOCX (stacked, full width) */}
+            {cvData.skills.length > 0 && (
+              <Section title="Skills" color={themeColor}>
+                {cvData.skills.map((s, i) => (
+                  <BulletItem key={i} color={themeColor}>{s}</BulletItem>
+                ))}
+              </Section>
+            )}
+
+            {cvData.certifications.length > 0 && (
+              <Section title="Certifications" color={themeColor}>
+                {cvData.certifications.map((c, i) => (
+                  <BulletItem key={i} color={themeColor}>{c}</BulletItem>
+                ))}
+              </Section>
+            )}
+
+            {cvData.projects.length > 0 && (
+              <Section title="Projects" color={themeColor} noSeparator>
+                {cvData.projects.map((p, i) => (
+                  <BulletItem key={i}>{p}</BulletItem>
+                ))}
+              </Section>
+            )}
+          </>
         )}
       </Page>
     </Document>
   );
-}
+};
+
+export default CVDocument;
