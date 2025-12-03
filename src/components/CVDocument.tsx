@@ -72,6 +72,12 @@ const themes = {
   emerald: '#047857',
   violet: '#7c3aed',
   orange: '#ea580c',
+  cyan: '#0891b2',            // clean business cyan
+  bronze: '#b45309',          // premium resume tone
+  forest: '#065f46',          // muted professional green
+  teal: '#0d9488',            // refined teal
+  gold: '#ca8a04',            // soft gold accent (print-friendly)
+  black: '#000000',
 } as const;
 
 // ──────────────────────────────────────────────────────────────

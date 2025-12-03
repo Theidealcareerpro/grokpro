@@ -12,43 +12,72 @@ import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
 
 // ────────────────────────────────────────────────────────────────
-// 1. NEW REDESIGNED CVPDFDocument – Matches DOCX 100%
+// Themes & styles
 // ────────────────────────────────────────────────────────────────
 const themes: Record<string, string> = {
   blue: '#1d4ed8',
   emerald: '#047857',
   violet: '#7c3aed',
   orange: '#ea580c',
+  cyan: '#0891b2',            // clean business cyan
+  bronze: '#b45309',          // premium resume tone
+  forest: '#065f46',          // muted professional green
+  teal: '#0d9488',            // refined teal
+  gold: '#ca8a04',            // soft gold accent (print-friendly)
   black: '#000000'
 };
 
 const pdfStyles = StyleSheet.create({
   page: {
-    paddingTop: 50,
-    paddingBottom: 50,
-    paddingHorizontal: 50,
+    paddingTop: 44,
+    paddingBottom: 44,
+    paddingHorizontal: 40,
     fontFamily: 'Helvetica',
-    fontSize: 11,
-    lineHeight: 1.4,
+    fontSize: 10.75,
+    lineHeight: 1.34,
+    color: '#111827',
   },
-  name: { fontSize: 23, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
-  contact: { fontSize: 11, color: '#666666', textAlign: 'center', marginBottom: 4, fontWeight: 'bold' },
-  dividerThin: { borderBottomWidth: 0.5, marginBottom: 12, marginTop: 8 },
-  sectionTitle: { fontSize: 15, fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', marginBottom: 8 },
-  sectionDivider: { borderBottomWidth: 1.5, marginBottom: 16, marginTop: -4 },
-  companyLine: { fontSize: 10, fontWeight: 'bold', marginBottom: 2 },
-  role: { fontSize: 10, fontWeight: 'bold', fontStyle: 'italic', textDecoration: 'underline', marginBottom: 4 },
-  eduLine: { fontSize: 11, fontWeight: 'bold', marginBottom: 3 },
-  body: { fontSize: 11, marginBottom: 6, textAlign: 'justify' },
-  bullet: { fontSize: 10, marginLeft: 18, marginBottom: 1, flexDirection: 'row' },
-  bulletPoint: { width: 12 },
-  sectionGap: { height: 10 },
+
+  name: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 12 },
+  contact: { fontSize: 10, color: '#4b5563', textAlign: 'center', marginBottom: 6, fontWeight: 500 },
+
+  dividerThin: { borderBottomWidth: 0.6, marginBottom: 10, marginTop: 6 },
+  // restore left alignment for section titles (preserve original design)
+  sectionTitle: { fontSize: 13, fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', marginBottom: 4 },
+  sectionDivider: { borderBottomWidth: 1.2, marginBottom: 10, marginTop: -4 },
+
+  companyLine: { fontSize: 12, fontWeight: 'bold', marginBottom: 2 },
+  role: { fontSize: 10.25, fontWeight: 'bold', fontStyle: 'italic', textDecoration: 'underline', marginBottom: 4 },
+  eduLine: { fontSize: 10.25, fontWeight: 'bold', marginBottom: 2 },
+
+  body: { fontSize: 10, marginBottom: 4, textAlign: 'justify' },
+
+  bullet: { flexDirection: 'row', marginBottom: 2, alignItems: 'flex-start' },
+  bulletPoint: { width: 12, fontSize: 10, lineHeight: 1 },
+
+  sectionGap: { height: 8 },
   entryGap: { height: 6 },
 });
 
+// ────────────────────────────────────────────────────────────────
+// CVPDFDocument — compact + robust pagination (with sanitization)
+// ────────────────────────────────────────────────────────────────
 const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
   const themeColor = themes[cvData.theme] || themes.blue;
 
+  // sanitize helper: removes falsy, empty, or whitespace-only items
+  const cleanArray = (arr?: string[]) =>
+    (arr || []).filter((s) => typeof s === 'string' && s.trim() !== '');
+
+  // sanitize experience achievements
+  const cleanExperience = (exps = cvData.experience) =>
+    (exps || []).map((e) => ({
+      ...e,
+      achievements: (e.achievements || []).filter((a) => typeof a === 'string' && a.trim() !== ''),
+      description: typeof e.description === 'string' ? e.description : '',
+    }));
+
+  // cleaned lists for rendering
   const contact = [
     cvData.location,
     cvData.phone,
@@ -57,64 +86,91 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
     cvData.portfolio?.replace(/^https?:\/\//i, ''),
   ]
     .filter(Boolean)
-    .join(' | ');
+    .join(' • ');
+
+  const education = (cvData.education || []).map((edu) => ({
+    ...edu,
+    details: typeof edu.details === 'string' ? edu.details : '',
+  }));
+
+  const experiences = cleanExperience();
+  const skills = cleanArray(cvData.skills);
+  const certifications = cleanArray(cvData.certifications);
+  const projects = cleanArray(cvData.projects);
+  const summary = typeof cvData.summary === 'string' ? cvData.summary.trim() : '';
 
   return (
-    <Document>
-      <Page size="A4" style={pdfStyles.page}>
-        {/* Header */}
-        <Text style={[pdfStyles.name, { color: themeColor }]}>{cvData.name || 'Your Name'}</Text>
-        {contact && <Text style={pdfStyles.contact}>{contact}</Text>}
-        <View style={[pdfStyles.dividerThin, { borderColor: themeColor }]} />
+    <Document title={`${cvData.name || 'CV'} - CV`} author={cvData.name || ''}>
+      <Page size="A4" style={pdfStyles.page} wrap>
+        {/* Header: keep together (do not split) */}
+        <View wrap={false}>
+          <Text style={[pdfStyles.name, { color: themeColor }]}>{cvData.name || 'Your Name'}</Text>
+          {contact && <Text style={pdfStyles.contact}>{contact}</Text>}
+          <View style={[pdfStyles.dividerThin, { borderColor: themeColor }]} />
+        </View>
 
-        {/* Summary */}
-        {cvData.summary?.trim() && (
+        {/* Summary — allow natural breaking (no wrap) */}
+        {summary && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Professional Summary</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            <Text style={pdfStyles.body}>{cvData.summary.trim()}</Text>
+            <Text style={pdfStyles.body}>{summary}</Text>
             <View style={pdfStyles.sectionGap} />
           </>
         )}
 
-        {/* Education */}
-        {cvData.education.length > 0 && (
+        {/* Education — keep each entry together to avoid awkward splits */}
+        {education.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Education</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            {cvData.education.map((edu, i) => (
-              <View key={i} style={i > 0 ? pdfStyles.entryGap : undefined}>
+
+            {education.map((edu, i) => (
+              <View key={i} wrap={false} style={i > 0 ? pdfStyles.entryGap : undefined}>
                 <Text style={pdfStyles.eduLine}>
                   {edu.degree}
-                  {edu.school && `; ${edu.school}`}
-                  {edu.location && `, ${edu.location}`}
-                  {edu.date && `; ${edu.date}`}
+                  {edu.school ? ` • ${edu.school}` : ''}
+                  {edu.location ? ` • ${edu.location}` : ''}
+                  {edu.date ? ` • ${edu.date}` : ''}
                 </Text>
-                {edu.details?.trim() && <Text style={pdfStyles.body}>{edu.details}</Text>}
+                {edu.details?.trim() && <Text style={pdfStyles.body}>{edu.details.trim()}</Text>}
               </View>
             ))}
+
             <View style={pdfStyles.sectionGap} />
           </>
         )}
 
-        {/* Experience */}
-        {cvData.experience.length > 0 && (
+        {/* Experience — keep company/role/description together, allow bullets to break */}
+        {experiences.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Professional Experience</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            {cvData.experience.map((exp, i) => (
-              <View key={i} style={i > 0 ? pdfStyles.entryGap : undefined}>
-                <Text style={pdfStyles.companyLine}>
-                  {exp.company}
-                  {exp.location && `; ${exp.location}`}
-                  {exp.date && `; ${exp.date}`}
-                </Text>
-                <Text style={[pdfStyles.role, { color: themeColor }]}>{exp.role}</Text>
-                {exp.description?.trim() && <Text style={pdfStyles.body}>{exp.description}</Text>}
-                {exp.achievements?.filter(Boolean).length > 0 && (
+
+            {experiences.map((exp, i) => (
+              <View key={i} style={{ marginBottom: 8 }}>
+                {/* Company + Role + short description block kept together */}
+                <View wrap={false}>
+                  <Text style={pdfStyles.companyLine}>
+                    {exp.company}
+                    {exp.location ? ` • ${exp.location}` : ''}
+                    {exp.date ? ` • ${exp.date}` : ''}
+                  </Text>
+
+                  <Text style={[pdfStyles.role, { color: themeColor }]}>{exp.role}</Text>
+
+                  {exp.description?.trim() && <Text style={pdfStyles.body}>{exp.description.trim()}</Text>}
+                </View>
+
+                {/* Achievements header kept with first bullet (if any) — bullets break naturally */}
+                {exp.achievements?.length > 0 && (
                   <>
-                    <Text style={[pdfStyles.role, { color: themeColor, marginTop: 8 }]}>Key Achievements</Text>
-                    {exp.achievements.filter(Boolean).map((ach, j) => (
+                    {/* keep heading with first bullet where possible */}
+                    <View wrap={false}>
+                      <Text style={[pdfStyles.role, { color: themeColor, marginTop: 6 }]}>Key Achievements</Text>
+                    </View>
+
+                    {exp.achievements.map((ach, j) => (
                       <View key={j} style={pdfStyles.bullet}>
                         <Text style={[pdfStyles.bulletPoint, { color: themeColor }]}>•</Text>
                         <Text style={pdfStyles.body}>{ach}</Text>
@@ -122,48 +178,56 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
                     ))}
                   </>
                 )}
+
+                {i < experiences.length - 1 && <View style={pdfStyles.entryGap} />}
               </View>
             ))}
+
             <View style={pdfStyles.sectionGap} />
           </>
         )}
 
-        {/* Skills */}
-        {cvData.skills.filter(Boolean).length > 0 && (
+        {/* Skills — break naturally, compact bullets */}
+        {skills.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Skills</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            {cvData.skills.filter(Boolean).map((skill, i) => (
+
+            {skills.map((skill, i) => (
               <View key={i} style={pdfStyles.bullet}>
                 <Text style={[pdfStyles.bulletPoint, { color: themeColor }]}>•</Text>
                 <Text style={pdfStyles.body}>{skill}</Text>
               </View>
             ))}
+
             <View style={pdfStyles.sectionGap} />
           </>
         )}
 
         {/* Certifications */}
-        {cvData.certifications.filter(Boolean).length > 0 && (
+        {certifications.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Certifications</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            {cvData.certifications.filter(Boolean).map((cert, i) => (
+
+            {certifications.map((cert, i) => (
               <View key={i} style={pdfStyles.bullet}>
                 <Text style={[pdfStyles.bulletPoint, { color: themeColor }]}>•</Text>
                 <Text style={pdfStyles.body}>{cert}</Text>
               </View>
             ))}
+
             <View style={pdfStyles.sectionGap} />
           </>
         )}
 
         {/* Projects */}
-        {cvData.projects.filter(Boolean).length > 0 && (
+        {projects.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Projects</Text>
             <View style={[pdfStyles.sectionDivider, { borderColor: themeColor }]} />
-            {cvData.projects.filter(Boolean).map((proj, i) => (
+
+            {projects.map((proj, i) => (
               <View key={i} style={pdfStyles.bullet}>
                 <Text style={[pdfStyles.bulletPoint, { color: themeColor }]}>•</Text>
                 <Text style={pdfStyles.body}>{proj}</Text>
@@ -226,7 +290,7 @@ const SAMPLE_CV: CVData = {
 };
 
 // ────────────────────────────────────────────────────────────────
-// 3. Main Page Component
+// 3. Main Page Component (unchanged behavior)
 // ────────────────────────────────────────────────────────────────
 export default function CVPage() {
   const [cvData, setCVData] = useState<CVData>(EMPTY_CV);
@@ -359,7 +423,9 @@ export default function CVPage() {
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
                 <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <text x="7" y="15.5" fontSize="7" fill="white" fontWeight="bold">W</text>
+                <text x="7" y="15.5" fontSize="7" fill="white" fontWeight="bold">
+                  W
+                </text>
               </svg>
               {isDownloadingDocx ? 'Generating Word...' : 'Download Word'}
             </button>

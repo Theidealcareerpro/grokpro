@@ -14,18 +14,30 @@ interface CVPreviewProps {
 }
 
 export default function CVPreview({ data }: CVPreviewProps) {
-  const themeColor =
-    data.theme === 'blue'
-      ? 'text-blue-700'
-      : data.theme === 'emerald'
-      ? 'text-emerald-700'
-      : data.theme === 'teal'
-      ? 'text-teal-700'
-      : data.theme === 'rose'
-      ? 'text-rose-700'
-      : data.theme === 'black'
-      ? 'text-black'
-      : 'text-blue-700'; // fallback
+const themeColor =
+  data.theme === 'blue'
+    ? 'text-blue-700'
+    : data.theme === 'emerald'
+    ? 'text-emerald-700'
+    : data.theme === 'teal'
+    ? 'text-teal-700'
+    : data.theme === 'rose'
+    ? 'text-rose-700'
+    : data.theme === 'orange'
+    ? 'text-orange-700'
+    : data.theme === 'violet'
+    ? 'text-violet-700'
+    : data.theme === 'cyan'
+    ? 'text-cyan-700'
+    : data.theme === 'bronze'
+    ? 'text-yellow-700' // Bronze isn't a Tailwind color, closest match
+    : data.theme === 'forest'
+    ? 'text-green-800' // Forest deep green tone
+    : data.theme === 'gold'
+    ? 'text-yellow-600' // Gold approximation
+    : data.theme === 'black'
+    ? 'text-black'
+    : 'text-blue-700'; // fallback
 
   return (
     <motion.div

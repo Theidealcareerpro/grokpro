@@ -16,7 +16,7 @@ export const EMPTY_CV = {
   font: 'Helvetica' as FontChoice,
 };
 
-export type Theme = 'blue' | 'emerald' | 'rose' | 'black' | 'teal';
+export type Theme = 'blue' | 'emerald' | 'rose' | 'black' | 'violet' | 'gold' | 'orange' | 'cyan'  | 'bronze' | 'forest' | 'teal';
 export type FontChoice = 'Helvetica' | 'Roboto' | 'Times';
 export type ExperienceEntry = {
   company: string;
