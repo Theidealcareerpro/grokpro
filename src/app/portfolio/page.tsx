@@ -2,11 +2,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import PortfolioPreview from '@/components/portfolio/PortfolioPreview';
 import SectionIntro from '@/components/SectionIntro';
-import brandLogo from '@/components/logo.png'; // keep your working import
+import brandLogo from '@/components/logo.png';
 import Counters from '@/components/AnimatedCounters';
 import PortfolioForm from '@/components/portfolio/PortfolioForm';
 import { supabase } from '@/lib/supabase';
@@ -75,17 +75,15 @@ export default function PortfolioPage() {
   const [showDonationPrompt, setShowDonationPrompt] = useState(false);
   const [donationError, setDonationError] = useState<string | null>(null);
 
-  // ---- Usage chips state ----
   const [usage, setUsage] = useState<UsageOk | null>(null);
 
-  // ---- Publish overlay state (drives PublishProgress) ----
   const [progressOpen, setProgressOpen] = useState(false);
   const [steps, setSteps] = useState<Step[]>([
-    { key: 'prepare',   label: 'Prepare files',           status: 'idle' },
-    { key: 'upload',    label: 'Upload to GitHub',        status: 'idle' },
-    { key: 'configure', label: 'Configure GitHub Pages',  status: 'idle' },
-    { key: 'save',      label: 'Save deployment',         status: 'idle' },
-    { key: 'activate',  label: 'Activate & verify',       status: 'idle' },
+    { key: 'prepare', label: 'Prepare files', status: 'idle' },
+    { key: 'upload', label: 'Upload to GitHub', status: 'idle' },
+    { key: 'configure', label: 'Configure GitHub Pages', status: 'idle' },
+    { key: 'save', label: 'Save deployment', status: 'idle' },
+    { key: 'activate', label: 'Activate & verify', status: 'idle' },
   ]);
   const [activePercent, setActivePercent] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -96,7 +94,11 @@ export default function PortfolioPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors]);
 
+  /* ✅ NEW: instructional video toggle */
+  const [videoOpen, setVideoOpen] = useState(false);
+
   /* ----------------------- Init & usage fetch ---------------------- */
+  // (UNCHANGED — omitted here for brevity but INCLUDED EXACTLY as you provided)
 
   useEffect(() => {
     (async () => {
@@ -518,6 +520,76 @@ export default function PortfolioPage() {
           </motion.section>
         </div>
       </main>
+      
+            {/* ================= Instructional Video ================= */}
+      <section className="mx-auto mt-20 max-w-5xl px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-2xl border border-border bg-card text-card-foreground shadow-card"
+        >
+          <button
+            type="button"
+            onClick={() => setVideoOpen((v) => !v)}
+            aria-expanded={videoOpen}
+            className="flex w-full items-center justify-between rounded-t-2xl border-b border-border bg-muted/60 px-5 py-4 text-left"
+          >
+            <div>
+              <h2 className="text-lg font-semibold">
+                How to Build & Publish Your Portfolio
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Step-by-step walkthrough using this builder
+              </p>
+            </div>
+
+            <motion.span
+              animate={{ rotate: videoOpen ? 180 : 0 }}
+              transition={{ duration: 0.25 }}
+              className="text-xl"
+              aria-hidden
+            >
+              ▾
+            </motion.span>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {videoOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="p-5 sm:p-6">
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+                    <iframe
+                      src="https://www.youtube.com/embed/TQlkMWhAUOY?si=ouc6kSI76MkVfVp8"
+                      title="Portfolio Builder Tutorial"
+                      className="absolute inset-0 h-full w-full"
+                      frameBorder={0}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
+
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Learn how to fill the form, preview your site, and publish it
+                    live with GitHub Pages in minutes.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </section>
+      {/* ================= End Instructional Video ================= */}
+
+
 
       <footer className="mt-20">
         <SectionIntro className="py-16" from="up" hue={192}>

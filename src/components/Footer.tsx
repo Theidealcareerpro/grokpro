@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Github, Linkedin, Twitter, ArrowUp } from 'lucide-react';
+import { Youtube, Instagram, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useCallback } from 'react';
 
 type Nav = { href: `/${string}` | '/'; label: string };
 type Social = {
   href: `https://${string}`;
-  label: 'Twitter' | 'LinkedIn' | 'GitHub';
+  label: 'Youtube' | 'Instagram' | 'TikTok';
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -22,9 +22,8 @@ const NAV: readonly Nav[] = [
 ] as const;
 
 const SOCIAL: readonly Social[] = [
-  { href: 'https://twitter.com/theidealprogen', label: 'Twitter', icon: Twitter },
-  { href: 'https://linkedin.com/company/theidealprogen', label: 'LinkedIn', icon: Linkedin },
-  { href: 'https://github.com/theidealprogen', label: 'GitHub', icon: Github },
+  { href: 'https://instagram.com/theidealprogen', label: 'Instagram', icon: Instagram },
+  { href: 'https://youtube.com/@theidealprocareers', label: 'Youtube', icon: Youtube },
 ] as const;
 
 export default function Footer() {

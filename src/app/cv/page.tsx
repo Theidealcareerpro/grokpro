@@ -1,14 +1,14 @@
 ﻿'use client';
 
-import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useId } from 'react';
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
 import CVForm from '@/components/CVForm';
 import CVPreview from '@/components/CVPreview';
 import Skeleton from '@/components/Skeleton';
 import SectionIntro from '@/components/SectionIntro';
 import Counters from '@/components/AnimatedCounters';
-import { ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, ArrowPathIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { CVData, STORAGE_KEY, EMPTY_CV, sanitizeCVData } from '@/lib/types';
 
 // ────────────────────────────────────────────────────────────────
@@ -19,11 +19,11 @@ const themes: Record<string, string> = {
   emerald: '#047857',
   violet: '#7c3aed',
   orange: '#ea580c',
-  cyan: '#0891b2',            // clean business cyan
-  bronze: '#b45309',          // premium resume tone
-  forest: '#065f46',          // muted professional green
-  teal: '#0d9488',            // refined teal
-  gold: '#ca8a04',            // soft gold accent (print-friendly)
+  cyan: '#0891b2',
+  bronze: '#b45309',
+  forest: '#065f46',
+  teal: '#0d9488',
+  gold: '#ca8a04',
   black: '#000000'
 };
 
@@ -42,7 +42,6 @@ const pdfStyles = StyleSheet.create({
   contact: { fontSize: 10, color: '#4b5563', textAlign: 'center', marginBottom: 6, fontWeight: 500 },
 
   dividerThin: { borderBottomWidth: 0.6, marginBottom: 10, marginTop: 6 },
-  // restore left alignment for section titles (preserve original design)
   sectionTitle: { fontSize: 13, fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', marginBottom: 4 },
   sectionDivider: { borderBottomWidth: 1.2, marginBottom: 10, marginTop: -4 },
 
@@ -65,11 +64,9 @@ const pdfStyles = StyleSheet.create({
 const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
   const themeColor = themes[cvData.theme] || themes.blue;
 
-  // sanitize helper: removes falsy, empty, or whitespace-only items
   const cleanArray = (arr?: string[]) =>
     (arr || []).filter((s) => typeof s === 'string' && s.trim() !== '');
 
-  // sanitize experience achievements
   const cleanExperience = (exps = cvData.experience) =>
     (exps || []).map((e) => ({
       ...e,
@@ -77,7 +74,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
       description: typeof e.description === 'string' ? e.description : '',
     }));
 
-  // cleaned lists for rendering
   const contact = [
     cvData.location,
     cvData.phone,
@@ -102,14 +98,12 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
   return (
     <Document title={`${cvData.name || 'CV'} - CV`} author={cvData.name || ''}>
       <Page size="A4" style={pdfStyles.page} wrap>
-        {/* Header: keep together (do not split) */}
         <View wrap={false}>
           <Text style={[pdfStyles.name, { color: themeColor }]}>{cvData.name || 'Your Name'}</Text>
           {contact && <Text style={pdfStyles.contact}>{contact}</Text>}
           <View style={[pdfStyles.dividerThin, { borderColor: themeColor }]} />
         </View>
 
-        {/* Summary — allow natural breaking (no wrap) */}
         {summary && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Professional Summary</Text>
@@ -119,7 +113,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
           </>
         )}
 
-        {/* Education — keep each entry together to avoid awkward splits */}
         {education.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Education</Text>
@@ -141,7 +134,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
           </>
         )}
 
-        {/* Experience — keep company/role/description together, allow bullets to break */}
         {experiences.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Professional Experience</Text>
@@ -149,7 +141,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
 
             {experiences.map((exp, i) => (
               <View key={i} style={{ marginBottom: 8 }}>
-                {/* Company + Role + short description block kept together */}
                 <View wrap={false}>
                   <Text style={pdfStyles.companyLine}>
                     {exp.company}
@@ -162,10 +153,8 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
                   {exp.description?.trim() && <Text style={pdfStyles.body}>{exp.description.trim()}</Text>}
                 </View>
 
-                {/* Achievements header kept with first bullet (if any) — bullets break naturally */}
                 {exp.achievements?.length > 0 && (
                   <>
-                    {/* keep heading with first bullet where possible */}
                     <View wrap={false}>
                       <Text style={[pdfStyles.role, { color: themeColor, marginTop: 6 }]}>Key Achievements</Text>
                     </View>
@@ -187,7 +176,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
           </>
         )}
 
-        {/* Skills — break naturally, compact bullets */}
         {skills.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Skills</Text>
@@ -204,7 +192,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
           </>
         )}
 
-        {/* Certifications */}
         {certifications.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Certifications</Text>
@@ -221,7 +208,6 @@ const CVPDFDocument = ({ cvData }: { cvData: CVData }) => {
           </>
         )}
 
-        {/* Projects */}
         {projects.length > 0 && (
           <>
             <Text style={[pdfStyles.sectionTitle, { color: themeColor }]}>Projects</Text>
@@ -290,14 +276,20 @@ const SAMPLE_CV: CVData = {
 };
 
 // ────────────────────────────────────────────────────────────────
-// 3. Main Page Component (unchanged behavior)
+// 3. Main Page Component (updated with collapsible video section)
 // ────────────────────────────────────────────────────────────────
 export default function CVPage() {
   const [cvData, setCVData] = useState<CVData>(EMPTY_CV);
-  const [loading, setLoading] = useState(true);
-  const [isDownloadingSample, setIsDownloadingSample] = useState(false);
-  const [isDownloadingCV, setIsDownloadingCV] = useState(false);
-  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isDownloadingSample, setIsDownloadingSample] = useState<boolean>(false);
+  const [isDownloadingCV, setIsDownloadingCV] = useState<boolean>(false);
+  const [isDownloadingDocx, setIsDownloadingDocx] = useState<boolean>(false);
+
+  // Collapsible video state
+  const [isVideoOpen, setIsVideoOpen] = useState<boolean>(false);
+
+  // unique id for aria-controls
+  const videoRegionId = useId();
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -370,6 +362,10 @@ export default function CVPage() {
     }
   };
 
+  // video configuration
+  const videoId = 's3HJdwEN8Dw';
+  const videoSrc = `https://www.youtube.com/embed/${videoId}?si=i8M1GrZRIEdHADlF&rel=0`;
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-navy-900/10 to-white text-black dark:bg-zinc-900 dark:text-white">
       <header className="mb-4 sm:mb-6 flex justify-between items-center px-3 sm:px-6 pt-4">
@@ -420,7 +416,7 @@ export default function CVPage() {
               disabled={currentStep < 2 || isDownloadingDocx}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition flex items-center gap-2.5 font-medium shadow-md"
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
                 <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 <text x="7" y="15.5" fontSize="7" fill="white" fontWeight="bold">
@@ -468,6 +464,83 @@ export default function CVPage() {
           </div>
         </motion.div>
       </main>
+
+      {/* -------------------------
+          Instructional Video Section
+         ------------------------- */}
+      <section className="container-app px-3 sm:px-6 mt-10 mb-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-100 dark:border-zinc-700">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center rounded-md w-10 h-10 bg-blue-600 text-white shadow-sm"
+                  aria-hidden
+                >
+                  ▶
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Instructional Video</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-300">Watch a short walkthrough on using the CV Builder</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-expanded={isVideoOpen}
+                  aria-controls={`video-panel-${videoRegionId}`}
+                  onClick={() => setIsVideoOpen((s) => !s)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 transition text-sm"
+                >
+                  <span className="sr-only">{isVideoOpen ? 'Close video' : 'Open video'}</span>
+                  <motion.span
+                    animate={{ rotate: isVideoOpen ? 180 : 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="w-4 h-4"
+                  >
+                    <ChevronDownIcon className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+                  </motion.span>
+                  <span className="text-xs text-gray-700 dark:text-gray-200">{isVideoOpen ? 'Close' : 'Watch'}</span>
+                </button>
+              </div>
+            </div>
+
+            <AnimatePresence initial={false}>
+              {isVideoOpen && (
+                <motion.div
+                  id={`video-panel-${videoRegionId}`}
+                  key="video-panel"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  className="px-4 sm:px-6 pb-6"
+                >
+                  <div className="pt-4">
+                    {/* Responsive 16:9 wrapper */}
+                    <div className="relative w-full pb-[56.25%]">
+                      <iframe
+                        className="absolute top-0 left-0 w-full h-full rounded-lg shadow-md border border-gray-100 dark:border-zinc-700"
+                        src={videoSrc}
+                        title="Instructional video — CV Builder walkthrough"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+
+                    <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">
+                      Tip: press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-zinc-700 rounded">Space</kbd> to play/pause when the player is focused.
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </section>
 
       <footer className="mt-16">
         <SectionIntro className="py-12" from="up" hue={192}>
