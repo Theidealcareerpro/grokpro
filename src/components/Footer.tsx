@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Youtube, Instagram, ArrowUp } from 'lucide-react';
+import { Youtube, Instagram, Linkedin, ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useCallback } from 'react';
 
 type Nav = { href: `/${string}` | '/'; label: string };
 type Social = {
   href: `https://${string}`;
-  label: 'Youtube' | 'Instagram' | 'TikTok';
+  label: 'Youtube' | 'Instagram' | 'Linkedin';
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -22,7 +22,8 @@ const NAV: readonly Nav[] = [
 ] as const;
 
 const SOCIAL: readonly Social[] = [
-  { href: 'https://instagram.com/theidealprogen', label: 'Instagram', icon: Instagram },
+  { href: 'https://instagram.com/theidealprocareers', label: 'Instagram', icon: Instagram },
+  { href: 'https://www.linkedin.com/groups/15693009/', label: 'Linkedin', icon: Linkedin },
   { href: 'https://youtube.com/@theidealprocareers', label: 'Youtube', icon: Youtube },
 ] as const;
 
